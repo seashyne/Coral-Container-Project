@@ -1,0 +1,69 @@
+{
+  "ociVersion": "1.0.2",
+  "process": {
+    "terminal": false,
+    "user": {
+      "uid": 0,
+      "gid": 0
+    },
+    "args": [
+      "/bin/sh",
+      "-c",
+      "echo \"Coral v2.0 Container Ready — hostname=$(hostname) pid=$$ alpine=$(cat /etc/alpine-release)\""
+    ],
+    "env": [
+      "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+      "TERM=xterm"
+    ],
+    "cwd": "/",
+    "noNewPrivileges": true
+  },
+  "root": {
+    "path": "rootfs",
+    "readonly": false
+  },
+  "hostname": "coral-container",
+  "mounts": [
+    {
+      "destination": "/proc",
+      "type": "proc",
+      "source": "proc",
+      "options": [
+        "nosuid",
+        "noexec",
+        "nodev"
+      ]
+    },
+    {
+      "destination": "/tmp",
+      "type": "tmpfs",
+      "source": "tmpfs",
+      "options": [
+        "nosuid",
+        "nodev",
+        "mode=1777"
+      ]
+    }
+  ],
+  "linux": {
+    "namespaces": [
+      { "type": "pid" },
+      { "type": "ipc" },
+      { "type": "uts" },
+      { "type": "mount" }
+    ],
+    "resources": {
+      "memory": {
+        "limit": 134217728
+      },
+      "cpu": {
+        "shares": 1024,
+        "quota": 100000,
+        "period": 100000
+      },
+      "pids": {
+        "limit": 128
+      }
+    }
+  }
+}

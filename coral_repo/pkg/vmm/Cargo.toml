@@ -1,0 +1,15 @@
+[package]
+name = "coral-vmm"
+description = "Native Linux /dev/kvm MicroVM hypervisor, initramfs builder, and AI Agent untrusted code sandbox for Coral"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+flate2.workspace = true
+libc.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

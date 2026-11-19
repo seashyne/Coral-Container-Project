@@ -1,1 +1,26 @@
-/target
+# Rust build outputs
+/coral_repo/target/
+/coral_repo/dist/
+/desktop/src-tauri/target/
+/desktop/src-tauri/gen/
+
+# Downloaded Alpine minirootfs (recreated by setup-rootfs.sh)
+/coral_repo/rootfs/*
+!/coral_repo/rootfs/hello.txt
+
+# Node dependencies
+/desktop/node_modules/
+
+# Local reference checkouts & scratch folders (not part of Coral repo)
+/external/
+/open source/
+/OS/
+/vibe_images/
+/.agents/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~

@@ -1,0 +1,67 @@
+[workspace]
+resolver = "2"
+members = [
+    "api",
+    "pkg/oci",
+    "pkg/cgroups",
+    "pkg/networking",
+    "pkg/runtime",
+    "pkg/wasm",
+    "pkg/vmm",
+    "cmd/coral-daemon",
+    "cmd/coral-cli",
+    "tests",
+]
+
+[workspace.package]
+version = "2.0.0"
+edition = "2024"
+license = "Apache-2.0"
+
+[workspace.dependencies]
+# Internal crates
+coral-api = { path = "api" }
+coral-oci = { path = "pkg/oci" }
+coral-cgroups = { path = "pkg/cgroups" }
+coral-net = { path = "pkg/networking" }
+coral-runtime = { path = "pkg/runtime" }
+coral-wasm = { path = "pkg/wasm" }
+coral-vmm = { path = "pkg/vmm" }
+coral-daemon = { path = "cmd/coral-daemon" }
+
+# WebAssembly runtime
+wasmi = "2.0"
+
+# Core Linux / System
+nix = { version = "0.29", features = ["sched", "mount", "process", "user", "hostname", "fs", "signal", "ioctl"] }
+libc = "0.2"
+
+# Serialization & Error handling
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+anyhow = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+
+# Async & gRPC (CRI v1)
+tokio = { version = "1.0", features = ["full"] }
+tokio-stream = { version = "0.1", features = ["net"] }
+tonic = "0.12"
+tonic-build = "0.12"
+prost = "0.13"
+protoc-bin-vendored = "3.0"
+
+# OCI Registry & Rootfs extraction
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
+flate2 = "1.0"
+tar = "0.4"
+sha2 = "0.10"
+futures-util = "0.3"
+
+# CLI & Logging
+clap = { version = "4.5", features = ["derive", "env"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Testing
+tempfile = "3"

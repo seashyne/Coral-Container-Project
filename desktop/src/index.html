@@ -1,0 +1,723 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coral Desktop</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- top strip -->
+  <div class="strip">
+    <button id="rail-btn" class="sb" title="Toggle sidebar (Ctrl+B)" aria-label="Toggle sidebar"></button>
+    <div class="brand"><span class="mark"></span><span class="brand-name">Coral</span></div>
+    <div class="drag"></div>
+    <label class="gfind" id="gfind">
+      <span class="s-ic"></span>
+      <input id="search" type="text" placeholder="Search containers…" autocomplete="off" spellcheck="false" />
+      <kbd>Ctrl K</kbd>
+    </label>
+    <button id="theme-btn" class="sb" title="Theme" aria-label="Toggle theme"></button>
+    <button id="gear-btn" class="sb" title="Settings" aria-label="Settings"></button>
+  </div>
+
+  <!-- sidebar -->
+  <aside>
+    <nav>
+      <div class="navlabel">Runtime</div>
+      <button class="nav-item active" data-view="containers" aria-current="page">
+        <span class="i" data-icon="cube"></span><span class="lbl">Containers</span><span class="count" id="n-containers">0</span>
+      </button>
+      <button class="nav-item" data-view="images">
+        <span class="i" data-icon="image"></span><span class="lbl">Images</span><span class="count" id="n-images">0</span>
+      </button>
+      <button class="nav-item" data-view="volumes">
+        <span class="i" data-icon="database"></span><span class="lbl">Volumes</span><span class="count" id="n-volumes">0</span>
+      </button>
+      <div class="navlabel">CRI</div>
+      <button class="nav-item" data-view="pods">
+        <span class="i" data-icon="hexagon"></span><span class="lbl">Pods</span><span class="count" id="n-pods">0</span>
+      </button>
+      <div class="navlabel">Next-Gen</div>
+      <button class="nav-item" data-view="nextgen">
+        <span class="i" data-icon="cpu"></span><span class="lbl">Wasm &amp; KVM</span>
+      </button>
+      <div class="navlabel">Coral</div>
+      <button class="nav-item" data-view="settings">
+        <span class="i" data-icon="sliders"></span><span class="lbl">Settings</span>
+      </button>
+    </nav>
+
+    <div class="vm" id="vm-card">
+      <div class="vm-head">
+        <span class="vm-id"><span class="dot" id="vm-dot"></span><span id="vm-name">Coral daemon</span></span>
+        <span id="vm-state">Stopped</span>
+      </div>
+      <div class="vm-sub" id="vm-sub">Not connected</div>
+      <dl>
+        <dt>Running</dt><dd id="vm-running">0</dd>
+        <dt>Pods</dt><dd id="vm-pods">0</dd>
+        <dt>Version</dt><dd id="vm-version">—</dd>
+      </dl>
+      <button id="vm-btn" class="btn primary full">Connect</button>
+    </div>
+  </aside>
+
+  <!-- main -->
+  <main id="main">
+    <!-- Containers -->
+    <section id="view-containers" class="view">
+      <div class="toolbar">
+        <h2>Containers</h2>
+        <div class="ltabs" id="ctabs"></div>
+        <div class="bulk hidden" id="cbulk"></div>
+        <div class="spacer"></div>
+        <div class="hright" id="cright"></div>
+      </div>
+      <div id="containers-table" class="content"></div>
+    </section>
+
+    <!-- Images -->
+    <section id="view-images" class="view hidden">
+      <div class="toolbar">
+        <h2>Images</h2>
+        <div class="spacer"></div>
+        <div class="hright">
+          <button id="add-image-btn" type="button" class="btn primary"><span class="i" data-icon="plus"></span><span class="hlbl">Pull / Add image</span></button>
+          <button id="refresh-images" type="button" class="btn ic" title="Refresh" aria-label="Refresh"></button>
+        </div>
+      </div>
+      <div class="content images-page">
+        <div id="pull-status" class="status-banner hidden" role="status" aria-live="polite"></div>
+
+        <section class="catalog-section" aria-labelledby="catalog-heading">
+          <div class="section-head">
+            <h3 id="catalog-heading">Popular Linux Base Images</h3>
+            <p class="section-sub">One-click OCI Registry v2 pull (or empty <code>scratch</code> rootfs) — persisted in Coral's images store.</p>
+          </div>
+          <div id="base-catalog" class="base-grid"></div>
+        </section>
+
+        <section class="installed-section" aria-labelledby="installed-images-heading">
+          <div class="section-head">
+            <h3 id="installed-images-heading">Installed Images</h3>
+            <span id="installed-images-count" class="section-sub"></span>
+          </div>
+          <div id="images-table" class="responsive-table-wrap" tabindex="0" role="region" aria-labelledby="installed-images-heading"></div>
+        </section>
+      </div>
+    </section>
+
+    <!-- Volumes & Storage -->
+    <section id="view-volumes" class="view hidden">
+      <div class="toolbar">
+        <h2>Volumes &amp; Storage</h2>
+        <div class="spacer"></div>
+        <div class="hright">
+          <button id="prune-btn" type="button" class="btn danger"><span class="i" data-icon="trash"></span><span class="hlbl">System Prune</span></button>
+          <button id="refresh-volumes" type="button" class="btn ic" title="Refresh" aria-label="Refresh"></button>
+        </div>
+      </div>
+      <div class="content volumes-page">
+        <div id="sys-df-cards" class="df-grid"></div>
+        <form id="vol-create-form" class="vol-create-bar" aria-label="Create named volume">
+          <input
+            id="vol-name-input"
+            class="field mono"
+            type="text"
+            required
+            autocorrect="off"
+            autocapitalize="none"
+            spellcheck="false"
+            placeholder="New named volume (e.g. app-data, pg-storage)"
+          />
+          <button id="vol-create-btn" type="submit" class="btn primary">Create volume</button>
+        </form>
+        <div id="volumes-table" class="responsive-table-wrap" tabindex="0" role="region" aria-label="Named volumes"></div>
+      </div>
+    </section>
+
+    <!-- Pods -->
+    <section id="view-pods" class="view hidden">
+      <div class="toolbar">
+        <h2>Pod sandboxes</h2>
+        <div class="spacer"></div>
+        <div class="hright">
+          <button id="refresh-pods" class="btn ic" title="Refresh" aria-label="Refresh"></button>
+        </div>
+      </div>
+      <div id="pods-table" class="content"></div>
+    </section>
+
+    <!-- Next-Gen: Wasm & KVM Sandbox -->
+    <section id="view-nextgen" class="view hidden">
+      <div class="toolbar">
+        <h2>Next-Gen Runtimes — WebAssembly &amp; KVM MicroVM</h2>
+        <div class="spacer"></div>
+        <div class="hright">
+          <button id="kvm-probe-btn" type="button" class="btn primary">Run 64-bit KVM Self-Test</button>
+        </div>
+      </div>
+      <div class="content nextgen-page">
+        <div class="panel nextgen-card">
+          <div class="section-head">
+            <h3>Native Linux <code>/dev/kvm</code> MicroVM Hypervisor (<code>coral-vmm</code>)</h3>
+            <span id="kvm-status-pill" class="health-badge">Not probed</span>
+          </div>
+          <p id="kvm-probe-meta" class="hint" style="margin-top:0;">Click "Run 64-bit KVM Self-Test" to boot a real hardware-virtualized x86-64 Long Mode guest via /dev/kvm.</p>
+          <pre id="kvm-selftest-out" class="console" style="max-height:130px;border-radius:8px;">(ready to probe /dev/kvm)</pre>
+        </div>
+
+        <div class="nextgen-split">
+          <form id="wasm-run-form" class="panel nextgen-card" aria-label="WebAssembly Playground">
+            <div class="section-head">
+              <h3>WebAssembly WASI Runner (<code>coral-wasm</code>)</h3>
+              <span id="wasm-stats" class="section-sub mono">Microsecond startup</span>
+            </div>
+            <div class="form-grid" style="margin-bottom:10px;">
+              <label>CPU Fuel Budget <input id="wasm-fuel" class="field mono" type="number" min="1000" value="5000000" /></label>
+              <label>Memory Cap (MB) <input id="wasm-mem" class="field mono" type="number" min="1" value="16" /></label>
+            </div>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:var(--fs);color:var(--muted);">
+              WebAssembly Text (<code>.wat</code>) module
+              <textarea id="wasm-source" class="field area mono" rows="7" autocorrect="off" autocapitalize="none" spellcheck="false">(module
+  (import "wasi_snapshot_preview1" "fd_write"
+    (func $fd_write (param i32 i32 i32 i32) (result i32)))
+  (memory (export "memory") 1)
+  (data (i32.const 0) "\10\00\00\00\17\00\00\00")
+  (data (i32.const 16) "Hello from Coral Wasm!\n")
+  (func (export "_start")
+    (drop (call $fd_write (i32.const 1) (i32.const 0) (i32.const 1) (i32.const 64)))))</textarea>
+            </label>
+            <div class="form-row right">
+              <button id="wasm-run-btn" type="submit" class="btn primary">Run Wasm (µs)</button>
+            </div>
+            <pre id="wasm-output" class="console" style="max-height:120px;margin-top:10px;border-radius:8px;">(output will appear here)</pre>
+          </form>
+
+          <form id="sandbox-form" class="panel nextgen-card" aria-label="AI Agent Untrusted Code Sandbox">
+            <div class="section-head">
+              <h3>AI Agent Untrusted Code Sandbox</h3>
+              <span id="sbx-stats" class="section-sub mono">Air-gapped + Timeout</span>
+            </div>
+            <div class="form-grid" style="margin-bottom:10px;">
+              <label>Base Image <input id="sbx-image" class="field mono" type="text" list="image-list" value="alpine:3.20" /></label>
+              <label>Hard Timeout (s) <input id="sbx-timeout" class="field mono" type="number" min="1" max="120" value="5" /></label>
+              <label>Memory Cap (MB) <input id="sbx-mem" class="field mono" type="number" min="16" value="64" /></label>
+              <label class="inline-check" style="align-self:end;padding-bottom:6px;">
+                <input id="sbx-net" type="checkbox" /> Allow isolated bridge network
+              </label>
+            </div>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:var(--fs);color:var(--muted);">
+              Untrusted Shell / Agent Command
+              <textarea id="sbx-cmd" class="field area mono" rows="4" autocorrect="off" autocapitalize="none" spellcheck="false">echo "Isolated UID=$(id -u) PID=$$" && uname -a</textarea>
+            </label>
+            <div class="form-row right">
+              <button id="sbx-run-btn" type="submit" class="btn primary">Run in Sandbox</button>
+            </div>
+            <pre id="sbx-output" class="console" style="max-height:120px;margin-top:10px;border-radius:8px;">(sandbox report will appear here)</pre>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section id="view-settings" class="view hidden">
+      <div class="toolbar"><h2>Settings</h2></div>
+      <div class="content settings">
+        <div class="panel">
+          <h3>Connection</h3>
+          <div class="form-grid">
+            <label>Mode
+              <select id="set-mode" class="field">
+                <option value="local">Local — spawn daemon on this machine</option>
+                <option value="wsl2">WSL2 — spawn daemon inside WSL2 (Windows)</option>
+                <option value="remote">Remote — attach to a running daemon</option>
+              </select>
+            </label>
+            <label>Daemon endpoint (host:port)
+              <input id="set-endpoint" class="field" type="text" placeholder="127.0.0.1:50051" />
+            </label>
+            <label>coral-daemon binary
+              <div class="input-btn">
+                <input id="set-daemon-bin" class="field" type="text" placeholder="coral-daemon" />
+                <button class="btn ic pick" data-target="set-daemon-bin" title="Browse" aria-label="Browse"></button>
+              </div>
+            </label>
+            <label>coral CLI binary
+              <div class="input-btn">
+                <input id="set-coral-bin" class="field" type="text" placeholder="coral" />
+                <button class="btn ic pick" data-target="set-coral-bin" title="Browse" aria-label="Browse"></button>
+              </div>
+            </label>
+            <label>Default rootfs (optional)
+              <div class="input-btn">
+                <input id="set-rootfs" class="field" type="text" placeholder="/path/to/rootfs" />
+                <button type="button" class="btn ic pick-dir" data-target="set-rootfs" title="Browse" aria-label="Browse"></button>
+              </div>
+            </label>
+            <label>Images dir (optional)
+              <div class="input-btn">
+                <input id="set-images-dir" class="field" type="text" placeholder="~/.local/state/coral/images" />
+                <button type="button" class="btn ic pick-dir" data-target="set-images-dir" title="Browse" aria-label="Browse"></button>
+              </div>
+            </label>
+            <label>Daemon state dir (optional)
+              <div class="input-btn">
+                <input id="set-state-dir" class="field" type="text" placeholder="$XDG_RUNTIME_DIR/coral/daemon" />
+                <button type="button" class="btn ic pick-dir" data-target="set-state-dir" title="Browse" aria-label="Browse"></button>
+              </div>
+            </label>
+            <label>WSL2 distro (optional, Windows)
+              <input id="set-wsl-distro" class="field" type="text" placeholder="default distro" />
+            </label>
+          </div>
+          <p class="hint" id="mode-hint"></p>
+          <div class="form-row">
+            <button id="save-settings" class="btn primary">Save</button>
+            <button id="save-connect" class="btn">Save &amp; Connect</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Appearance</h3>
+          <div class="form-grid">
+            <label>Theme
+              <select id="set-theme" class="field">
+                <option value="auto">Auto — follow system</option>
+                <option value="dark">Dark</option>
+                <option value="light">Light</option>
+              </select>
+            </label>
+          </div>
+          <p class="hint">Coral Desktop's window design is inspired by Kiri (Apache-2.0). Coral is an independent project; the Kiri name and logo are not used.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- status bar -->
+  <div class="statusbar">
+    <span class="item" id="sb-left">Coral Desktop</span>
+    <span class="grow"></span>
+    <span class="item" id="sb-mid"></span>
+    <span class="grow"></span>
+    <span class="item" id="sb-right"><span class="dot"></span><span id="sb-endpoint">Disconnected</span></span>
+  </div>
+
+  <!-- Run container modal -->
+  <div id="run-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-head"><h3>Run container</h3><button class="sb" data-close="run-modal" aria-label="Close"></button></div>
+      <div class="form-grid">
+        <label>Name <input id="run-name" class="field" type="text" placeholder="my-container" /></label>
+        <label>Image <input id="run-image" class="field" type="text" list="image-list" placeholder="alpine:latest" /><datalist id="image-list"></datalist></label>
+        <label>Command <input id="run-command" class="field" type="text" placeholder="/bin/sh" value="/bin/sh" /></label>
+        <label>Args <input id="run-args" class="field" type="text" placeholder='-c "echo hello from coral"' /></label>
+        <label>Memory limit (MB, 0 = unlimited) <input id="run-memory" class="field" type="number" min="0" value="128" /></label>
+        <label>CPU limit (% of one core, 0 = unlimited) <input id="run-cpu" class="field" type="number" min="0" value="100" /></label>
+        <label>PID limit (0 = unlimited) <input id="run-pids" class="field" type="number" min="0" value="64" /></label>
+        <label>Network
+          <select id="run-network" class="field">
+            <option value="host">Host + DNS (internet &amp; localhost)</option>
+            <option value="bridge">Isolated Bridge NetNS (CLONE_NEWNET + TCP Port Proxy)</option>
+            <option value="none">None (air-gapped loopback only)</option>
+          </select>
+        </label>
+        <label>Restart policy
+          <select id="run-restart" class="field">
+            <option value="no">No (do not auto-restart)</option>
+            <option value="always">Always</option>
+            <option value="unless-stopped">Unless stopped</option>
+            <option value="on-failure:3">On failure (max 3 retries)</option>
+          </select>
+        </label>
+        <label>Healthcheck command (optional) <input id="run-health-cmd" class="field mono" type="text" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="e.g. test -f /tmp/ready" /></label>
+        <label>Ports (HOST:CONTAINER, comma/line) <input id="run-ports" class="field mono" type="text" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="8080:8000" /></label>
+        <label>Volumes (NAMED_VOL or /host/dir:CTR[:ro]) <textarea id="run-volumes" class="field area" rows="2" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="my-data:/data&#10;/host/dir:/mnt:ro"></textarea></label>
+        <label>Environment (KEY=VALUE per line) <textarea id="run-env" class="field area" rows="2" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="FOO=bar"></textarea></label>
+      </div>
+      <div class="form-row right">
+        <button class="btn" data-close="run-modal">Cancel</button>
+        <button id="run-submit" class="btn primary">Run</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add / Pull image modal -->
+  <div id="image-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="image-modal-heading">Pull or add image</h3>
+        <button type="button" class="sb" data-close="image-modal" aria-label="Close"></button>
+      </div>
+
+      <form id="oci-pull-form" class="modal-section" aria-labelledby="image-modal-heading">
+        <div class="field-group">
+          <label for="oci-image-ref">OCI image reference</label>
+          <div class="input-btn">
+            <input
+              id="oci-image-ref"
+              name="image"
+              class="field mono"
+              type="text"
+              required
+              autocorrect="off"
+              autocapitalize="none"
+              spellcheck="false"
+              enterkeyhint="done"
+              placeholder="e.g. debian:bookworm-slim, ubuntu:24.04, nginx:alpine, scratch"
+            />
+            <button id="oci-pull-submit" type="submit" class="btn primary">Pull</button>
+          </div>
+          <p class="hint">Pulls Linux layers from Docker Hub, Red Hat Registry, GHCR, or creates an empty <code>scratch</code> rootfs directly on the daemon host (Local, WSL2, or Remote).</p>
+        </div>
+      </form>
+
+      <details class="disclosure modal-disclosure">
+        <summary>Register local rootfs directory (offline)</summary>
+        <form id="local-rootfs-form" class="disclosure-body" aria-label="Register local rootfs">
+          <div class="form-grid">
+            <div class="field-group">
+              <label for="img-name">Image name</label>
+              <input
+                id="img-name"
+                name="name"
+                class="field"
+                type="text"
+                required
+                autocorrect="off"
+                autocapitalize="none"
+                spellcheck="false"
+                placeholder="my-alpine:local"
+              />
+            </div>
+            <div class="field-group">
+              <label for="img-rootfs">Rootfs directory</label>
+              <div class="input-btn">
+                <input
+                  id="img-rootfs"
+                  name="rootfs"
+                  class="field"
+                  type="text"
+                  required
+                  autocorrect="off"
+                  autocapitalize="none"
+                  spellcheck="false"
+                  placeholder="/path/to/rootfs"
+                />
+                <button id="img-pick" type="button" class="btn ic" title="Browse" aria-label="Browse"></button>
+              </div>
+            </div>
+          </div>
+          <p class="hint">Attaches an existing rootfs directory without downloading. On WSL2/remote, enter a Linux path.</p>
+          <div class="form-row right">
+            <button type="button" class="btn" data-close="image-modal">Cancel</button>
+            <button id="img-register" type="submit" class="btn primary">Register</button>
+          </div>
+        </form>
+      </details>
+
+      <details class="disclosure modal-disclosure">
+        <summary>Build custom image from Dockerfile</summary>
+        <form id="dockerfile-build-form" class="disclosure-body" aria-label="Build image from Dockerfile">
+          <div class="form-grid">
+            <div class="field-group">
+              <label for="build-tag">Target image tag</label>
+              <input
+                id="build-tag"
+                name="tag"
+                class="field mono"
+                type="text"
+                required
+                autocorrect="off"
+                autocapitalize="none"
+                spellcheck="false"
+                placeholder="my-service:v1"
+              />
+            </div>
+            <div class="field-group">
+              <label for="build-context">Build context directory (optional, for COPY/ADD)</label>
+              <input
+                id="build-context"
+                name="context"
+                class="field mono"
+                type="text"
+                autocorrect="off"
+                autocapitalize="none"
+                spellcheck="false"
+                placeholder="/path/to/context"
+              />
+            </div>
+          </div>
+          <div class="field-group" style="margin-top: 10px;">
+            <label for="build-dockerfile">Dockerfile instructions (<code>FROM</code>, <code>RUN</code>, <code>COPY</code>, <code>ENV</code>, <code>WORKDIR</code>)</label>
+            <textarea
+              id="build-dockerfile"
+              name="dockerfile"
+              class="field area mono"
+              rows="5"
+              required
+              autocorrect="off"
+              autocapitalize="none"
+              spellcheck="false"
+              placeholder="FROM alpine:3.20&#10;ENV APP_ENV=production&#10;RUN echo 'Built with Coral' > /etc/motd"
+            >FROM alpine:3.20
+ENV APP_ENV=production
+RUN echo "Built with Coral" > /etc/coral-build-info</textarea>
+          </div>
+          <div class="form-row right">
+            <label style="display:inline-flex;align-items:center;gap:6px;margin-right:auto;font-size:12px;">
+              <input id="build-no-cache" type="checkbox" />
+              No cache (rebuild every step)
+            </label>
+            <button type="button" class="btn" data-close="image-modal">Cancel</button>
+            <button id="build-submit" type="submit" class="btn primary">Build image</button>
+          </div>
+        </form>
+      </details>
+
+      <details class="disclosure modal-disclosure">
+        <summary>Import / Export archive (.tar.gz / .tar.zst) or tag image</summary>
+        <div class="disclosure-body">
+          <form id="archive-load-form" class="form-grid" aria-label="Load image archive">
+            <div class="field-group">
+              <label for="load-archive-path">Import archive path (<code>.tar</code>, <code>.tar.gz</code>, <code>.tar.zst</code>)</label>
+              <input id="load-archive-path" class="field mono" type="text" required autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="/path/to/image.tar.zst" />
+            </div>
+            <div class="field-group">
+              <label for="load-archive-tag">Optional tag override</label>
+              <div class="input-btn">
+                <input id="load-archive-tag" class="field mono" type="text" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="my-app:v1" />
+                <button id="load-archive-submit" type="submit" class="btn primary sm">Load</button>
+              </div>
+            </div>
+          </form>
+          <form id="img-tag-form" class="form-grid" style="margin-top:10px;" aria-label="Tag existing image">
+            <div class="field-group">
+              <label for="tag-source-img">Source image</label>
+              <input id="tag-source-img" class="field mono" type="text" list="image-list" required autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="alpine:3.20" />
+            </div>
+            <div class="field-group">
+              <label for="tag-target-img">New tag alias</label>
+              <div class="input-btn">
+                <input id="tag-target-img" class="field mono" type="text" required autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="my-base:stable" />
+                <button id="tag-submit" type="submit" class="btn sm">Tag</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </details>
+
+      <details class="disclosure modal-disclosure">
+        <summary>Registry Login &amp; Push Image (Docker Hub / GHCR / Harbor)</summary>
+        <div class="disclosure-body">
+          <form id="reg-login-form" class="form-grid" aria-label="OCI Registry login">
+            <div class="field-group">
+              <label for="reg-host">Registry</label>
+              <input id="reg-host" class="field mono" type="text" required autocorrect="off" autocapitalize="none" spellcheck="false" value="docker.io" placeholder="ghcr.io / docker.io / localhost:5000" />
+            </div>
+            <div class="field-group">
+              <label for="reg-user">Username</label>
+              <input id="reg-user" class="field mono" type="text" required autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="username" />
+            </div>
+            <div class="field-group" style="grid-column: 1 / -1;">
+              <label for="reg-pass">Password / Personal Access Token</label>
+              <div class="input-btn">
+                <input id="reg-pass" class="field mono" type="password" required autocomplete="current-password" placeholder="ghp_... or registry password" />
+                <button id="reg-login-submit" type="submit" class="btn sm primary">Login</button>
+              </div>
+            </div>
+          </form>
+          <form id="reg-push-form" class="form-grid" style="margin-top:10px;" aria-label="Push OCI image">
+            <div class="field-group" style="grid-column: 1 / -1;">
+              <label for="push-image-ref">Push tagged image to registry</label>
+              <div class="input-btn">
+                <input id="push-image-ref" class="field mono" type="text" list="image-list" required autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="ghcr.io/user/my-app:v1" />
+                <button id="push-submit" type="submit" class="btn sm primary">Push</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- Compose Stack modal -->
+  <div id="compose-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-head">
+        <h3>Coral Compose Stack (YAML)</h3>
+        <button type="button" class="sb" data-close="compose-modal" aria-label="Close"></button>
+      </div>
+      <div class="form-grid">
+        <label>Project name
+          <input id="compose-project" class="field mono" type="text" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="my-stack" value="demo-stack" />
+        </label>
+        <label>Base directory (optional, for relative volumes/build)
+          <input id="compose-basedir" class="field mono" type="text" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="/path/to/project" />
+        </label>
+      </div>
+      <div class="field-group" style="margin-top:10px;">
+        <label for="compose-yaml"><code>coral-compose.yml</code> / <code>docker-compose.yml</code></label>
+        <textarea id="compose-yaml" class="field area mono" rows="10" autocorrect="off" autocapitalize="none" spellcheck="false">services:
+  cache:
+    image: alpine:3.20
+    command: /bin/sh -c "echo CACHE_READY && sleep 30"
+  app:
+    image: alpine:3.20
+    depends_on:
+      - cache
+    environment:
+      CACHE_HOST: cache
+    command: /bin/sh -c "echo APP_CONNECTED_TO=$CACHE_HOST && cat /etc/hosts"</textarea>
+      </div>
+      <div class="form-row right">
+        <button id="compose-down-btn" type="button" class="btn danger">Compose Down</button>
+        <button type="button" class="btn" data-close="compose-modal">Cancel</button>
+        <button id="compose-up-btn" type="button" class="btn primary">Compose Up</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- System Prune modal -->
+  <div id="prune-modal" class="modal-backdrop hidden">
+    <div class="modal" style="width: 460px;">
+      <div class="modal-head">
+        <h3>System Prune</h3>
+        <button type="button" class="sb" data-close="prune-modal" aria-label="Close"></button>
+      </div>
+      <p class="hint" style="margin-top: 0;">Removes all exited containers, unused pod sandboxes, and Dockerfile build step cache layers to reclaim disk space.</p>
+      <div class="prune-checks">
+        <label class="inline-check">
+          <input id="prune-all" type="checkbox" />
+          Also remove all unused managed images (<code>--all</code>)
+        </label>
+        <label class="inline-check">
+          <input id="prune-volumes" type="checkbox" />
+          Also remove unused named volumes (<code>--volumes</code>)
+        </label>
+      </div>
+      <div class="form-row right">
+        <button type="button" class="btn" data-close="prune-modal">Cancel</button>
+        <button id="prune-submit" type="button" class="btn danger">Prune now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Container detail drawer -->
+  <div id="drawer-backdrop" class="drawer-backdrop hidden"></div>
+  <div id="detail-drawer" class="drawer hidden">
+    <div class="drawer-head">
+      <div class="dh-title"><span class="tile" id="detail-tile"></span><h3 id="detail-title">Container</h3></div>
+      <button id="detail-close" type="button" class="sb" aria-label="Close"></button>
+    </div>
+    <div id="detail-meta" class="detail-meta"></div>
+
+    <div id="detail-tablist" class="drawer-tablist" role="tablist" focusgroup="tablist nomemory" aria-label="Container workspace">
+      <button type="button" role="tab" id="dtab-logs" data-dtab="logs" aria-selected="true" tabindex="0" focusgroupstart>Logs</button>
+      <button type="button" role="tab" id="dtab-term" data-dtab="term" aria-selected="false" tabindex="-1">Terminal</button>
+      <button type="button" role="tab" id="dtab-metrics" data-dtab="metrics" aria-selected="false" tabindex="-1">Metrics &amp; CoW</button>
+    </div>
+
+    <div class="drawer-panels">
+      <div id="dpane-logs" class="drawer-panel" role="tabpanel" aria-labelledby="dtab-logs">
+        <div class="dpane-inner dpane-logs-inner">
+          <div class="pane-bar">
+            <span id="log-live-badge" class="live-badge">Idle</span>
+            <span class="spacer"></span>
+            <label class="inline-check">
+              <input id="log-autoscroll" type="checkbox" checked />
+              Auto-scroll
+            </label>
+            <button id="log-refresh" type="button" class="btn sm">Refresh</button>
+          </div>
+          <pre id="detail-log" class="console"></pre>
+        </div>
+      </div>
+
+      <div id="dpane-term" class="drawer-panel" role="tabpanel" aria-labelledby="dtab-term" hidden="until-found">
+        <div class="dpane-inner dpane-term-inner">
+          <div class="pane-bar term-bar">
+            <span id="pty-status-badge" class="live-badge">Exec Mode</span>
+            <button id="pty-connect-btn" type="button" class="btn sm primary">Connect PTY</button>
+            <button id="pty-ctrl-c" type="button" class="btn sm" title="Send Ctrl+C (SIGINT)">^C</button>
+            <div class="quick-chips">
+              <button type="button" class="chip-btn" data-term-quick="ls -la">ls -la</button>
+              <button type="button" class="chip-btn" data-term-quick="ps">ps</button>
+              <button type="button" class="chip-btn" data-term-quick="env">env</button>
+            </div>
+            <span class="spacer"></span>
+            <button id="term-clear" type="button" class="btn sm" title="Clear terminal (Ctrl+L)">Clear</button>
+          </div>
+          <pre id="term-output" class="console term-console" tabindex="0" aria-live="polite"></pre>
+          <div class="exec-row term-input-row">
+            <span id="term-prompt" class="prompt">root:/#</span>
+            <input
+              id="term-input"
+              type="text"
+              placeholder="Type command (or click terminal screen above for direct raw PTY keys)…"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="none"
+              spellcheck="false"
+            />
+            <button id="term-run" type="button" class="btn sm primary">Run</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="dpane-metrics" class="drawer-panel" role="tabpanel" aria-labelledby="dtab-metrics" hidden="until-found">
+        <div class="dpane-inner dpane-metrics-inner">
+          <div id="metrics-cards" class="metrics-grid"></div>
+          <div class="spark-grid">
+            <div class="spark-card">
+              <div class="spark-head"><span>Memory Usage</span><span id="spark-mem-val" class="mono">—</span></div>
+              <div id="spark-mem-svg" class="spark-wrap"></div>
+            </div>
+            <div class="spark-card">
+              <div class="spark-head"><span>CPU Time</span><span id="spark-cpu-val" class="mono">—</span></div>
+              <div id="spark-cpu-svg" class="spark-wrap"></div>
+            </div>
+          </div>
+          <details class="disclosure" open>
+            <summary>OverlayFS CoW Changes &amp; Commit to Image</summary>
+            <div class="disclosure-body">
+              <pre id="detail-overlay-diff" class="console" style="max-height: 120px; margin: 0 0 10px;">(no OverlayFS changes recorded)</pre>
+              <div class="input-btn">
+                <input
+                  id="commit-image-name"
+                  class="field mono"
+                  type="text"
+                  autocorrect="off"
+                  autocapitalize="none"
+                  spellcheck="false"
+                  placeholder="committed-app:v1"
+                />
+                <button id="commit-btn" type="button" class="btn primary sm">Commit CoW Layer</button>
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- floating row menu -->
+  <div id="row-menu" class="menu hidden"></div>
+
+  <div id="toasts" class="toasts"></div>
+  <script src="js/icons.js"></script>
+  <script src="js/catalog-data.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/connection.js"></script>
+  <script src="js/terminal.js"></script>
+  <script src="js/containers.js"></script>
+  <script src="js/volumes.js"></script>
+  <script src="js/nextgen.js"></script>
+  <script src="js/pods.js"></script>
+  <script src="js/images.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

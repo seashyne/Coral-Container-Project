@@ -1,0 +1,296 @@
+syntax = "proto3";
+
+package runtime.v1;
+
+// RuntimeService defines the public CRI v1 API for managing pod sandboxes and containers.
+service RuntimeService {
+  rpc Version (VersionRequest) returns (VersionResponse);
+
+  // PodSandbox lifecycle
+  rpc RunPodSandbox (RunPodSandboxRequest) returns (RunPodSandboxResponse);
+  rpc StopPodSandbox (StopPodSandboxRequest) returns (StopPodSandboxResponse);
+  rpc RemovePodSandbox (RemovePodSandboxRequest) returns (RemovePodSandboxResponse);
+  rpc ListPodSandbox (ListPodSandboxRequest) returns (ListPodSandboxResponse);
+
+  // Container lifecycle
+  rpc CreateContainer (CreateContainerRequest) returns (CreateContainerResponse);
+  rpc StartContainer (StartContainerRequest) returns (StartContainerResponse);
+  rpc StopContainer (StopContainerRequest) returns (StopContainerResponse);
+  rpc RemoveContainer (RemoveContainerRequest) returns (RemoveContainerResponse);
+  rpc ListContainers (ListContainersRequest) returns (ListContainersResponse);
+  rpc ContainerStatus (ContainerStatusRequest) returns (ContainerStatusResponse);
+  rpc ExecSync (ExecSyncRequest) returns (ExecSyncResponse);
+  rpc ExecStream (stream ExecStreamRequest) returns (stream ExecStreamResponse);
+}
+
+// ImageService defines the CRI v1 API for managing container images/bundles.
+service ImageService {
+  rpc ListImages (ListImagesRequest) returns (ListImagesResponse);
+  rpc ImageStatus (ImageStatusRequest) returns (ImageStatusResponse);
+  rpc PullImage (PullImageRequest) returns (PullImageResponse);
+  rpc RemoveImage (RemoveImageRequest) returns (RemoveImageResponse);
+}
+
+message VersionRequest {
+  string version = 1;
+}
+
+message VersionResponse {
+  string version = 1;
+  string runtime_name = 2;
+  string runtime_version = 3;
+  string runtime_api_version = 4;
+}
+
+message KeyValue {
+  string key = 1;
+  string value = 2;
+}
+
+message PodSandboxMetadata {
+  string name = 1;
+  string uid = 2;
+  string namespace = 3;
+  uint32 attempt = 4;
+}
+
+message PodSandboxConfig {
+  PodSandboxMetadata metadata = 1;
+  string hostname = 2;
+  string log_directory = 3;
+  map<string, string> labels = 4;
+  map<string, string> annotations = 5;
+}
+
+enum PodSandboxState {
+  SANDBOX_READY = 0;
+  SANDBOX_NOTREADY = 1;
+}
+
+message PodSandbox {
+  string id = 1;
+  PodSandboxMetadata metadata = 2;
+  PodSandboxState state = 3;
+  int64 created_at = 4;
+  map<string, string> labels = 5;
+  map<string, string> annotations = 6;
+}
+
+message RunPodSandboxRequest {
+  PodSandboxConfig config = 1;
+  string runtime_handler = 2;
+}
+
+message RunPodSandboxResponse {
+  string pod_sandbox_id = 1;
+}
+
+message StopPodSandboxRequest {
+  string pod_sandbox_id = 1;
+}
+
+message StopPodSandboxResponse {}
+
+message RemovePodSandboxRequest {
+  string pod_sandbox_id = 1;
+}
+
+message RemovePodSandboxResponse {}
+
+message PodSandboxFilter {
+  string id = 1;
+  map<string, string> label_selector = 2;
+}
+
+message ListPodSandboxRequest {
+  PodSandboxFilter filter = 1;
+}
+
+message ListPodSandboxResponse {
+  repeated PodSandbox items = 1;
+}
+
+message ContainerMetadata {
+  string name = 1;
+  uint32 attempt = 2;
+}
+
+message ImageSpec {
+  string image = 1;
+  map<string, string> annotations = 2;
+}
+
+message LinuxContainerResources {
+  int64 cpu_period = 1;
+  int64 cpu_quota = 2;
+  int64 cpu_shares = 3;
+  int64 memory_limit_in_bytes = 4;
+  int64 pids_limit = 5;
+}
+
+message LinuxContainerConfig {
+  LinuxContainerResources resources = 1;
+}
+
+message ContainerConfig {
+  ContainerMetadata metadata = 1;
+  ImageSpec image = 2;
+  repeated string command = 3;
+  repeated string args = 4;
+  string working_dir = 5;
+  repeated KeyValue envs = 6;
+  map<string, string> labels = 7;
+  map<string, string> annotations = 8;
+  string log_path = 9;
+  LinuxContainerConfig linux = 10;
+}
+
+enum ContainerState {
+  CONTAINER_CREATED = 0;
+  CONTAINER_RUNNING = 1;
+  CONTAINER_EXITED = 2;
+  CONTAINER_UNKNOWN = 3;
+}
+
+message Container {
+  string id = 1;
+  string pod_sandbox_id = 2;
+  ContainerMetadata metadata = 3;
+  ImageSpec image = 4;
+  string image_ref = 5;
+  ContainerState state = 6;
+  int64 created_at = 7;
+  map<string, string> labels = 8;
+  map<string, string> annotations = 9;
+}
+
+message CreateContainerRequest {
+  string pod_sandbox_id = 1;
+  ContainerConfig config = 2;
+  PodSandboxConfig sandbox_config = 3;
+}
+
+message CreateContainerResponse {
+  string container_id = 1;
+}
+
+message StartContainerRequest {
+  string container_id = 1;
+}
+
+message StartContainerResponse {}
+
+message StopContainerRequest {
+  string container_id = 1;
+  int64 timeout = 2;
+}
+
+message StopContainerResponse {}
+
+message RemoveContainerRequest {
+  string container_id = 1;
+}
+
+message RemoveContainerResponse {}
+
+message ContainerFilter {
+  string id = 1;
+  string pod_sandbox_id = 2;
+  map<string, string> label_selector = 3;
+}
+
+message ListContainersRequest {
+  ContainerFilter filter = 1;
+}
+
+message ListContainersResponse {
+  repeated Container containers = 1;
+}
+
+message ContainerStatus {
+  string id = 1;
+  ContainerMetadata metadata = 2;
+  ContainerState state = 3;
+  int64 created_at = 4;
+  int64 started_at = 5;
+  int64 finished_at = 6;
+  int32 exit_code = 7;
+  ImageSpec image = 8;
+  string image_ref = 9;
+  string reason = 10;
+  string message = 11;
+  map<string, string> labels = 12;
+  map<string, string> annotations = 13;
+}
+
+message ContainerStatusRequest {
+  string container_id = 1;
+  bool verbose = 2;
+}
+
+message ContainerStatusResponse {
+  ContainerStatus status = 1;
+  map<string, string> info = 2;
+}
+
+message ExecSyncRequest {
+  string container_id = 1;
+  repeated string cmd = 2;
+  int64 timeout = 3;
+}
+
+message ExecSyncResponse {
+  bytes stdout = 1;
+  bytes stderr = 2;
+  int32 exit_code = 3;
+}
+
+message ExecStreamRequest {
+  string container_id = 1;
+  repeated string cmd = 2;
+  uint32 cols = 3;
+  uint32 rows = 4;
+  bytes stdin = 5;
+  bool resize = 6;
+}
+
+message ExecStreamResponse {
+  bytes data = 1;
+  bool exited = 2;
+  int32 exit_code = 3;
+}
+
+message Image {
+  string id = 1;
+  repeated string repo_tags = 2;
+  uint64 size = 3;
+  string rootfs_path = 4;
+}
+
+message ListImagesRequest {}
+
+message ListImagesResponse {
+  repeated Image images = 1;
+}
+
+message ImageStatusRequest {
+  ImageSpec image = 1;
+}
+
+message ImageStatusResponse {
+  Image image = 1;
+}
+
+message PullImageRequest {
+  ImageSpec image = 1;
+}
+
+message PullImageResponse {
+  string image_ref = 1;
+}
+
+message RemoveImageRequest {
+  ImageSpec image = 1;
+}
+
+message RemoveImageResponse {}

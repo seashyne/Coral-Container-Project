@@ -1,0 +1,42 @@
+[package]
+name = "coral-daemon"
+description = "Kubernetes CRI v1 gRPC daemon for Coral Container Runtime"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "coral-daemon"
+path = "src/main.rs"
+
+[lib]
+name = "coral_daemon"
+path = "src/lib.rs"
+
+[dependencies]
+anyhow.workspace = true
+chrono.workspace = true
+clap.workspace = true
+coral-api.workspace = true
+coral-cgroups.workspace = true
+coral-net.workspace = true
+coral-oci.workspace = true
+coral-runtime.workspace = true
+coral-vmm.workspace = true
+coral-wasm.workspace = true
+flate2.workspace = true
+futures-util.workspace = true
+libc.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tar.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+tonic.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

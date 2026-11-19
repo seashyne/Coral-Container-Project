@@ -1,0 +1,30 @@
+[package]
+name = "coral-cli"
+description = "OCI-compatible CLI and CRI client for Coral Container Runtime"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "coral"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+chrono.workspace = true
+clap.workspace = true
+coral-api.workspace = true
+coral-cgroups.workspace = true
+coral-daemon.workspace = true
+coral-net.workspace = true
+coral-oci.workspace = true
+coral-runtime.workspace = true
+coral-vmm.workspace = true
+coral-wasm.workspace = true
+libc.workspace = true
+serde_json.workspace = true
+tar.workspace = true
+tokio.workspace = true
+tonic.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true

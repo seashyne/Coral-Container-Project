@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Coral Container Runtime v2.0 — Rust OCI, Wasm &amp; KVM MicroVM Docs</title>
+  <meta name="description" content="Coral v2.0 — Memory-safe Rust OCI v1.0.2 container runtime, Kubernetes CRI v1 gRPC daemon, WASI WebAssembly runtime (coral-wasm), native /dev/kvm MicroVM &amp; AI Agent Sandbox (coral-vmm), and Coral Desktop.">
+  <meta name="color-scheme" content="light dark">
+  <script>
+    try {
+      var saved = localStorage.getItem("color-scheme");
+      if (saved === "light" || saved === "dark") {
+        document.querySelector('meta[name="color-scheme"]').content = saved;
+      }
+    } catch (e) {}
+  </script>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand-link" href="#overview">
+        <img class="brand-icon" src="assets/coral-icon.png" alt="" width="32" height="32">
+        <span>Coral Runtime</span>
+        <span class="version-pill" id="topbar-version">v2.0.0</span>
+      </a>
+
+      <div class="topbar-actions">
+        <a class="nav-pill" href="https://github.com/seashyne/Coral-Container-Project/releases" target="_blank" rel="noopener" data-i18n="topbar.releases">Releases</a>
+        <a class="nav-pill" href="https://github.com/seashyne/Coral-Container-Project" target="_blank" rel="noopener">GitHub</a>
+
+        <button type="button" id="lang-toggle" class="icon-btn" aria-label="Switch language">
+          <span id="lang-label">EN</span>
+        </button>
+
+        <button type="button" id="theme-toggle" class="icon-btn theme-toggle">
+          <span class="state-to-dark">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+            <span class="sr-only" data-i18n="topbar.themeDark">เปลี่ยนเป็นธีมมืด</span>
+          </span>
+          <span class="state-to-light">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="12" cy="12" r="5"/>
+              <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+            </svg>
+            <span class="sr-only" data-i18n="topbar.themeLight">เปลี่ยนเป็นธีมสว่าง</span>
+          </span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="page-shell">
+    <aside class="sidebar">
+      <p class="toc-heading" data-i18n="topbar.toc">สารบัญ</p>
+      <nav class="toc-nav" aria-label="Documentation sections">
+        <a href="#overview" data-i18n="nav.overview">ภาพรวม</a>
+        <a href="#install" data-i18n="nav.install">ดาวน์โหลด &amp; ติดตั้ง</a>
+        <a href="#quickstart" data-i18n="nav.quickstart">ตัวอย่างคำสั่ง CLI</a>
+        <a href="#nextgen" data-i18n="nav.nextgen">Wasm &amp; KVM MicroVM</a>
+        <a href="#desktop" data-i18n="nav.desktop">Coral Desktop</a>
+        <a href="#benchmarks" data-i18n="nav.benchmarks">ผลทดสอบ &amp; เปรียบเทียบ</a>
+        <a href="#architecture" data-i18n="nav.architecture">สถาปัตยกรรม 10 Crates</a>
+        <a href="#support" data-i18n="nav.support">สนับสนุน / โดเนท</a>
+      </nav>
+    </aside>
+
+    <main class="doc-main">
+      <!-- 1. Overview / Hero -->
+      <section id="overview" class="doc-section" tabindex="-1">
+        <div class="hero">
+          <div class="hero-badge" data-i18n="hero.badge">Release v2.0.0 · Rust Edition 2024 · Apache-2.0</div>
+          <h1 data-i18n="hero.title">Container Runtime ยุคใหม่ด้วย Rust</h1>
+          <p class="hero-subtitle" data-i18n="hero.subtitle">
+            รันคอนเทนเนอร์ OCI แบบ Rootless, จัดการผ่าน Kubernetes CRI v1 gRPC, รัน WebAssembly ระดับไมโครวินาที (coral-wasm) และแยกเคอร์เนลด้วย KVM 64-bit MicroVM &amp; AI Agent Sandbox (coral-vmm) ครบจบในชุดเดียว
+          </p>
+
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#install" data-i18n="hero.ctaInstall">ดาวน์โหลด &amp; ติดตั้ง v2.0.0</a>
+            <a class="btn btn-secondary" href="https://github.com/seashyne/Coral-Container-Project" target="_blank" rel="noopener" data-i18n="hero.ctaGithub">ดูซอร์สโค้ดบน GitHub</a>
+            <a class="btn btn-teal" href="#support" data-i18n="hero.ctaSupport">สนับสนุนโปรเจกต์</a>
+          </div>
+
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-value">326 µs</div>
+              <div class="metric-label" data-i18n="metric.wasmLabel">WASI WebAssembly Cold Start</div>
+              <div class="metric-sub" data-i18n="metric.wasmSub">coral-wasm · wasmi 2.0 (Fuel + RAM cap)</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value">2.94 ms</div>
+              <div class="metric-label" data-i18n="metric.kvmLabel">Native /dev/kvm 64-bit Boot</div>
+              <div class="metric-sub" data-i18n="metric.kvmSub">coral-vmm · Pure-Rust Long Mode MicroVM</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value">41 ms</div>
+              <div class="metric-label" data-i18n="metric.sandboxLabel">AI Agent Sandbox Execution</div>
+              <div class="metric-sub" data-i18n="metric.sandboxSub">Zero-network · Read-Only · Hard timeout</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value">60 / 60</div>
+              <div class="metric-label" data-i18n="metric.testsLabel">Automated E2E &amp; Unit Tests</div>
+              <div class="metric-sub" data-i18n="metric.testsSub">0 Clippy warnings · 10 Rust Crates</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 32px;">
+          <h2 data-i18n="overview.title">ทำไมต้อง Coral?</h2>
+          <p class="section-lead" data-i18n="overview.lead">
+            Coral ออกแบบมาเพื่อแก้ปัญหาความช้าของ Runtime แบบเก่า ลดช่องโหว่ด้านหน่วยความจำด้วย Rust และเพิ่มความสามารถระดับ Next-Gen สำหรับยุค AI Agent และ Serverless WebAssembly
+          </p>
+          <div class="cards-grid">
+            <article class="card">
+              <span class="card-tag">coral-runtime · coral-oci</span>
+              <h3 data-i18n="feat.oci.title">OCI v1.0.2 &amp; Rootless by Default</h3>
+              <p data-i18n="feat.oci.desc"></p>
+            </article>
+            <article class="card">
+              <span class="card-tag">coral-daemon · coral-cli</span>
+              <h3 data-i18n="feat.dev.title">Workflow ครบเทียบชั้น Docker/Podman</h3>
+              <p data-i18n="feat.dev.desc"></p>
+            </article>
+            <article class="card">
+              <span class="card-tag">coral-wasm · WASI Preview 1</span>
+              <h3 data-i18n="feat.wasm.title">WebAssembly Runtime (coral-wasm)</h3>
+              <p data-i18n="feat.wasm.desc"></p>
+            </article>
+            <article class="card">
+              <span class="card-tag">coral-vmm · /dev/kvm</span>
+              <h3 data-i18n="feat.vmm.title">KVM MicroVM &amp; AI Sandbox (coral-vmm)</h3>
+              <p data-i18n="feat.vmm.desc"></p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. Download & Install -->
+      <section id="install" class="doc-section" tabindex="-1">
+        <h2 data-i18n="install.title">ดาวน์โหลด &amp; วิธีติดตั้ง</h2>
+        <p class="section-lead" data-i18n="install.lead">
+          เลือกวิธีติดตั้งที่เหมาะกับระบบของคุณ — รองรับ Linux x86_64 (Rootless-first) และ Windows ผ่าน WSL2 + Coral Desktop
+        </p>
+
+        <div class="tabs" data-tabs="install">
+          <div class="tablist" role="tablist" focusgroup="tablist nomemory" aria-label="Installation methods">
+            <button type="button" role="tab" id="tab-oneliner" aria-selected="true" focusgroupstart tabindex="0" data-i18n="install.tabOneliner">One-Liner (Linux)</button>
+            <button type="button" role="tab" id="tab-deb" aria-selected="false" tabindex="-1" data-i18n="install.tabDeb">Debian / Ubuntu (.deb)</button>
+            <button type="button" role="tab" id="tab-desktop" aria-selected="false" tabindex="-1" data-i18n="install.tabDesktop">Coral Desktop (GUI)</button>
+            <button type="button" role="tab" id="tab-source" aria-selected="false" tabindex="-1" data-i18n="install.tabSource">Build จากซอร์ส</button>
+          </div>
+
+          <div class="tab-panels">
+            <div role="tabpanel" aria-labelledby="tab-oneliner" tabindex="0">
+              <div class="tab-panel-body">
+                <p data-i18n="install.onelinerDesc"></p>
+                <div class="code-block">
+                  <button type="button" class="copy-btn" data-copy-target="code-oneliner" data-i18n="copy.btn">คัดลอก</button>
+                  <pre id="code-oneliner"><code>curl -fsSL https://seashyne.github.io/Coral-Container-Project/install.sh | bash</code></pre>
+                </div>
+                <p data-i18n="install.onelinerVerify"></p>
+                <div class="code-block">
+                  <button type="button" class="copy-btn" data-copy-target="code-verify" data-i18n="copy.btn">คัดลอก</button>
+                  <pre id="code-verify"><code>coral version
+coral vm probe
+coral run alpine:3.20 /bin/sh -c 'echo "Hello from Coral PID=$$"'</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div role="tabpanel" aria-labelledby="tab-deb" hidden="until-found">
+              <div class="tab-panel-body">
+                <p data-i18n="install.debDesc"></p>
+                <div class="download-bar">
+                  <a class="btn btn-primary" id="dl-deb-link" href="https://github.com/seashyne/Coral-Container-Project/releases/download/v2.0.0/coral-runtime_2.0.0_amd64.deb" target="_blank" rel="noopener" data-i18n="install.downloadDeb">ดาวน์โหลด coral-runtime_2.0.0_amd64.deb</a>
+                  <a class="btn btn-secondary" id="dl-tar-link" href="https://github.com/seashyne/Coral-Container-Project/releases/download/v2.0.0/coral-v2.0.0-linux-x86_64.tar.gz" target="_blank" rel="noopener" data-i18n="install.downloadTar">ดาวน์โหลด coral-v2.0.0-linux-x86_64.tar.gz</a>
+                </div>
+                <div class="code-block">
+                  <button type="button" class="copy-btn" data-copy-target="code-deb" data-i18n="copy.btn">คัดลอก</button>
+                  <pre id="code-deb"><code>curl -fsSLO https://github.com/seashyne/Coral-Container-Project/releases/download/v2.0.0/coral-runtime_2.0.0_amd64.deb
+sudo dpkg -i coral-runtime_2.0.0_amd64.deb
+systemctl --user enable --now coral-daemon.service
+coral version</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div role="tabpanel" aria-labelledby="tab-desktop" hidden="until-found">
+              <div class="tab-panel-body">
+                <p data-i18n="install.desktopDesc"></p>
+                <div class="cards-grid">
+                  <div class="card">
+                    <h3 data-i18n="install.desktopLinuxTitle">Linux (Ubuntu / Fedora / AppImage)</h3>
+                    <p data-i18n="install.desktopLinuxStep"></p>
+                  </div>
+                  <div class="card">
+                    <h3 data-i18n="install.desktopWinTitle">Windows 10 / 11 (WSL2)</h3>
+                    <p data-i18n="install.desktopWinStep"></p>
+                  </div>
+                </div>
+                <div class="download-bar" style="margin-top: 16px;">
+                  <a class="btn btn-primary" href="https://github.com/seashyne/Coral-Container-Project/releases/latest" target="_blank" rel="noopener" data-i18n="install.allReleases">ดูไฟล์ทั้งหมดบน GitHub Releases</a>
+                </div>
+              </div>
+            </div>
+
+            <div role="tabpanel" aria-labelledby="tab-source" hidden="until-found">
+              <div class="tab-panel-body">
+                <p data-i18n="install.sourceDesc"></p>
+                <div class="code-block">
+                  <button type="button" class="copy-btn" data-copy-target="code-source" data-i18n="copy.btn">คัดลอก</button>
+                  <pre id="code-source"><code>git clone https://github.com/seashyne/Coral-Container-Project.git
+cd Coral-Container-Project/coral_repo
+./install.sh          # compiles --release &amp; installs ~/.local/bin/coral
+./verify.sh           # runs 60 unit/E2E tests + strict Clippy -D warnings</code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="callout">
+          <strong data-i18n="install.prereqTitle">ข้อกำหนดระบบ (Prerequisites)</strong>
+          <span data-i18n="install.prereqList"></span>
+        </div>
+      </section>
+
+      <!-- 3. CLI Cookbook -->
+      <section id="quickstart" class="doc-section" tabindex="-1">
+        <h2 data-i18n="cli.title">คู่มือและตัวอย่างคำสั่ง CLI</h2>
+        <p class="section-lead" data-i18n="cli.lead"></p>
+
+        <div class="tabs" data-tabs="cli">
+          <div class="tablist" role="tablist" focusgroup="tablist nomemory" aria-label="CLI examples">
+            <button type="button" role="tab" id="tab-cli-containers" aria-selected="true" focusgroupstart tabindex="0" data-i18n="cli.tabContainers">Containers &amp; Exec</button>
+            <button type="button" role="tab" id="tab-cli-build" aria-selected="false" tabindex="-1" data-i18n="cli.tabBuild">Build, Compose &amp; Push</button>
+            <button type="button" role="tab" id="tab-cli-wasm" aria-selected="false" tabindex="-1" data-i18n="cli.tabWasm">WebAssembly (Wasm)</button>
+            <button type="button" role="tab" id="tab-cli-vmm" aria-selected="false" tabindex="-1" data-i18n="cli.tabVmm">KVM MicroVM &amp; Sandbox</button>
+          </div>
+
+          <div class="tab-panels">
+            <div role="tabpanel" aria-labelledby="tab-cli-containers" tabindex="0">
+              <div class="tab-panel-body">
+                <div class="code-block">
+                  <button type="button" class="copy-btn" data-copy-target="code-cli-1" data-i18n="copy.btn">คัดลอก</button>
+                  <pre id="code-cli-1"><code># Run interactive rootless container with memory/PID limits &amp; named volume
+coral volume create app-data
+coral run -it --name web --memory 128m --pids-limit 64 -v app-data:/data -p 8080:80 alpine:3.20 /bin/sh
+
+# Detached container with live healthcheck &amp; auto-restart across daemon reboot
+coral run -d --name worker --restart always \
+  --health-cmd "test -f /tmp/ready" --health-interval 5 \
+  alpine:3.20 /bin/sh -c 'touch /tmp/ready; sleep 3600'
+
+# Inspect, live logs, real setns exec, live CPU/RAM metrics &amp; file copy
+coral ps
+coral logs -f --tail 50 worker
+coral exec -it worker /bin/sh
+coral stats --watch worker
+coral cp ./config.yaml worker:/data/config.yaml</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div role="tabpanel" aria-labelledby="tab-cli-build" hidden="until-found">
+              <div class="tab-panel-body">
+                <div class="code-block">
+                  <button type="button" class="copy-btn" data-copy-target="code-cli-2" data-i18n="copy.btn">คัดลอก</button>
+                  <pre id="code-cli-2"><code># Build OCI image from Dockerfile with Content-Addressable Step Cache
+coral build -t myapp:2.0 .
+
+# Multi-container stack with depends_on topological ordering
+coral compose up -d
+coral compose ps
+coral compose logs -f
+coral compose down
+
+# Private Registry authentication &amp; OCI Distribution v2 push
+coral login ghcr.io -u seashyne
+coral tag myapp:2.0 ghcr.io/seashyne/myapp:2.0
+coral push ghcr.io/seashyne/myapp:2.0
+
+# Offline image export/import (.tar, .tar.gz, .tar.zst) &amp; disk cleanup
+coral save myapp:2.0 -o myapp.tar.zst
+coral load -i myapp.tar.zst
+coral system df
+coral system prune --all</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div role="tabpanel" aria-labelledby="tab-cli-wasm" hidden="until-found">
+              <div class="tab-panel-body">
+                <div class="code-block">
+                  <button type="button" class="copy-btn" data-copy-target="code-cli-3" data-i18n="copy.btn">คัดลอก</button>
+                  <pre id="code-cli-3"><code># Run any WASI Preview 1 .wasm or .wat module directly in microseconds
+coral wasm run hello.wasm --fuel 5000000 --memory-mb 32 --json
+
+# Pack a .wasm binary into an OCI image (zero Linux rootfs overhead)
+coral wasm pack hello.wasm hello-wasm:v1
+
+# Run as a first-class container workload via --runtime wasm
+coral run --runtime wasm hello-wasm:v1</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div role="tabpanel" aria-labelledby="tab-cli-vmm" hidden="until-found">
+              <div class="tab-panel-body">
+                <div class="code-block">
+                  <button type="button" class="copy-btn" data-copy-target="code-cli-4" data-i18n="copy.btn">คัดลอก</button>
+                  <pre id="code-cli-4"><code># Verify host VT-x/AMD-V hardware &amp; boot a 64-bit Long Mode /dev/kvm MicroVM
+coral vm probe
+
+# Execute a raw 64-bit x86-64 payload inside hardware KVM with strict exit budget
+coral vm run payload.bin --memory-mb 16 --timeout-ms 2000 --max-exits 50000
+
+# Run untrusted / AI-generated code in a zero-network, read-only, hard-timeout sandbox
+coral sandbox run --image alpine:3.20 --timeout 5 --memory-mb 64 --json -- \
+  /bin/sh -c 'echo "Isolated PID=$$ UID=$(id -u)"'</code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. Next-Gen Deep Dive -->
+      <section id="nextgen" class="doc-section" tabindex="-1">
+        <h2 data-i18n="nextgen.title">เจาะลึกฟีเจอร์ Next-Gen (v2.0)</h2>
+        <p class="section-lead" data-i18n="nextgen.lead"></p>
+
+        <div class="cards-grid">
+          <article class="card">
+            <span class="card-tag">coral-wasm</span>
+            <h3 data-i18n="nextgen.wasmCardTitle"></h3>
+            <ul>
+              <li data-i18n="nextgen.wasmBullet1"></li>
+              <li data-i18n="nextgen.wasmBullet2"></li>
+              <li data-i18n="nextgen.wasmBullet3"></li>
+              <li data-i18n="nextgen.wasmBullet4"></li>
+            </ul>
+          </article>
+
+          <article class="card">
+            <span class="card-tag">coral-vmm</span>
+            <h3 data-i18n="nextgen.vmmCardTitle"></h3>
+            <ul>
+              <li data-i18n="nextgen.vmmBullet1"></li>
+              <li data-i18n="nextgen.vmmBullet2"></li>
+              <li data-i18n="nextgen.vmmBullet3"></li>
+              <li data-i18n="nextgen.vmmBullet4"></li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <!-- 5. Coral Desktop -->
+      <section id="desktop" class="doc-section" tabindex="-1">
+        <h2 data-i18n="desktop.title">Coral Desktop (Tauri v2)</h2>
+        <p class="section-lead" data-i18n="desktop.lead"></p>
+
+        <div class="cards-grid">
+          <article class="card">
+            <span class="card-tag">CRI ExecStream</span>
+            <h3 data-i18n="desktop.f1Title"></h3>
+            <p data-i18n="desktop.f1Desc"></p>
+          </article>
+          <article class="card">
+            <span class="card-tag">Observability</span>
+            <h3 data-i18n="desktop.f2Title"></h3>
+            <p data-i18n="desktop.f2Desc"></p>
+          </article>
+          <article class="card">
+            <span class="card-tag">Ecosystem</span>
+            <h3 data-i18n="desktop.f3Title"></h3>
+            <p data-i18n="desktop.f3Desc"></p>
+          </article>
+          <article class="card">
+            <span class="card-tag">v2.0 UI</span>
+            <h3 data-i18n="desktop.f4Title"></h3>
+            <p data-i18n="desktop.f4Desc"></p>
+          </article>
+        </div>
+      </section>
+
+      <!-- 6. Benchmarks & Comparison Table -->
+      <section id="benchmarks" class="doc-section" tabindex="-1">
+        <h2 data-i18n="bench.title">ผลทดสอบจริง &amp; ตารางเปรียบเทียบ</h2>
+        <p class="section-lead" data-i18n="bench.lead"></p>
+
+        <div tabindex="0" role="region" aria-labelledby="bench-caption" class="table-wrapper">
+          <table class="data-table" id="bench-table">
+            <caption id="bench-caption" data-i18n="bench.caption"></caption>
+            <thead>
+              <tr>
+                <th scope="col" data-i18n="bench.colFeature">คุณสมบัติ / ตัวชี้วัด</th>
+                <th scope="col" data-i18n="bench.colCoral">Coral v2.0 (Rust)</th>
+                <th scope="col" data-i18n="bench.colRunc">runc (Go)</th>
+                <th scope="col" data-i18n="bench.colDocker">Docker Engine</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row" data-i18n="bench.r1"></th>
+                <td class="col-highlight" data-i18n="bench.r1c"></td>
+                <td data-i18n="bench.r1r"></td>
+                <td data-i18n="bench.r1d"></td>
+              </tr>
+              <tr>
+                <th scope="row" data-i18n="bench.r2"></th>
+                <td class="col-highlight" data-i18n="bench.r2c"></td>
+                <td data-i18n="bench.r2r"></td>
+                <td data-i18n="bench.r2d"></td>
+              </tr>
+              <tr>
+                <th scope="row" data-i18n="bench.r3"></th>
+                <td class="col-highlight" data-i18n="bench.r3c"></td>
+                <td data-i18n="bench.r3r"></td>
+                <td data-i18n="bench.r3d"></td>
+              </tr>
+              <tr>
+                <th scope="row" data-i18n="bench.r4"></th>
+                <td class="col-highlight" data-i18n="bench.r4c"></td>
+                <td data-i18n="bench.r4r"></td>
+                <td data-i18n="bench.r4d"></td>
+              </tr>
+              <tr>
+                <th scope="row" data-i18n="bench.r5"></th>
+                <td class="col-highlight" data-i18n="bench.r5c"></td>
+                <td data-i18n="bench.r5r"></td>
+                <td data-i18n="bench.r5d"></td>
+              </tr>
+              <tr>
+                <th scope="row" data-i18n="bench.r6"></th>
+                <td class="col-highlight" data-i18n="bench.r6c"></td>
+                <td data-i18n="bench.r6r"></td>
+                <td data-i18n="bench.r6d"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 7. Architecture Table -->
+      <section id="architecture" class="doc-section" tabindex="-1">
+        <h2 data-i18n="arch.title">สถาปัตยกรรม 10 Rust Crates</h2>
+        <p class="section-lead" data-i18n="arch.lead"></p>
+
+        <div tabindex="0" role="region" aria-labelledby="arch-caption" class="table-wrapper">
+          <table class="data-table" id="arch-table">
+            <caption id="arch-caption" data-i18n="arch.caption"></caption>
+            <thead>
+              <tr>
+                <th scope="col" data-i18n="arch.colCrate">Crate</th>
+                <th scope="col" data-i18n="arch.colPath">Path</th>
+                <th scope="col" data-i18n="arch.colRole">Responsibility</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code class="inline">coral-api</code></th>
+                <td><code class="inline">coral_repo/api</code></td>
+                <td>Kubernetes CRI v1 Protobuf &amp; Tonic gRPC bindings (including bidirectional <code class="inline">ExecStream</code> PTY)</td>
+              </tr>
+              <tr>
+                <th scope="row"><code class="inline">coral-oci</code></th>
+                <td><code class="inline">coral_repo/pkg/oci</code></td>
+                <td>OCI Runtime Specification v1.0.2 parser, validator &amp; <code class="inline">state.json</code> model</td>
+              </tr>
+              <tr>
+                <th scope="row"><code class="inline">coral-cgroups</code></th>
+                <td><code class="inline">coral_repo/pkg/cgroups</code></td>
+                <td>Cgroups v2 memory/CPU/PIDs enforcement &amp; live kernel telemetry</td>
+              </tr>
+              <tr>
+                <th scope="row"><code class="inline">coral-net</code></th>
+                <td><code class="inline">coral_repo/pkg/networking</code></td>
+                <td>CNI v1.0.0 bridge, custom networks, sibling <code class="inline">/etc/hosts</code> &amp; <code class="inline">pasta</code>/<code class="inline">slirp4netns</code> egress</td>
+              </tr>
+              <tr>
+                <th scope="row"><code class="inline">coral-runtime</code></th>
+                <td><code class="inline">coral_repo/pkg/runtime</code></td>
+                <td>Root/rootless lifecycle, OverlayFS CoW, Seccomp-BPF, Cap drop, PTY &amp; <code class="inline">setns</code> exec</td>
+              </tr>
+              <tr>
+                <th scope="row"><code class="inline">coral-wasm</code></th>
+                <td><code class="inline">coral_repo/pkg/wasm</code></td>
+                <td>WASI Preview 1 WebAssembly runtime (<code class="inline">wasmi 2.0</code>) with fuel &amp; linear memory ceilings</td>
+              </tr>
+              <tr>
+                <th scope="row"><code class="inline">coral-vmm</code></th>
+                <td><code class="inline">coral_repo/pkg/vmm</code></td>
+                <td>Pure-Rust Linux <code class="inline">/dev/kvm</code> 64-bit Long Mode hypervisor, <code class="inline">newc</code> initramfs &amp; AI Sandbox</td>
+              </tr>
+              <tr>
+                <th scope="row"><code class="inline">coral-daemon</code></th>
+                <td><code class="inline">coral_repo/cmd/coral-daemon</code></td>
+                <td>Tokio + Tonic CRI v1 server, step-cached builds, OCI push/pull, persistence &amp; auto-resume</td>
+              </tr>
+              <tr>
+                <th scope="row"><code class="inline">coral-cli</code></th>
+                <td><code class="inline">coral_repo/cmd/coral-cli</code></td>
+                <td>Single-threaded pre-fork <code class="inline">coral</code> CLI covering OCI, Compose, Wasm, KVM &amp; Sandbox</td>
+              </tr>
+              <tr>
+                <th scope="row"><code class="inline">coral-e2e-tests</code></th>
+                <td><code class="inline">coral_repo/tests</code></td>
+                <td>60 automated unit, OCI, parity, CRI gRPC, Wasm &amp; hardware KVM integration tests</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 8. Support / Donate -->
+      <section id="support" class="doc-section" tabindex="-1">
+        <h2 data-i18n="support.title">สนับสนุนโปรเจกต์ (Donate &amp; Sponsor)</h2>
+        <p class="section-lead" data-i18n="support.lead"></p>
+
+        <div class="support-grid">
+          <article class="support-card">
+            <div>
+              <div class="support-header">
+                <h3 data-i18n="support.ppTitle">PromptPay QR (ประเทศไทย)</h3>
+                <span class="status-badge" id="badge-promptpay" data-i18n="support.templateBadge">เทมเพลตพร้อมตั้งค่า</span>
+              </div>
+              <p data-i18n="support.ppDesc"></p>
+              <div class="support-meta" id="meta-promptpay"></div>
+            </div>
+            <button type="button" class="btn btn-primary" id="open-promptpay-btn" data-i18n="support.ppBtn">เปิดหน้าต่าง PromptPay QR</button>
+          </article>
+
+          <article class="support-card">
+            <div>
+              <div class="support-header">
+                <h3 data-i18n="support.ghTitle">GitHub Sponsors</h3>
+                <span class="status-badge" id="badge-github" data-i18n="support.templateBadge">เทมเพลตพร้อมตั้งค่า</span>
+              </div>
+              <p data-i18n="support.ghDesc"></p>
+              <div class="support-meta" id="meta-github"></div>
+            </div>
+            <a class="btn btn-secondary" id="link-github-sponsor" href="https://github.com/sponsors/seashyne" target="_blank" rel="noopener" data-i18n="support.ghBtn">ไปที่ GitHub Sponsors</a>
+          </article>
+
+          <article class="support-card">
+            <div>
+              <div class="support-header">
+                <h3 data-i18n="support.bmcTitle">Buy Me a Coffee / Ko-fi</h3>
+                <span class="status-badge" id="badge-bmc" data-i18n="support.templateBadge">เทมเพลตพร้อมตั้งค่า</span>
+              </div>
+              <p data-i18n="support.bmcDesc"></p>
+              <div class="support-meta" id="meta-bmc"></div>
+            </div>
+            <a class="btn btn-teal" id="link-bmc-sponsor" href="https://buymeacoffee.com/seashyne" target="_blank" rel="noopener" data-i18n="support.bmcBtn">เลี้ยงกาแฟนักพัฒนา</a>
+          </article>
+        </div>
+
+        <div class="callout" id="sponsor-config-hint">
+          <span data-i18n="support.configHint"></span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Native Modal Dialog with Declarative Light-Dismiss (closedby="any") + Safari Fallback -->
+  <dialog id="promptpay-dialog" class="qr-dialog" closedby="any" aria-labelledby="promptpay-title">
+    <div class="qr-dialog-inner">
+      <div class="qr-dialog-head">
+        <h3 id="promptpay-title" data-i18n="dialog.ppTitle">สนับสนุนผ่าน PromptPay QR</h3>
+        <form method="dialog">
+          <button type="submit" class="icon-btn" aria-label="Close">✕</button>
+        </form>
+      </div>
+
+      <div class="qr-frame" id="promptpay-qr-frame">
+        <div>
+          <strong data-i18n="dialog.ppPlaceholderTitle">ยังไม่ได้อัปโหลดรูป PromptPay QR</strong>
+          <p style="margin: 8px 0 0; font-size: 0.85rem; color: var(--muted);" data-i18n="dialog.ppPlaceholderDesc"></p>
+        </div>
+      </div>
+
+      <div class="qr-info">
+        <div><strong data-i18n="dialog.ppAccount">ชื่อบัญชี:</strong> <span id="pp-account-name"></span></div>
+        <div><strong data-i18n="dialog.ppId">หมายเลขพร้อมเพย์:</strong> <code class="inline" id="pp-id-text"></code></div>
+      </div>
+
+      <div class="qr-dialog-foot">
+        <small data-i18n="dialog.ppHint">กดปุ่ม Esc หรือคลิกพื้นที่ด้านนอกเพื่อปิดหน้าต่าง</small>
+        <form method="dialog">
+          <button type="submit" class="btn btn-secondary" data-i18n="dialog.close">ปิดหน้าต่าง</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <span data-i18n="footer.copy">Coral Container Project v2.0.0 · Open-Source ภายใต้ Apache License 2.0</span>
+      <div class="footer-links">
+        <a href="https://github.com/seashyne/Coral-Container-Project/blob/main/coral_repo/docs/MANUAL.md" target="_blank" rel="noopener" data-i18n="footer.docsLink">คู่มือฉบับเต็ม (MANUAL.md)</a>
+        <a href="https://github.com/seashyne/Coral-Container-Project/blob/main/coral_repo/docs/ROADMAP.md" target="_blank" rel="noopener" data-i18n="footer.roadmapLink">Roadmap</a>
+        <a href="https://github.com/seashyne/Coral-Container-Project/issues" target="_blank" rel="noopener" data-i18n="footer.issuesLink">แจ้งบั๊ก / ขอฟีเจอร์</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="donate-config.js"></script>
+  <script src="i18n.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

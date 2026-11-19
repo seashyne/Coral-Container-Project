@@ -1,0 +1,10 @@
+services:
+  coral:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+    container_name: coral_container
+    # ถ้ามีพอร์ตที่ต้อง map (เช่น 8080) ให้ uncomment บรรทัดล่าง
+    # ports:
+    #   - "8080:8080"
+    restart: always

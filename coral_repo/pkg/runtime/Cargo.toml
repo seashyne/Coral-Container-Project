@@ -1,0 +1,21 @@
+[package]
+name = "coral-runtime"
+description = "Core Linux container runtime engine for Coral (namespaces, rootless UserNS, pivot_root, cgroups v2, OCI lifecycle)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+chrono.workspace = true
+coral-cgroups.workspace = true
+coral-net.workspace = true
+coral-oci.workspace = true
+libc.workspace = true
+nix.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

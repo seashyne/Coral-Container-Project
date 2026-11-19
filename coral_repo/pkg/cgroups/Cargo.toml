@@ -1,0 +1,16 @@
+[package]
+name = "coral-cgroups"
+description = "Linux Cgroups v2 resource controller (memory, CPU, PIDs) with root and rootless support"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+coral-oci.workspace = true
+libc.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
