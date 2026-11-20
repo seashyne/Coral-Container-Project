@@ -213,3 +213,59 @@ cargo clippy --workspace --all-targets -- -D warnings
 # หรือรันสคริปต์ตรวจสอบครบวงจรในคำสั่งเดียว
 ./verify.sh
 ```
+
+---
+
+## 5. ฟีเจอร์ระดับ Next-Gen & Deep-Tech (`v2.0` – `v2.1`)
+
+### 5.1 Pure-Rust `/dev/kvm` Separate-Kernel Linux MicroVM (Zero QEMU)
+```bash
+# ทดสอบฮาร์ดแวร์ /dev/kvm (VT-x/AMD-V) + 64-bit Long Mode self-test (~2.9 ms)
+coral vm probe
+
+# ดาวน์โหลดและติดตั้ง Guest Linux Kernel (Alpine 3.20 linux-virt) อัตโนมัติ
+coral vm setup-kernel
+
+# บูต Linux Kernel แยกจริง + Alpine container โดยตรงผ่าน Pure-Rust KVM (~760 ms, ไม่ต้องลง QEMU/Firecracker)
+coral vm boot --image alpine:3.20 --timeout 15 -- /bin/sh -c 'echo "Kernel=$(uname -r) PID=$$"'
+
+# รันโค้ดที่ไม่ไว้ใจใน AI Agent Sandbox (Air-gapped + Read-Only + Hard Process-Group Timeout)
+coral sandbox run --image alpine:3.20 --timeout 5 --memory 64 --json -- /bin/sh -c 'echo "Safe PID=$$"'
+```
+
+### 5.2 WebAssembly WASI Preview 1 & Serverless HTTP (`coral-wasm`)
+```bash
+# รันไฟล์ .wasm / .wat ตรง ๆ พร้อมคุม CPU fuel และเพดาน RAM
+coral wasm run app.wasm --fuel 5000000 --memory 32 --json
+
+# แพ็ก .wasm เป็น OCI Image และรันผ่าน --runtime wasm
+coral wasm pack app.wasm -t my-wasm:v1
+coral run --runtime wasm my-wasm:v1
+
+# เปิดเซิร์ฟเวอร์ HTTP/1.1 Serverless (สร้าง Wasm Sandbox แยกใหม่ทุก Request ใน ~89 µs)
+coral wasm serve my-wasm:v1 --listen 127.0.0.1:8080 --fuel 10000000 --memory 32
+```
+
+### 5.3 Kubernetes CRI v1 Unix Domain Socket (`kubelet` / `crictl`)
+```bash
+# coral-daemon เปิดฟังทั้ง TCP (127.0.0.1:50051) และ Unix Socket (~/.local/state/coral/daemon/coral.sock) พร้อมกัน
+coral-daemon --listen 127.0.0.1:50051 --unix-socket /run/coral/coral.sock
+
+# ตรวจสอบสถานะ CRI v1 (RuntimeReady & NetworkReady) ผ่าน Unix Socket
+coral --endpoint unix://$HOME/.local/state/coral/daemon/coral.sock cri-status --verbose
+```
+
+### 5.4 Supply-Chain Security: Ed25519 Signing & SPDX 2.3 SBOM
+```bash
+# สร้างคู่กุญแจ Ed25519 (~/.config/coral/cosign.key mode 0600 และ cosign.pub)
+coral keygen
+
+# ลงนาม Image ด้วย Ed25519 + SHA-256 Rootfs Merkle Tree Digest
+coral sign alpine:3.20
+
+# ตรวจสอบลายเซ็นและความถูกต้องของไฟล์ทุกไบต์ใน RootFS (แจ้งเตือนทันทีหากถูกดัดแปลง)
+coral verify alpine:3.20
+
+# สร้างรายงาน Software Bill of Materials มาตรฐาน SPDX 2.3 JSON (รองรับ APK, DPKG และ Wasm)
+coral sbom alpine:3.20 -o alpine-sbom.spdx.json
+```

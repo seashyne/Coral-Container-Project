@@ -2,7 +2,12 @@
 //! Runs OCI `.wasm` workloads directly with deterministic CPU fuel metering and linear
 //! memory caps — zero Linux rootfs required.
 
+pub mod http;
 pub mod wasi;
+
+pub use http::{
+    WasmHttpHandler, WasmHttpOptions, WasmHttpRequest, WasmHttpResponse, serve_wasm_http,
+};
 
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};

@@ -5,11 +5,13 @@ package runtime.v1;
 // RuntimeService defines the public CRI v1 API for managing pod sandboxes and containers.
 service RuntimeService {
   rpc Version (VersionRequest) returns (VersionResponse);
+  rpc Status (StatusRequest) returns (StatusResponse);
 
   // PodSandbox lifecycle
   rpc RunPodSandbox (RunPodSandboxRequest) returns (RunPodSandboxResponse);
   rpc StopPodSandbox (StopPodSandboxRequest) returns (StopPodSandboxResponse);
   rpc RemovePodSandbox (RemovePodSandboxRequest) returns (RemovePodSandboxResponse);
+  rpc PodSandboxStatus (PodSandboxStatusRequest) returns (PodSandboxStatusResponse);
   rpc ListPodSandbox (ListPodSandboxRequest) returns (ListPodSandboxResponse);
 
   // Container lifecycle
@@ -294,3 +296,49 @@ message RemoveImageRequest {
 }
 
 message RemoveImageResponse {}
+
+// Kubernetes kubelet / crictl CRI v1 Status & PodSandboxStatus messages
+message StatusRequest {
+  bool verbose = 1;
+}
+
+message RuntimeCondition {
+  string type = 1;
+  bool status = 2;
+  string reason = 3;
+  string message = 4;
+}
+
+message RuntimeStatus {
+  repeated RuntimeCondition conditions = 1;
+}
+
+message StatusResponse {
+  RuntimeStatus status = 1;
+  map<string, string> info = 2;
+}
+
+message PodSandboxStatusRequest {
+  string pod_sandbox_id = 1;
+  bool verbose = 2;
+}
+
+message PodSandboxNetworkStatus {
+  string ip = 1;
+}
+
+message PodSandboxStatus {
+  string id = 1;
+  PodSandboxMetadata metadata = 2;
+  PodSandboxState state = 3;
+  int64 created_at = 4;
+  PodSandboxNetworkStatus network = 5;
+  map<string, string> labels = 6;
+  map<string, string> annotations = 7;
+  string runtime_handler = 8;
+}
+
+message PodSandboxStatusResponse {
+  PodSandboxStatus status = 1;
+  map<string, string> info = 2;
+}

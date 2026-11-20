@@ -9,7 +9,7 @@ VOLUMES_DIR="${CORAL_VOLUMES_DIR:-$STATE_DIR/volumes}"
 SYSTEMD_USER_DIR="$HOME/.config/systemd/user"
 
 echo "============================================================"
-echo "  Coral Container Runtime v2.0 — System Installer (Linux)   "
+echo "  Coral Container Runtime v2.1 — System Installer (Linux)   "
 echo "============================================================"
 
 # 1. Ensure Alpine 3.20 minirootfs is prepared

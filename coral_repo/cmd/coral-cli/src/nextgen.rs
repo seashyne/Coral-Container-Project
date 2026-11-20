@@ -4,13 +4,18 @@ use crate::catalog;
 use anyhow::{Context, Result, bail};
 use coral_daemon::images;
 use coral_vmm::{
-    KvmRunOptions, SandboxPolicy, boot_linux_microvm, probe_kvm, run_ai_sandbox,
-    run_kvm_hardware_selftest, run_long_mode_payload,
+    KvmRunOptions, SandboxPolicy, boot_linux_microvm, build_initramfs_cpio_gz, default_kernel_path,
+    install_kernel_from_file, probe_kvm, run_ai_sandbox, run_kvm_hardware_selftest,
+    run_long_mode_payload, setup_alpine_microvm_kernel,
 };
-use coral_wasm::{WasmRunOptions, find_wasm_module_in_rootfs, run_wasm_file};
+use coral_wasm::{
+    WasmHttpHandler, WasmHttpOptions, WasmRunOptions, find_wasm_module_in_rootfs, run_wasm_file,
+    serve_wasm_http,
+};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
+use std::sync::Arc;
 
 pub fn cmd_wasm_run(
     images_dir: &Path,
@@ -290,4 +295,196 @@ pub fn resolve_wasm_target(images_dir: &Path, target: &str) -> Result<PathBuf> {
     bail!(
         "WebAssembly module or Wasm OCI image '{target}' not found (pack one with `coral wasm pack <file.wasm> -t <tag>`)"
     )
+}
+
+pub async fn cmd_wasm_serve(
+    images_dir: &Path,
+    target: &str,
+    listen: &str,
+    fuel: u64,
+    memory_mb: usize,
+    envs: Vec<String>,
+) -> Result<()> {
+    let module_path = resolve_wasm_target(images_dir, target)?;
+    let bytes = fs::read(&module_path)
+        .with_context(|| format!("read Wasm module '{}'", module_path.display()))?;
+    let handler = Arc::new(WasmHttpHandler::from_bytes(
+        &bytes,
+        WasmHttpOptions {
+            fuel_limit: fuel,
+            memory_limit_mb: memory_mb,
+            extra_envs: envs,
+        },
+    )?);
+    let listener = tokio::net::TcpListener::bind(listen)
+        .await
+        .with_context(|| format!("bind Wasm HTTP listener on {listen}"))?;
+    let local = listener.local_addr()?;
+    println!(
+        "Coral Wasm HTTP microservice listening on http://{local}\n  Module:    {}\n  Fuel/req:  {}\n  Mem/req:   {} MB\nPress Ctrl+C to stop.",
+        module_path.display(),
+        fuel,
+        memory_mb
+    );
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    tokio::spawn(async move {
+        let _ = tokio::signal::ctrl_c().await;
+        let _ = tx.send(());
+    });
+    serve_wasm_http(listener, handler, rx).await
+}
+
+pub fn cmd_vm_setup_kernel(
+    from: Option<PathBuf>,
+    dest: Option<PathBuf>,
+    as_json: bool,
+) -> Result<()> {
+    let target = dest.unwrap_or_else(default_kernel_path);
+    let report = if let Some(src) = from {
+        install_kernel_from_file(&src, &target)?
+    } else {
+        if !as_json {
+            println!("Downloading official Alpine Linux 3.20 `linux-virt` guest kernel...");
+        }
+        setup_alpine_microvm_kernel(&target)?
+    };
+    if as_json {
+        println!("{}", serde_json::to_string_pretty(&report)?);
+    } else {
+        println!("MicroVM Linux kernel ready!");
+        println!("  Kernel:   {}", report.kernel_path);
+        println!("  Size:     {}", catalog::format_bytes(report.size_bytes));
+        println!("  Protocol: Linux x86-64 v{}", report.protocol_version);
+        println!("  Source:   {}", report.source);
+    }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn cmd_vm_boot(
+    state_root: &Path,
+    images_dir: &Path,
+    image: &str,
+    kernel: Option<PathBuf>,
+    memory_mb: usize,
+    timeout: u64,
+    cmdline: Option<String>,
+    cmd: &[String],
+    as_json: bool,
+) -> Result<ExitCode> {
+    let kernel_path = kernel.unwrap_or_else(default_kernel_path);
+    if !kernel_path.is_file() {
+        bail!(
+            "guest Linux kernel '{}' not found — install one automatically with `coral vm setup-kernel`",
+            kernel_path.display()
+        );
+    }
+    let rootfs = if Path::new(image).is_dir() {
+        fs::canonicalize(image)?
+    } else {
+        let idx = images::load_index(images_dir);
+        let img = images::find_image(&idx, image)
+            .ok_or_else(|| anyhow::anyhow!("image '{image}' not found in {}", images_dir.display()))?;
+        PathBuf::from(&img.rootfs_path)
+    };
+
+    let initrd_path = state_root.join(format!("coral-vm-initrd-{}.cpio.gz", std::process::id()));
+    build_initramfs_cpio_gz(&rootfs, cmd, &initrd_path)?;
+    let report = boot_linux_microvm(
+        &kernel_path,
+        &initrd_path,
+        memory_mb as i64,
+        timeout,
+        cmdline.as_deref(),
+    );
+    let _ = fs::remove_file(&initrd_path);
+    let report = report?;
+
+    if as_json {
+        println!("{}", serde_json::to_string_pretty(&report)?);
+    } else {
+        print!("{}", report.stdout);
+        if !report.stderr.is_empty() {
+            eprint!("{}", report.stderr);
+        }
+        if report.timed_out {
+            eprintln!("coral vm boot: timed out after {}s (mode={})", timeout, report.isolation_mode);
+        }
+    }
+    let code = u8::try_from(report.exit_code.clamp(0, 255)).unwrap_or(1);
+    Ok(ExitCode::from(code))
+}
+
+pub fn cmd_keygen(
+    key: Option<PathBuf>,
+    pub_key: Option<PathBuf>,
+    force: bool,
+    as_json: bool,
+) -> Result<()> {
+    let (def_priv, def_pub) = images::default_key_paths();
+    let priv_path = key.unwrap_or(def_priv);
+    let pub_path = pub_key.unwrap_or(def_pub);
+    let rep = images::generate_keypair(&priv_path, &pub_path, force)?;
+    if as_json {
+        println!("{}", serde_json::to_string_pretty(&rep)?);
+    } else {
+        println!("Generated Coral Ed25519 signing keypair:");
+        println!("  Private Key (0600): {}", rep.private_key_path);
+        println!("  Public Key:         {}", rep.public_key_path);
+        println!("  Fingerprint:        {}", rep.fingerprint);
+    }
+    Ok(())
+}
+
+pub fn cmd_sign(
+    images_dir: &Path,
+    image: &str,
+    key: Option<PathBuf>,
+    as_json: bool,
+) -> Result<()> {
+    let (def_priv, _) = images::default_key_paths();
+    let priv_path = key.unwrap_or(def_priv);
+    let env = images::sign_image(images_dir, image, &priv_path)?;
+    if as_json {
+        println!("{}", serde_json::to_string_pretty(&env)?);
+    } else {
+        println!("Signed image '{}' ({})", env.image_ref, env.algorithm);
+        println!("  Tree Digest: {}", env.tree_digest);
+        println!("  Signer:      {}", env.signer_fingerprint);
+        println!("  Signed At:   {}", env.signed_at);
+    }
+    Ok(())
+}
+
+pub fn cmd_verify(
+    images_dir: &Path,
+    image: &str,
+    key: Option<PathBuf>,
+    as_json: bool,
+) -> Result<()> {
+    let (_, def_pub) = images::default_key_paths();
+    let pub_path = key.unwrap_or(def_pub);
+    let rep = images::verify_image(images_dir, image, &pub_path)?;
+    if as_json {
+        println!("{}", serde_json::to_string_pretty(&rep)?);
+    } else {
+        println!("VERIFIED '{}' (Ed25519 + SHA-256 rootfs Merkle tree intact)", rep.image_ref);
+        println!("  Tree Digest: {}", rep.tree_digest);
+        println!("  Signer:      {}", rep.signer_fingerprint);
+        println!("  Signed At:   {}", rep.signed_at);
+    }
+    Ok(())
+}
+
+pub fn cmd_sbom(images_dir: &Path, image: &str, output: Option<PathBuf>) -> Result<()> {
+    let sbom = images::generate_spdx_sbom(images_dir, image)?;
+    let pretty = serde_json::to_string_pretty(&sbom)?;
+    if let Some(out) = output {
+        fs::write(&out, &pretty).with_context(|| format!("write SBOM '{}'", out.display()))?;
+        let count = sbom["packages"].as_array().map(|a| a.len()).unwrap_or(0);
+        println!("Wrote SPDX 2.3 SBOM ({count} packages) to {}", out.display());
+    } else {
+        println!("{pretty}");
+    }
+    Ok(())
 }

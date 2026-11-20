@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version tag (e.g. v2.0.0)"
+        description: "Release version tag (e.g. v2.1.0)"
         required: false
-        default: "v2.0.0"
+        default: "v2.1.0"
 
 permissions:
   contents: write
@@ -31,9 +31,17 @@ jobs:
         run: ./verify.sh
 
   package-linux-runtime:
-    name: Package Linux Runtime (.tar.gz + .deb)
+    name: Package Linux Runtime (${{ matrix.arch }})
     needs: verify-runtime
-    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-22.04
+            arch: x86_64
+          - platform: ubuntu-24.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -44,7 +52,7 @@ jobs:
         id: ver
         run: |
           TAG="${GITHUB_REF_NAME}"
-          if [[ "$TAG" != v* ]]; then TAG="${{ inputs.version || 'v2.0.0' }}"; fi
+          if [[ "$TAG" != v* ]]; then TAG="${{ inputs.version || 'v2.1.0' }}"; fi
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           echo "num=${TAG#v}" >> "$GITHUB_OUTPUT"
       - name: Build .deb and .tar.gz bundles
@@ -52,17 +60,15 @@ jobs:
         run: |
           chmod +x scripts/package-deb.sh
           ./scripts/package-deb.sh "${{ steps.ver.outputs.num }}"
-          mkdir -p dist/coral
+          mkdir -p dist/coral/scripts
           install -m 0755 target/release/coral dist/coral/coral
           install -m 0755 target/release/coral-daemon dist/coral/coral-daemon
           install -m 0755 install.sh dist/coral/install.sh
-          mkdir -p dist/coral/scripts
           install -m 0755 scripts/setup-rootfs.sh dist/coral/scripts/setup-rootfs.sh
-          tar -C dist -czf "target/packages/coral-${{ steps.ver.outputs.tag }}-linux-x86_64.tar.gz" coral
-          (cd target/packages && sha256sum * > SHA256SUMS.txt)
+          tar -C dist -czf "target/packages/coral-${{ steps.ver.outputs.tag }}-linux-${{ matrix.arch }}.tar.gz" coral
       - uses: actions/upload-artifact@v4
         with:
-          name: coral-runtime-linux
+          name: coral-runtime-linux-${{ matrix.arch }}
           path: coral_repo/target/packages/*
 
   package-desktop:
@@ -105,21 +111,27 @@ jobs:
         with:
           projectPath: desktop
           args: --verbose
-      - uses: actions/upload-artifact@v4
+      - name: Collect flat Linux installers
         if: matrix.target == 'linux'
-        with:
-          name: coral-desktop-linux
-          path: |
-            desktop/src-tauri/target/release/bundle/deb/*.deb
-            desktop/src-tauri/target/release/bundle/rpm/*.rpm
-            desktop/src-tauri/target/release/bundle/appimage/*.AppImage
-      - uses: actions/upload-artifact@v4
+        run: |
+          mkdir -p desktop-dist
+          find desktop/src-tauri/target/release/bundle -maxdepth 2 -type f \
+            \( -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' \) \
+            -exec cp {} desktop-dist/ \;
+          ls -lh desktop-dist/
+      - name: Collect flat Windows installers
         if: matrix.target == 'windows'
+        shell: bash
+        run: |
+          mkdir -p desktop-dist
+          find desktop/src-tauri/target/release/bundle -maxdepth 2 -type f \
+            \( -name '*.msi' -o -name '*.exe' \) \
+            -exec cp {} desktop-dist/ \;
+          ls -lh desktop-dist/
+      - uses: actions/upload-artifact@v4
         with:
-          name: coral-desktop-windows
-          path: |
-            desktop/src-tauri/target/release/bundle/msi/*.msi
-            desktop/src-tauri/target/release/bundle/nsis/*.exe
+          name: coral-desktop-${{ matrix.target }}
+          path: desktop-dist/*
 
   publish-release:
     name: Publish GitHub Release
@@ -131,6 +143,12 @@ jobs:
         with:
           path: release-assets
           merge-multiple: true
+      - name: Generate unified SHA256SUMS.txt
+        working-directory: release-assets
+        run: |
+          rm -f SHA256SUMS.txt
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
       - uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true

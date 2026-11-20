@@ -67,7 +67,7 @@ pub fn build_initramfs_cpio_gz(
          {}\n\
          EC=$?\n\
          echo \"__CORAL_VMM_EXIT__=$EC\"\n\
-         poweroff -f 2>/dev/null || reboot -f 2>/dev/null || exit $EC\n",
+         reboot -f 2>/dev/null || poweroff -f 2>/dev/null || exit $EC\n",
         if quoted_cmd.is_empty() { "/bin/sh".into() } else { quoted_cmd }
     );
     write_cpio_entry(&mut gz, "coral-init", 0o100755, ino, init_script.as_bytes())?;

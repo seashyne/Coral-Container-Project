@@ -10,127 +10,166 @@ use std::io;
 use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
 use std::time::{Duration, Instant};
 
-// Exact Linux x86-64 KVM ioctl constants verified against <linux/kvm.h>.
-const KVM_GET_API_VERSION: libc::c_ulong = 0xae00;
-const KVM_CREATE_VM: libc::c_ulong = 0xae01;
+// Exact Linux KVM ioctl constants verified against <linux/kvm.h>.
+pub(crate) const KVM_GET_API_VERSION: libc::c_ulong = 0xae00;
+pub(crate) const KVM_CREATE_VM: libc::c_ulong = 0xae01;
 const KVM_CHECK_EXTENSION: libc::c_ulong = 0xae03;
-const KVM_GET_VCPU_MMAP_SIZE: libc::c_ulong = 0xae04;
-const KVM_GET_SUPPORTED_CPUID: libc::c_ulong = 0xc008_ae05;
-const KVM_CREATE_VCPU: libc::c_ulong = 0xae41;
-const KVM_SET_USER_MEMORY_REGION: libc::c_ulong = 0x4020_ae46;
-const KVM_RUN: libc::c_ulong = 0xae80;
-const KVM_SET_REGS: libc::c_ulong = 0x4090_ae82;
-const KVM_GET_SREGS: libc::c_ulong = 0x8138_ae83;
-const KVM_SET_SREGS: libc::c_ulong = 0x4138_ae84;
-const KVM_SET_CPUID2: libc::c_ulong = 0x4008_ae90;
+pub(crate) const KVM_GET_VCPU_MMAP_SIZE: libc::c_ulong = 0xae04;
+#[cfg(target_arch = "x86_64")]
+pub(crate) const KVM_GET_SUPPORTED_CPUID: libc::c_ulong = 0xc008_ae05;
+pub(crate) const KVM_CREATE_VCPU: libc::c_ulong = 0xae41;
+pub(crate) const KVM_SET_USER_MEMORY_REGION: libc::c_ulong = 0x4020_ae46;
+#[cfg(target_arch = "x86_64")]
+pub(crate) const KVM_SET_TSS_ADDR: libc::c_ulong = 0xae47;
+#[cfg(target_arch = "x86_64")]
+pub(crate) const KVM_SET_IDENTITY_MAP_ADDR: libc::c_ulong = 0x4008_ae48;
+#[cfg(target_arch = "x86_64")]
+pub(crate) const KVM_CREATE_IRQCHIP: libc::c_ulong = 0xae60;
+#[cfg(target_arch = "x86_64")]
+pub(crate) const KVM_IRQ_LINE: libc::c_ulong = 0x4008_ae61;
+#[cfg(target_arch = "x86_64")]
+pub(crate) const KVM_CREATE_PIT2: libc::c_ulong = 0x4040_ae77;
+pub(crate) const KVM_RUN: libc::c_ulong = 0xae80;
+#[cfg(target_arch = "x86_64")]
+pub(crate) const KVM_SET_REGS: libc::c_ulong = 0x4090_ae82;
+#[cfg(target_arch = "x86_64")]
+pub(crate) const KVM_GET_SREGS: libc::c_ulong = 0x8138_ae83;
+#[cfg(target_arch = "x86_64")]
+pub(crate) const KVM_SET_SREGS: libc::c_ulong = 0x4138_ae84;
+#[cfg(target_arch = "x86_64")]
+pub(crate) const KVM_SET_CPUID2: libc::c_ulong = 0x4008_ae90;
 
 const KVM_CAP_IRQCHIP: libc::c_ulong = 0;
 const KVM_CAP_USER_MEMORY: libc::c_ulong = 3;
 const KVM_CAP_NR_VCPUS: libc::c_ulong = 9;
 
-const KVM_EXIT_IO: u32 = 2;
-const KVM_EXIT_HLT: u32 = 5;
-const KVM_EXIT_SHUTDOWN: u32 = 8;
-const KVM_EXIT_FAIL_ENTRY: u32 = 9;
-const KVM_EXIT_INTERNAL_ERROR: u32 = 17;
-const KVM_EXIT_IO_IN: u8 = 0;
-const KVM_EXIT_IO_OUT: u8 = 1;
+#[cfg(target_arch = "x86_64")]
+pub(crate) const KVM_EXIT_IO: u32 = 2;
+#[cfg(target_arch = "x86_64")]
+pub(crate) const KVM_EXIT_HLT: u32 = 5;
+#[cfg(target_arch = "x86_64")]
+pub(crate) const KVM_EXIT_MMIO: u32 = 6;
+#[cfg(target_arch = "x86_64")]
+pub(crate) const KVM_EXIT_SHUTDOWN: u32 = 8;
+#[cfg(target_arch = "x86_64")]
+pub(crate) const KVM_EXIT_FAIL_ENTRY: u32 = 9;
+#[cfg(target_arch = "x86_64")]
+pub(crate) const KVM_EXIT_INTERNAL_ERROR: u32 = 17;
+#[cfg(target_arch = "x86_64")]
+pub(crate) const KVM_EXIT_SYSTEM_EVENT: u32 = 24;
+#[cfg(target_arch = "x86_64")]
+pub(crate) const KVM_EXIT_IO_IN: u8 = 0;
+#[cfg(target_arch = "x86_64")]
+pub(crate) const KVM_EXIT_IO_OUT: u8 = 1;
 
 // Guest physical memory layout for 64-bit Long Mode MicroVMs.
+#[cfg(target_arch = "x86_64")]
 const PML4_ADDR: u64 = 0x1000;
+#[cfg(target_arch = "x86_64")]
 const PDPT_ADDR: u64 = 0x2000;
+#[cfg(target_arch = "x86_64")]
 const PD_ADDR: u64 = 0x3000;
+#[cfg(target_arch = "x86_64")]
 const PAYLOAD_ADDR: u64 = 0x10000;
 
-const COM1_DATA: u16 = 0x3F8;
+#[cfg(target_arch = "x86_64")]
+pub(crate) const COM1_DATA: u16 = 0x3F8;
+#[cfg(target_arch = "x86_64")]
 const COM1_LSR: u16 = 0x3FD;
-const DEBUG_EXIT_PORT: u16 = 0x0F4;
+#[cfg(target_arch = "x86_64")]
+pub(crate) const DEBUG_EXIT_PORT: u16 = 0x0F4;
 
 #[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
-struct KvmUserspaceMemoryRegion {
-    slot: u32,
-    flags: u32,
-    guest_phys_addr: u64,
-    memory_size: u64,
-    userspace_addr: u64,
+pub(crate) struct KvmUserspaceMemoryRegion {
+    pub(crate) slot: u32,
+    pub(crate) flags: u32,
+    pub(crate) guest_phys_addr: u64,
+    pub(crate) memory_size: u64,
+    pub(crate) userspace_addr: u64,
 }
 
+#[cfg(target_arch = "x86_64")]
 #[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
-struct KvmRegs {
-    rax: u64,
-    rbx: u64,
-    rcx: u64,
-    rdx: u64,
-    rsi: u64,
-    rdi: u64,
-    rsp: u64,
-    rbp: u64,
-    r8: u64,
-    r9: u64,
-    r10: u64,
-    r11: u64,
-    r12: u64,
-    r13: u64,
-    r14: u64,
-    r15: u64,
-    rip: u64,
-    rflags: u64,
+pub(crate) struct KvmRegs {
+    pub(crate) rax: u64,
+    pub(crate) rbx: u64,
+    pub(crate) rcx: u64,
+    pub(crate) rdx: u64,
+    pub(crate) rsi: u64,
+    pub(crate) rdi: u64,
+    pub(crate) rsp: u64,
+    pub(crate) rbp: u64,
+    pub(crate) r8: u64,
+    pub(crate) r9: u64,
+    pub(crate) r10: u64,
+    pub(crate) r11: u64,
+    pub(crate) r12: u64,
+    pub(crate) r13: u64,
+    pub(crate) r14: u64,
+    pub(crate) r15: u64,
+    pub(crate) rip: u64,
+    pub(crate) rflags: u64,
 }
 
+#[cfg(target_arch = "x86_64")]
 #[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
-struct KvmSegment {
-    base: u64,
-    limit: u32,
-    selector: u16,
-    type_: u8,
-    present: u8,
-    dpl: u8,
-    db: u8,
-    s: u8,
-    l: u8,
-    g: u8,
-    avl: u8,
-    unusable: u8,
-    padding: u8,
+pub(crate) struct KvmSegment {
+    pub(crate) base: u64,
+    pub(crate) limit: u32,
+    pub(crate) selector: u16,
+    pub(crate) type_: u8,
+    pub(crate) present: u8,
+    pub(crate) dpl: u8,
+    pub(crate) db: u8,
+    pub(crate) s: u8,
+    pub(crate) l: u8,
+    pub(crate) g: u8,
+    pub(crate) avl: u8,
+    pub(crate) unusable: u8,
+    pub(crate) padding: u8,
 }
 
+#[cfg(target_arch = "x86_64")]
 #[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
-struct KvmDtable {
-    base: u64,
-    limit: u16,
-    padding: [u16; 3],
+pub(crate) struct KvmDtable {
+    pub(crate) base: u64,
+    pub(crate) limit: u16,
+    pub(crate) padding: [u16; 3],
 }
 
+#[cfg(target_arch = "x86_64")]
 #[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
-struct KvmSregs {
-    cs: KvmSegment,
-    ds: KvmSegment,
-    es: KvmSegment,
-    fs: KvmSegment,
-    gs: KvmSegment,
-    ss: KvmSegment,
-    tr: KvmSegment,
-    ldt: KvmSegment,
-    gdt: KvmDtable,
-    idt: KvmDtable,
-    cr0: u64,
-    cr2: u64,
-    cr3: u64,
-    cr4: u64,
-    cr8: u64,
-    efer: u64,
-    apic_base: u64,
-    interrupt_bitmap: [u64; 4],
+pub(crate) struct KvmSregs {
+    pub(crate) cs: KvmSegment,
+    pub(crate) ds: KvmSegment,
+    pub(crate) es: KvmSegment,
+    pub(crate) fs: KvmSegment,
+    pub(crate) gs: KvmSegment,
+    pub(crate) ss: KvmSegment,
+    pub(crate) tr: KvmSegment,
+    pub(crate) ldt: KvmSegment,
+    pub(crate) gdt: KvmDtable,
+    pub(crate) idt: KvmDtable,
+    pub(crate) cr0: u64,
+    pub(crate) cr2: u64,
+    pub(crate) cr3: u64,
+    pub(crate) cr4: u64,
+    pub(crate) cr8: u64,
+    pub(crate) efer: u64,
+    pub(crate) apic_base: u64,
+    pub(crate) interrupt_bitmap: [u64; 4],
 }
 
-// Compile-time ABI size assertions matching Linux x86-64 <linux/kvm.h>.
+// Compile-time ABI size assertions matching Linux <linux/kvm.h>.
 const _: () = assert!(std::mem::size_of::<KvmUserspaceMemoryRegion>() == 32);
+#[cfg(target_arch = "x86_64")]
 const _: () = assert!(std::mem::size_of::<KvmRegs>() == 144);
+#[cfg(target_arch = "x86_64")]
 const _: () = assert!(std::mem::size_of::<KvmSregs>() == 312);
 
 /// Host KVM virtualization capability summary.
@@ -446,6 +485,7 @@ pub fn run_long_mode_payload(_payload: &[u8], _opts: &KvmRunOptions) -> Result<K
     bail!("native x86-64 KVM Long Mode runner is only supported on x86_64 Linux hosts")
 }
 
+#[cfg(target_arch = "x86_64")]
 fn setup_long_mode_page_tables(mem: &mut [u8], mem_mb: usize) {
     // PML4[0] -> PDPT (Present | Writable)
     write_u64_le(mem, PML4_ADDR as usize, PDPT_ADDR | 0x3);
@@ -459,11 +499,13 @@ fn setup_long_mode_page_tables(mem: &mut [u8], mem_mb: usize) {
     }
 }
 
-fn write_u64_le(mem: &mut [u8], offset: usize, val: u64) {
+#[cfg(target_arch = "x86_64")]
+pub(crate) fn write_u64_le(mem: &mut [u8], offset: usize, val: u64) {
     mem[offset..offset + 8].copy_from_slice(&val.to_le_bytes());
 }
 
-fn setup_vcpu_cpuid(kvm_fd: i32, vcpu_fd: i32) -> Result<()> {
+#[cfg(target_arch = "x86_64")]
+pub(crate) fn setup_vcpu_cpuid(kvm_fd: i32, vcpu_fd: i32) -> Result<()> {
     // Allocate a flexible `kvm_cpuid2` buffer holding up to 128 `kvm_cpuid_entry2` (40 bytes each).
     const MAX_ENTRIES: usize = 128;
     let total_u32s = 2 + MAX_ENTRIES * 10;
@@ -484,6 +526,7 @@ fn setup_vcpu_cpuid(kvm_fd: i32, vcpu_fd: i32) -> Result<()> {
     Ok(())
 }
 
+#[cfg(target_arch = "x86_64")]
 fn configure_long_mode_sregs(sregs: &mut KvmSregs) {
     sregs.cr3 = PML4_ADDR;
     sregs.cr4 = 1 << 5; // PAE
@@ -533,13 +576,15 @@ fn configure_long_mode_sregs(sregs: &mut KvmSregs) {
     sregs.tr.unusable = 0;
 }
 
-struct MmapGuard {
-    ptr: *mut u8,
-    len: usize,
+#[cfg(target_arch = "x86_64")]
+pub(crate) struct MmapGuard {
+    pub(crate) ptr: *mut u8,
+    pub(crate) len: usize,
 }
 
+#[cfg(target_arch = "x86_64")]
 impl MmapGuard {
-    fn anon_rw(len: usize) -> Result<Self> {
+    pub(crate) fn anon_rw(len: usize) -> Result<Self> {
         let ptr = unsafe {
             libc::mmap(
                 std::ptr::null_mut(),
@@ -559,7 +604,7 @@ impl MmapGuard {
         })
     }
 
-    fn fd_rw(fd: i32, len: usize) -> Result<Self> {
+    pub(crate) fn fd_rw(fd: i32, len: usize) -> Result<Self> {
         let ptr = unsafe {
             libc::mmap(
                 std::ptr::null_mut(),
@@ -580,6 +625,7 @@ impl MmapGuard {
     }
 }
 
+#[cfg(target_arch = "x86_64")]
 impl Drop for MmapGuard {
     fn drop(&mut self) {
         unsafe {

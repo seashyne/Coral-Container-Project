@@ -17,19 +17,23 @@ if [[ "$(uname -s)" != "Linux" ]]; then
 fi
 
 ARCH="$(uname -m)"
-if [[ "$ARCH" != "x86_64" ]]; then
-  echo "[coral] Error: Prebuilt binaries currently target x86_64 (detected: $ARCH)." >&2
-  echo "[coral] Tip: Build from source with: git clone https://github.com/${REPO}.git && cd Coral-Container-Project/coral_repo && ./install.sh" >&2
-  exit 1
-fi
+case "$ARCH" in
+  x86_64|aarch64) ;;
+  arm64) ARCH="aarch64" ;;
+  *)
+    echo "[coral] Error: Prebuilt binaries support x86_64 and aarch64 (detected: $ARCH)." >&2
+    echo "[coral] Tip: Build from source with: git clone https://github.com/${REPO}.git && cd Coral-Container-Project/coral_repo && ./install.sh" >&2
+    exit 1
+    ;;
+esac
 
 if [[ -z "$VERSION" ]]; then
   VERSION="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null \
     | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1 || true)"
-  VERSION="${VERSION:-v2.0.0}"
+  VERSION="${VERSION:-v2.1.0}"
 fi
 
-TARBALL="coral-${VERSION}-linux-x86_64.tar.gz"
+TARBALL="coral-${VERSION}-linux-${ARCH}.tar.gz"
 BASE_URL="https://github.com/${REPO}/releases/download/${VERSION}"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -66,9 +70,9 @@ install -m 0755 "${TMP_DIR}/coral/coral-daemon" "${BIN_DIR}/coral-daemon"
 
 ALPINE_DEST="${IMAGES_DIR}/alpine-3.20/rootfs"
 if [[ ! -x "${ALPINE_DEST}/bin/sh" ]]; then
-  echo "[coral] Downloading Alpine Linux 3.20 minirootfs..."
+  echo "[coral] Downloading Alpine Linux 3.20 minirootfs (${ARCH})..."
   mkdir -p "$ALPINE_DEST"
-  curl -fsSL "https://dl-cdn.alpinelinux.org/alpine/v3.20/releases/x86_64/alpine-minirootfs-3.20.3-x86_64.tar.gz" \
+  curl -fsSL "https://dl-cdn.alpinelinux.org/alpine/v3.20/releases/${ARCH}/alpine-minirootfs-3.20.3-${ARCH}.tar.gz" \
     | tar -xz -C "$ALPINE_DEST"
 fi
 "${BIN_DIR}/coral" --images-dir "$IMAGES_DIR" pull alpine:3.20 --local --rootfs "$ALPINE_DEST" >/dev/null

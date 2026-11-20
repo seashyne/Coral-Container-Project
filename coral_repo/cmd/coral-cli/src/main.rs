@@ -416,6 +416,23 @@ fn dispatch(cli: Cli) -> Result<ExitCode> {
                 nextgen::cmd_wasm_pack(&images_dir, &file, &tag)?;
                 Ok(ExitCode::SUCCESS)
             }
+            WasmAction::Serve {
+                target,
+                listen,
+                fuel,
+                memory_mb,
+                envs,
+            } => {
+                run_async(nextgen::cmd_wasm_serve(
+                    &images_dir,
+                    &target,
+                    &listen,
+                    fuel,
+                    memory_mb,
+                    envs,
+                ))?;
+                Ok(ExitCode::SUCCESS)
+            }
         },
 
         Commands::Vm { action } => match action {
@@ -423,6 +440,29 @@ fn dispatch(cli: Cli) -> Result<ExitCode> {
                 nextgen::cmd_vm_probe(json)?;
                 Ok(ExitCode::SUCCESS)
             }
+            VmAction::SetupKernel { from, dest, json } => {
+                nextgen::cmd_vm_setup_kernel(from, dest, json)?;
+                Ok(ExitCode::SUCCESS)
+            }
+            VmAction::Boot {
+                image,
+                kernel,
+                memory_mb,
+                timeout,
+                cmdline,
+                json,
+                cmd,
+            } => nextgen::cmd_vm_boot(
+                &state_root,
+                &images_dir,
+                &image,
+                kernel,
+                memory_mb,
+                timeout,
+                cmdline,
+                &cmd,
+                json,
+            ),
             VmAction::Run {
                 payload,
                 kernel,
@@ -827,6 +867,36 @@ fn dispatch(cli: Cli) -> Result<ExitCode> {
             } else {
                 println!("{}", serde_json::to_string_pretty(&cfg)?);
             }
+            Ok(ExitCode::SUCCESS)
+        }
+
+        Commands::Keygen {
+            key,
+            pub_key,
+            force,
+            json,
+        } => {
+            nextgen::cmd_keygen(key, pub_key, force, json)?;
+            Ok(ExitCode::SUCCESS)
+        }
+
+        Commands::Sign { image, key, json } => {
+            nextgen::cmd_sign(&images_dir, &image, key, json)?;
+            Ok(ExitCode::SUCCESS)
+        }
+
+        Commands::Verify { image, key, json } => {
+            nextgen::cmd_verify(&images_dir, &image, key, json)?;
+            Ok(ExitCode::SUCCESS)
+        }
+
+        Commands::Sbom { image, output } => {
+            nextgen::cmd_sbom(&images_dir, &image, output)?;
+            Ok(ExitCode::SUCCESS)
+        }
+
+        Commands::CriStatus { verbose } => {
+            run_async(daemon_client::cmd_cri_status(&addr, verbose))?;
             Ok(ExitCode::SUCCESS)
         }
 

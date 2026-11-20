@@ -13,11 +13,13 @@ use coral_api::{
     ContainerStatusRequest, ContainerStatusResponse, CreateContainerRequest,
     CreateContainerResponse, ExecStreamRequest, ExecSyncRequest, ExecSyncResponse,
     ListContainersRequest, ListContainersResponse, ListPodSandboxRequest, ListPodSandboxResponse,
-    PodSandbox, PodSandboxState, RemoveContainerRequest, RemoveContainerResponse,
-    RemovePodSandboxRequest, RemovePodSandboxResponse, RunPodSandboxRequest,
-    RunPodSandboxResponse, StartContainerRequest, StartContainerResponse, StopContainerRequest,
-    StopContainerResponse, StopPodSandboxRequest, StopPodSandboxResponse, VersionRequest,
-    VersionResponse,
+    PodSandbox, PodSandboxNetworkStatus, PodSandboxState, PodSandboxStatus,
+    PodSandboxStatusRequest, PodSandboxStatusResponse, RemoveContainerRequest,
+    RemoveContainerResponse, RemovePodSandboxRequest, RemovePodSandboxResponse,
+    RunPodSandboxRequest, RunPodSandboxResponse, RuntimeCondition, RuntimeStatus,
+    StartContainerRequest, StartContainerResponse, StatusRequest, StatusResponse,
+    StopContainerRequest, StopContainerResponse, StopPodSandboxRequest, StopPodSandboxResponse,
+    VersionRequest, VersionResponse,
 };
 use coral_oci::OciSpec;
 use coral_runtime::overlay::diff_overlay;
@@ -39,6 +41,77 @@ impl RuntimeService for CoralDaemonService {
             runtime_name: "coral".into(),
             runtime_version: env!("CARGO_PKG_VERSION").into(),
             runtime_api_version: "v1".into(),
+        }))
+    }
+
+    async fn status(
+        &self,
+        request: Request<StatusRequest>,
+    ) -> Result<Response<StatusResponse>, Status> {
+        let verbose = request.into_inner().verbose;
+        let conditions = vec![
+            RuntimeCondition {
+                r#type: "RuntimeReady".into(),
+                status: true,
+                reason: String::new(),
+                message: String::new(),
+            },
+            RuntimeCondition {
+                r#type: "NetworkReady".into(),
+                status: true,
+                reason: String::new(),
+                message: String::new(),
+            },
+        ];
+        let mut info = HashMap::new();
+        if verbose {
+            let kvm = coral_vmm::probe_kvm();
+            let summary = serde_json::json!({
+                "runtime": "coral",
+                "version": env!("CARGO_PKG_VERSION"),
+                "stateDir": self.cfg.state_dir.display().to_string(),
+                "imagesDir": self.images_dir.display().to_string(),
+                "wasmRuntime": "wasmi-2.0-wasi-p1+http",
+                "kvmAvailable": kvm.available,
+                "kvmApiVersion": kvm.api_version,
+                "arch": std::env::consts::ARCH,
+            });
+            info.insert("config".into(), summary.to_string());
+        }
+        Ok(Response::new(StatusResponse {
+            status: Some(RuntimeStatus { conditions }),
+            info,
+        }))
+    }
+
+    async fn pod_sandbox_status(
+        &self,
+        request: Request<PodSandboxStatusRequest>,
+    ) -> Result<Response<PodSandboxStatusResponse>, Status> {
+        let req = request.into_inner();
+        let store = self.store.read().await;
+        let sb = store
+            .sandboxes
+            .get(&req.pod_sandbox_id)
+            .ok_or_else(|| Status::not_found(format!("pod sandbox '{}' not found", req.pod_sandbox_id)))?;
+        let mut info = HashMap::new();
+        if req.verbose {
+            info.insert("hostname".into(), sb.config.hostname.clone());
+        }
+        Ok(Response::new(PodSandboxStatusResponse {
+            status: Some(PodSandboxStatus {
+                id: sb.id.clone(),
+                metadata: sb.config.metadata.clone(),
+                state: sb.state as i32,
+                created_at: sb.created_at,
+                network: Some(PodSandboxNetworkStatus {
+                    ip: "127.0.0.1".into(),
+                }),
+                labels: sb.config.labels.clone(),
+                annotations: sb.config.annotations.clone(),
+                runtime_handler: "coral".into(),
+            }),
+            info,
         }))
     }
 

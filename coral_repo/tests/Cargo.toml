@@ -28,9 +28,11 @@ coral-daemon = { path = "../cmd/coral-daemon" }
 coral-net.workspace = true
 coral-oci.workspace = true
 coral-runtime.workspace = true
+hyper-util.workspace = true
 libc.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
 tokio.workspace = true
 tokio-stream.workspace = true
 tonic.workspace = true
+tower.workspace = true

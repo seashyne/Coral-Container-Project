@@ -1,4 +1,4 @@
-# Coral Container Runtime (`v2.0.0`)
+# Coral Container Runtime (`v2.1.0`)
 
 **Coral** is a modular, memory-safe Linux container runtime, Kubernetes CRI v1 gRPC daemon, WebAssembly WASI runtime, and native `/dev/kvm` MicroVM / AI Sandbox engine built in **Rust (Edition 2024)**.
 

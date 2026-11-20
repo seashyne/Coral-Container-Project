@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="${1:-2.0.0}"
+VERSION="${1:-2.1.0}"
 ARCH="$(dpkg --print-architecture 2>/dev/null || echo amd64)"
 OUT_DIR="$REPO_DIR/target/packages"
 STAGE="$(mktemp -d)"

@@ -54,8 +54,10 @@ pub struct SandboxReport {
     pub stderr: String,
 }
 
-/// Boots a real Linux guest kernel + initramfs inside a hardware KVM MicroVM using
-/// `qemu-system-x86_64 -enable-kvm` (or validates kernel image if no external VMM is installed).
+/// Boots a real Linux guest kernel + initramfs inside a hardware KVM MicroVM.
+/// Prefers Coral's built-in pure-Rust `/dev/kvm` 64-bit Linux Boot Engine (`coral-vmm` native,
+/// zero QEMU/Firecracker required) on x86_64 when `/dev/kvm` is accessible, and falls back
+/// to `qemu-system-x86_64` when running without KVM or on non-x86 hosts.
 pub fn boot_linux_microvm(
     kernel_path: &Path,
     initrd_path: &Path,
@@ -67,14 +69,47 @@ pub fn boot_linux_microvm(
     let _hdr = inspect_bzimage(kernel_path)?;
     let kvm = probe_kvm();
 
+    // Primary path (v2.1): Pure-Rust native /dev/kvm x86-64 Linux kernel boot (Zero QEMU/Firecracker!)
+    #[cfg(target_arch = "x86_64")]
+    if kvm.available {
+        let cmdline = format!(
+            "console=ttyS0 earlyprintk=serial,ttyS0,115200 nokaslr reboot=k panic=1 pci=off nomodules quiet rdinit=/coral-init {}",
+            extra_cmdline.unwrap_or("")
+        );
+        let res = crate::linux_boot::boot_linux_bzimage_kvm(&crate::linux_boot::LinuxBootOptions {
+            kernel_path: kernel_path.to_path_buf(),
+            initrd_path: Some(initrd_path.to_path_buf()),
+            cmdline: cmdline.trim().to_string(),
+            memory_mb: memory_mb.max(128) as usize,
+            timeout_ms: timeout_secs.max(1).saturating_mul(1000),
+            max_vm_exits: 0,
+        })?;
+        let mut clean_stdout = String::new();
+        for line in res.serial_output.lines() {
+            if !line.trim().starts_with("__CORAL_VMM_EXIT__=") {
+                clean_stdout.push_str(line);
+                clean_stdout.push('\n');
+            }
+        }
+        return Ok(SandboxReport {
+            isolation_mode: "coral-native-kvm-linux".into(),
+            kvm_hardware_available: true,
+            exit_code: res.exit_code,
+            timed_out: res.timed_out,
+            duration_ms: res.duration_ms,
+            stdout: clean_stdout,
+            stderr: String::new(),
+        });
+    }
+
     let Some((vmm_name, vmm_bin)) = detect_external_vmm() else {
         bail!(
-            "Linux kernel '{}' validated, but no Linux MicroVM launcher (`qemu-system-x86_64` / `firecracker`) found in PATH",
+            "Linux kernel '{}' validated, but neither hardware `/dev/kvm` nor an external VMM (`qemu-system-x86_64`) is available",
             kernel_path.display()
         );
     };
     if vmm_name != "qemu-system-x86_64" {
-        bail!("Linux initrd auto-boot currently supports `qemu-system-x86_64` (found '{vmm_name}')");
+        bail!("external Linux initrd fallback currently supports `qemu-system-x86_64` (found '{vmm_name}')");
     }
 
     let cmdline = format!(
@@ -131,8 +166,9 @@ pub fn boot_linux_microvm(
 }
 
 /// Executes an untrusted command inside Coral's AI Agent Sandbox:
-/// - If a readable Linux guest kernel (`policy.kernel_path` or `CORAL_VMM_KERNEL`) + `qemu-system-x86_64`
-///   are available, packs the rootfs into an ephemeral `initramfs.cpio.gz` and boots a full separate Linux Kernel via KVM!
+/// - If a readable Linux guest kernel (`policy.kernel_path`, `CORAL_VMM_KERNEL`, or
+///   `~/.local/state/coral/vmm/vmlinuz-virt`) + rootfs + hardware `/dev/kvm` (or QEMU) are available,
+///   packs the rootfs into an ephemeral `initramfs.cpio.gz` and boots a full separate Linux Kernel!
 /// - Otherwise runs inside Coral's maximum-hardening ephemeral sandbox (Air-gapped `CLONE_NEWNET`,
 ///   ephemeral OverlayFS CoW wiped on exit, Seccomp-BPF 27-syscall filter, Capabilities Drop,
 ///   `NO_NEW_PRIVS`, Memory/CPU/PIDs caps, and hard wall-clock timeout killer), reporting KVM hardware status.
@@ -147,11 +183,13 @@ pub fn run_ai_sandbox(policy: &SandboxPolicy) -> Result<SandboxReport> {
             .map(PathBuf::from)
     });
 
-    // Upgrade to full Linux Kernel MicroVM automatically when guest kernel + rootfs + VMM are available.
+    // Upgrade to full Linux Kernel MicroVM automatically when guest kernel + rootfs + (KVM or QEMU) exist.
+    let can_boot_linux = (cfg!(target_arch = "x86_64") && kvm.available)
+        || detect_external_vmm().is_some_and(|(n, _)| n == "qemu-system-x86_64");
     if let Some(kernel) = kernel_opt
         && kernel.is_file()
         && let Some(rootfs) = &policy.rootfs_override
-        && detect_external_vmm().is_some_and(|(n, _)| n == "qemu-system-x86_64")
+        && can_boot_linux
     {
         let tmp_initrd = policy
             .state_root
@@ -160,8 +198,8 @@ pub fn run_ai_sandbox(policy: &SandboxPolicy) -> Result<SandboxReport> {
         let res = boot_linux_microvm(
             &kernel,
             &tmp_initrd,
-            policy.memory_mb.max(128),
-            policy.timeout_secs.max(1),
+            policy.memory_mb.max(256),
+            policy.timeout_secs.max(5),
             None,
         );
         let _ = std::fs::remove_file(&tmp_initrd);

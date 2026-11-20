@@ -10,6 +10,7 @@ anyhow.workspace = true
 flate2.workspace = true
 libc.workspace = true
 serde.workspace = true
+tar.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

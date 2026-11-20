@@ -38,3 +38,13 @@
 | **3.7 Private Registry Push/Login, Custom Networks, Rootless Egress, True PTY Stream & Release CI** | `coral-api` / `coral-net` / `coral-daemon` / `coral-cli` / `desktop` | รองรับ `coral login`/`logout` (`auth.json` mode `0600`), `coral push` (OCI Distribution v2), `coral network create/ls/inspect/rm` พร้อม sibling `/etc/hosts` + `pasta`/`slirp4netns` rootless internet egress, Full-Duplex PTY Streaming (`ExecStream` gRPC) ใน Coral Desktop, สคริปต์แพ็ก `.deb`, และ GitHub Actions Release Pipeline | Done |
 | **3.8 WebAssembly (Wasm) Workload** | `coral-wasm` | รัน `.wasm`/`.wat` และ OCI Wasm artifacts โดยตรงผ่าน WASI Preview 1 (`wasmi`) ระดับไมโครวินาที พร้อม CPU Fuel Metering + Memory Ceiling (`coral wasm run / pack`, `coral run --runtime wasm`) | Done |
 | **3.9 MicroVM Isolation Backend & AI Agent Sandbox** | `coral-vmm` | Pure-Rust Linux `/dev/kvm` 64-bit Long Mode MicroVM Hypervisor (4-level paging, 16550 UART serial, VM-exit budget), Linux `newc` initramfs builder, และ AI Agent Untrusted Code Sandbox (`coral vm probe / run`, `coral sandbox run`) | Done |
+
+---
+
+## Phase 4: Deep-Tech Enterprise & Cloud-Native (v2.1) — Completed
+| Milestone | Component | Details | Status |
+| :--- | :--- | :--- | :--- |
+| **4.1 Pure-Rust Linux Kernel Boot (Zero-QEMU)** | `coral-vmm` | บูต Linux x86-64 `bzImage` (`zero_page` + E820 + KVM IRQChip/PIT2 + 16550A UART + IRQ 4 + VirtIO-MMIO v2) โดยตรงผ่าน `/dev/kvm` พร้อม `coral vm setup-kernel` (โหลด Alpine `linux-virt` อัตโนมัติ) และ `coral vm boot` | Done |
+| **4.2 WASI Serverless HTTP Runtime** | `coral-wasm` | รัน `.wasm`/`.wat` เป็น HTTP/1.1 Microservice (`coral wasm serve`) ด้วย Per-Request Micro-Isolated WASI Sandbox + `coral_http`/`wasi:http` host imports + telemetry headers (`X-Coral-Wasm-Duration-Us`, `X-Coral-Wasm-Fuel`) | Done |
+| **4.3 Kubernetes CRI v1 Unix Socket & Status RPC** | `coral-api` / `coral-daemon` / `coral-cli` | รองรับ CRI v1 บน Unix Domain Socket (`--unix-socket` / `--endpoint unix:///...`) ควบคู่ TCP พร้อม `Status` (`RuntimeReady`/`NetworkReady`) และ `PodSandboxStatus` สำหรับ `kubelet` / `crictl` | Done |
+| **4.4 Ed25519 Image Signing, SPDX 2.3 SBOM & ARM64** | `coral-daemon` / `coral-cli` / CI | `coral keygen` / `coral sign` / `coral verify` (Ed25519 + SHA-256 Rootfs Merkle Tree ตรวจจับการแก้ไขระดับไบต์), `coral sbom` (SPDX 2.3 JSON จาก APK/DPKG/Wasm), และ ARM64 (`aarch64`) Release CI | Done |

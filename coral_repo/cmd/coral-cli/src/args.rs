@@ -18,9 +18,10 @@ pub struct Cli {
     #[arg(long, global = true, env = "CORAL_IMAGES_DIR")]
     pub images_dir: Option<PathBuf>,
 
-    /// coral-daemon CRI v1 gRPC endpoint (host:port or http://host:port)
+    /// coral-daemon CRI v1 gRPC endpoint (`host:port`, `http://host:port`, or `unix:///path/coral.sock`)
     #[arg(
         long,
+        alias = "endpoint",
         global = true,
         env = "CORAL_ADDR",
         default_value = "http://127.0.0.1:50051"
@@ -131,6 +132,27 @@ pub enum WasmAction {
         #[arg(short = 't', long = "tag")]
         tag: String,
     },
+    /// Serve a `.wasm`/`.wat` or Wasm OCI image as a per-request isolated WASI HTTP/1.1 microservice
+    Serve {
+        /// Path to `.wasm`/`.wat` file or installed Wasm image tag
+        target: String,
+
+        /// TCP address to listen on (e.g. `127.0.0.1:8080`)
+        #[arg(long, default_value = "127.0.0.1:8080")]
+        listen: String,
+
+        /// Deterministic per-request CPU fuel budget (0 = unlimited)
+        #[arg(long, default_value_t = 50_000_000)]
+        fuel: u64,
+
+        /// Per-request linear memory ceiling in MB
+        #[arg(short = 'm', long = "memory", default_value_t = 32)]
+        memory_mb: usize,
+
+        /// Extra environment variable (`KEY=VALUE`), repeatable
+        #[arg(short = 'e', long = "env")]
+        envs: Vec<String>,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -140,6 +162,50 @@ pub enum VmAction {
         /// Output structured JSON capabilities and self-test telemetry
         #[arg(long)]
         json: bool,
+    },
+    /// Download and install an Alpine `linux-virt` guest kernel (or register a local bzImage) for pure-Rust KVM boot
+    SetupKernel {
+        /// Optional local bzImage path to copy instead of downloading Alpine `linux-virt`
+        #[arg(long)]
+        from: Option<PathBuf>,
+
+        /// Destination path (defaults to `~/.local/state/coral/vmm/vmlinuz-virt`)
+        #[arg(long)]
+        dest: Option<PathBuf>,
+
+        /// Output structured JSON installation report
+        #[arg(long)]
+        json: bool,
+    },
+    /// Boot an OCI image inside a real separate Linux guest kernel on Coral's pure-Rust `/dev/kvm` hypervisor (Zero QEMU)
+    Boot {
+        /// Base image tag or rootfs directory (e.g. `alpine:3.20`)
+        #[arg(long, default_value = "alpine:3.20")]
+        image: String,
+
+        /// Guest Linux bzImage kernel path (defaults to `~/.local/state/coral/vmm/vmlinuz-virt`)
+        #[arg(long)]
+        kernel: Option<PathBuf>,
+
+        /// Guest RAM in MB (64..=1024)
+        #[arg(short = 'm', long = "memory", default_value_t = 256)]
+        memory_mb: usize,
+
+        /// Hard wall-clock timeout in seconds
+        #[arg(long, default_value_t = 15)]
+        timeout: u64,
+
+        /// Extra kernel command line arguments
+        #[arg(long)]
+        cmdline: Option<String>,
+
+        /// Output structured JSON report
+        #[arg(long)]
+        json: bool,
+
+        /// Command to run as PID 1 inside the separate Linux kernel MicroVM (pass after `--`)
+        #[arg(last = true, required = true)]
+        cmd: Vec<String>,
     },
     /// Boot a raw 64-bit guest payload or Linux bzImage kernel + initramfs inside `/dev/kvm`
     Run {
@@ -778,6 +844,70 @@ pub enum Commands {
         /// Optional output path (prints to stdout if omitted)
         #[arg(short, long)]
         output: Option<PathBuf>,
+    },
+
+    /// Generate an Ed25519 signing keypair (`~/.config/coral/cosign.{key,pub}`) for image signing
+    Keygen {
+        /// Private key output path (mode 0600)
+        #[arg(long)]
+        key: Option<PathBuf>,
+
+        /// Public key output path
+        #[arg(long = "pub")]
+        pub_key: Option<PathBuf>,
+
+        /// Overwrite existing key files
+        #[arg(long)]
+        force: bool,
+
+        /// Output structured JSON report
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Cryptographically sign a Coral image with Ed25519 (tamper-evident Merkle tree digest)
+    Sign {
+        /// Image tag or ID (e.g. `alpine:3.20`)
+        image: String,
+
+        /// Ed25519 private key path (defaults to `~/.config/coral/cosign.key`)
+        #[arg(long)]
+        key: Option<PathBuf>,
+
+        /// Output structured JSON signature envelope
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Verify an image's Ed25519 signature and live rootfs integrity against a public key
+    Verify {
+        /// Image tag or ID (e.g. `alpine:3.20`)
+        image: String,
+
+        /// Ed25519 public key path (defaults to `~/.config/coral/cosign.pub`)
+        #[arg(long)]
+        key: Option<PathBuf>,
+
+        /// Output structured JSON verification report
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Generate a standards-compliant SPDX 2.3 JSON Software Bill of Materials (SBOM) for an image
+    Sbom {
+        /// Image tag or ID (e.g. `alpine:3.20`)
+        image: String,
+
+        /// Optional output file path (prints JSON to stdout if omitted)
+        #[arg(short = 'o', long)]
+        output: Option<PathBuf>,
+    },
+
+    /// Query Kubernetes CRI v1 RuntimeService Status (`RuntimeReady`, `NetworkReady`, verbose info)
+    CriStatus {
+        /// Include verbose runtime configuration JSON (same as `crictl info`)
+        #[arg(short, long)]
+        verbose: bool,
     },
 
     /// Query a running coral-daemon CRI v1 gRPC endpoint for version info

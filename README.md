@@ -1,19 +1,19 @@
-# Coral Container Project (`v2.0.0`)
+# Coral Container Project (`v2.1.0`)
 
-**Coral** is a next-generation, memory-safe container runtime written in **Rust (Edition 2024)** — uniting a rootless-first **OCI v1.0.2** Linux container engine, **Kubernetes CRI v1 gRPC** daemon, **WASI Preview 1 WebAssembly** runtime (`coral-wasm`), pure-Rust Linux **`/dev/kvm` 64-bit MicroVM & AI Agent Sandbox** (`coral-vmm`), and the cross-platform **Coral Desktop** GUI (Tauri v2).
+**Coral** is a next-generation, memory-safe container runtime written in **Rust (Edition 2024)** — uniting a rootless-first **OCI v1.0.2** Linux container engine, **Kubernetes CRI v1 gRPC** daemon (TCP + `unix://` Unix Domain Socket), **WASI Serverless HTTP WebAssembly** runtime (`coral-wasm`), pure-Rust Linux **`/dev/kvm` Separate-Kernel MicroVM & AI Agent Sandbox** (`coral-vmm`, Zero QEMU/Firecracker), **Ed25519 Image Signing + SPDX 2.3 SBOM**, multi-arch **x86_64 & ARM64**, and the cross-platform **Coral Desktop** GUI (Tauri v2).
 
 > **Documentation & Downloads:** https://seashyne.github.io/Coral-Container-Project/  
 > **GitHub Releases (`.deb`, `.tar.gz`, Desktop installers):** https://github.com/seashyne/Coral-Container-Project/releases
 
 ---
 
-## Highlights (`v2.0.0`)
+## Highlights (`v2.1.0`)
 
 - **Zero-GC Rust OCI Runtime (`coral`)**: Rootless by default (`CLONE_NEWUSER` + `pivot_root`), OverlayFS Copy-on-Write multi-lowerdir, Cgroups v2 limits & live stats, pure-Rust Seccomp-BPF (27 blocked syscalls), OCI Capability drop, interactive `-it` PTY, and real `setns()` `exec -it`.
-- **Full Developer Workflow**: `coral build` (Dockerfile + Content-Addressable Step Cache), `coral compose up/ps/logs/down`, `coral login/push/pull` (OCI Distribution v2), `coral save/load` (`.tar`/`.tar.gz`/`.tar.zst`), `coral network create/ls/rm` (`pasta`/`slirp4netns` rootless egress + sibling `/etc/hosts`), `coral volume`, `coral cp`, `coral logs -f`, `coral stats --watch`, `coral system df/prune`, persistent state & Boot Auto-Resume, and live Healthchecks.
-- **WebAssembly Runtime (`coral-wasm`)**: Run `.wasm` / `.wat` & OCI Wasm images directly via WASI Preview 1 (`wasmi 2.0`) with deterministic CPU fuel metering and linear memory ceilings — **326 µs** cold start on release builds without a Linux rootfs.
-- **KVM 64-bit MicroVM & AI Agent Sandbox (`coral-vmm`)**: Pure-Rust native `/dev/kvm` x86-64 Long Mode hypervisor (**2.94 ms** boot + COM1 serial execution), Linux `newc` initramfs builder, and hardened zero-network AI Agent Sandbox (`coral sandbox run`) with full process-group timeout termination.
-- **Coral Desktop (`desktop/`)**: Native Linux & Windows (WSL2) Tauri v2 GUI with full-duplex live streaming PTY terminal (`ExecStream` gRPC), SVG CPU/RAM sparklines, Volumes/Networks/Registry manager, and the **Next-Gen (Wasm & KVM)** playground.
+- **Kubernetes CRI v1 & Developer Workflow**: Dual TCP + Kubernetes **Unix Domain Socket (`unix:///.../coral.sock`)** with CRI `Status` (`RuntimeReady`/`NetworkReady`) & `PodSandboxStatus`, plus `coral build` (Step Cache), `coral compose`, `coral login/push/pull`, `coral save/load`, `coral network`, Named Volumes, Healthchecks & Boot Auto-Resume.
+- **WASI Serverless HTTP WebAssembly (`coral-wasm`)**: Run `.wasm`/`.wat` in **326 µs** OR host per-request isolated Serverless HTTP/1.1 microservices (`coral wasm serve`) in **89 µs/req** with deterministic CPU fuel metering & linear memory caps.
+- **Pure-Rust `/dev/kvm` Separate-Kernel Linux MicroVM (`coral-vmm`, Zero QEMU)**: Boot a real separate Linux 6.6 kernel + Alpine initramfs directly via Coral's pure-Rust KVM engine (**766 ms** end-to-end with `coral vm setup-kernel` & `coral vm boot`, **2.94 ms** raw 64-bit Long Mode), plus hardened AI Agent Sandbox (`coral sandbox run`).
+- **Supply-Chain Security & Multi-Arch**: Ed25519 image signing & live rootfs Merkle tamper verification (`coral keygen`/`sign`/`verify`), SPDX 2.3 JSON SBOM (`coral sbom`), and prebuilt **Linux `x86_64` & `arm64`** + **Coral Desktop (Linux & Windows)** installers.
 
 ---
 
