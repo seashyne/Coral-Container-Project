@@ -53,26 +53,44 @@ pub struct CniAddOutcome {
 pub struct CniPluginChain {
     pub conf_dir: PathBuf,
     pub bin_dir: PathBuf,
+    /// When true (custom CNI dir or explicit env config), missing plugins return an error.
+    /// When false (passive `/etc/cni/net.d` auto-discovery), incomplete host CNI setups
+    /// are skipped cleanly so rootless pods/compose keep working.
+    pub strict: bool,
 }
 
 impl Default for CniPluginChain {
     fn default() -> Self {
-        let conf_dir = std::env::var_os("CORAL_CNI_CONF_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| PathBuf::from("/etc/cni/net.d"));
-        let bin_dir = std::env::var_os("CORAL_CNI_BIN_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| PathBuf::from("/opt/cni/bin"));
-        Self { conf_dir, bin_dir }
+        let env_conf = std::env::var_os("CORAL_CNI_CONF_DIR").map(PathBuf::from);
+        let env_bin = std::env::var_os("CORAL_CNI_BIN_DIR").map(PathBuf::from);
+        let strict = env_conf.is_some() || env_bin.is_some();
+        Self {
+            conf_dir: env_conf.unwrap_or_else(|| PathBuf::from("/etc/cni/net.d")),
+            bin_dir: env_bin.unwrap_or_else(|| PathBuf::from("/opt/cni/bin")),
+            strict,
+        }
     }
 }
 
 impl CniPluginChain {
     pub fn new(conf_dir: impl Into<PathBuf>, bin_dir: impl Into<PathBuf>) -> Self {
+        let conf_dir = conf_dir.into();
+        let bin_dir = bin_dir.into();
+        let strict = conf_dir != Path::new("/etc/cni/net.d") || bin_dir != Path::new("/opt/cni/bin");
         Self {
-            conf_dir: conf_dir.into(),
-            bin_dir: bin_dir.into(),
+            conf_dir,
+            bin_dir,
+            strict,
         }
+    }
+
+    fn all_plugin_bins_exist(&self, net_list: &CniNetworkList) -> bool {
+        net_list.plugins.iter().all(|plugin| {
+            plugin
+                .get("type")
+                .and_then(|t| t.as_str())
+                .is_some_and(|p| self.bin_dir.join(p).is_file())
+        })
     }
 
     /// Scans `conf_dir` in lexicographical order and loads the first valid `.conflist` or `.conf`.
@@ -132,6 +150,18 @@ impl CniPluginChain {
         let Some(net_list) = self.discover_network_list()? else {
             return Ok(None);
         };
+        if !self.strict {
+            if !self.all_plugin_bins_exist(&net_list) {
+                return Ok(None);
+            }
+            // Do not attempt privileged system-wide CNI bridge attachment against host `/proc/self/ns/net` when rootless.
+            let is_root = fs::metadata("/proc/self")
+                .map(|m| std::os::unix::fs::MetadataExt::uid(&m) == 0)
+                .unwrap_or(false);
+            if !is_root && req.netns_path == "/proc/self/ns/net" {
+                return Ok(None);
+            }
+        }
         let mut prev_result: Option<Value> = None;
         let mut executed = 0usize;
 
@@ -431,5 +461,35 @@ mod tests {
                 "DEL:mock-cilium:pod-123:eth0",
             ]
         );
+    }
+
+    #[test]
+    fn passive_default_skips_incomplete_system_cni_without_failing() {
+        let tmp = tempfile::tempdir().unwrap();
+        let conf_dir = tmp.path().join("net.d");
+        let empty_bin_dir = tmp.path().join("bin");
+        fs::create_dir_all(&conf_dir).unwrap();
+        fs::create_dir_all(&empty_bin_dir).unwrap();
+        fs::write(
+            conf_dir.join("10-partial.conflist"),
+            r#"{"cniVersion":"1.0.0","name":"partial","plugins":[{"type":"bridge"}]}"#,
+        )
+        .unwrap();
+
+        let mut passive = CniPluginChain::new(&conf_dir, &empty_bin_dir);
+        passive.strict = false;
+        let req = CniExecRequest {
+            container_id: "pod-1".into(),
+            netns_path: "/proc/self/ns/net".into(),
+            ifname: "eth0".into(),
+            pod_name: "p".into(),
+            pod_namespace: "default".into(),
+            pod_uid: "u".into(),
+            runtime_config: None,
+        };
+        assert!(passive.add_pod_network(&req).unwrap().is_none());
+
+        let strict = CniPluginChain::new(&conf_dir, &empty_bin_dir);
+        assert!(strict.add_pod_network(&req).is_err());
     }
 }
