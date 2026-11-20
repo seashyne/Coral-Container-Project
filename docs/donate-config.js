@@ -7,7 +7,7 @@
  *    and set `promptpay.qrImage = "assets/promptpay-qr.png"`.
  */
 window.CORAL_SPONSOR_CONFIG = {
-  releaseVersion: "v2.1.0",
+  releaseVersion: "v2.2.0",
   repoSlug: "seashyne/Coral-Container-Project",
 
   promptpay: {
@@ -25,9 +25,8 @@ window.CORAL_SPONSOR_CONFIG = {
   },
 
   buyMeACoffee: {
-    configured: false,
-    // Replace with your real Buy Me a Coffee or Ko-fi link:
-    url: "https://buymeacoffee.com/seashyne",
+    configured: true,
+    url: "https://buymeacoffee.com/seashyne?new=1",
     handle: "buymeacoffee.com/seashyne",
   },
 };

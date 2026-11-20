@@ -9,7 +9,7 @@
     "args": [
       "/bin/sh",
       "-c",
-      "echo \"Coral v2.1 Container Ready — hostname=$(hostname) pid=$$ alpine=$(cat /etc/alpine-release)\""
+      "echo \"Coral v2.2 Container Ready — hostname=$(hostname) pid=$$ alpine=$(cat /etc/alpine-release)\""
     ],
     "env": [
       "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",

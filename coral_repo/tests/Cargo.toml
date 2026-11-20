@@ -21,6 +21,10 @@ path = "oci_features_e2e.rs"
 name = "cri_e2e"
 path = "cri_e2e.rs"
 
+[[test]]
+name = "security_fuzz_e2e"
+path = "security_fuzz_e2e.rs"
+
 [dev-dependencies]
 coral-api.workspace = true
 coral-cgroups.workspace = true
@@ -28,6 +32,10 @@ coral-daemon = { path = "../cmd/coral-daemon" }
 coral-net.workspace = true
 coral-oci.workspace = true
 coral-runtime.workspace = true
+coral-vmm.workspace = true
+coral-wasm.workspace = true
+flate2.workspace = true
+tar.workspace = true
 hyper-util.workspace = true
 libc.workspace = true
 serde_json.workspace = true

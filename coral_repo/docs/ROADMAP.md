@@ -48,3 +48,13 @@
 | **4.2 WASI Serverless HTTP Runtime** | `coral-wasm` | รัน `.wasm`/`.wat` เป็น HTTP/1.1 Microservice (`coral wasm serve`) ด้วย Per-Request Micro-Isolated WASI Sandbox + `coral_http`/`wasi:http` host imports + telemetry headers (`X-Coral-Wasm-Duration-Us`, `X-Coral-Wasm-Fuel`) | Done |
 | **4.3 Kubernetes CRI v1 Unix Socket & Status RPC** | `coral-api` / `coral-daemon` / `coral-cli` | รองรับ CRI v1 บน Unix Domain Socket (`--unix-socket` / `--endpoint unix:///...`) ควบคู่ TCP พร้อม `Status` (`RuntimeReady`/`NetworkReady`) และ `PodSandboxStatus` สำหรับ `kubelet` / `crictl` | Done |
 | **4.4 Ed25519 Image Signing, SPDX 2.3 SBOM & ARM64** | `coral-daemon` / `coral-cli` / CI | `coral keygen` / `coral sign` / `coral verify` (Ed25519 + SHA-256 Rootfs Merkle Tree ตรวจจับการแก้ไขระดับไบต์), `coral sbom` (SPDX 2.3 JSON จาก APK/DPKG/Wasm), และ ARM64 (`aarch64`) Release CI | Done |
+
+---
+
+## Phase 5: Production & Deep-Tech Enterprise (v2.2) — Completed
+| Milestone | Component | Details | Status |
+| :--- | :--- | :--- | :--- |
+| **5.1 Pure-Rust VirtIO-Blk & VirtIO-Net (`coral-vmm`)** | `coral-vmm` | VirtIO-MMIO v2 Block (`/dev/vda` persistent ext4/raw disk + `coral vm disk create`) และ Userspace L2/L3 VirtIO-Net (`eth0` 10.0.2.15/24, DHCP, ICMP, outbound TCP/UDP, `-p` host->guest port forward) พร้อม Auto-Extract Kernel Modules | Done |
+| **5.2 Kubernetes CRI v1 CNI Plugin Chain & Streaming** | `coral-net` / `coral-daemon` | รัน CNI plugin chain (`/etc/cni/net.d/*.conflist`, `/opt/cni/bin/*`) พร้อม reverse-DEL rollback, Streaming HTTP/SPDY (`Exec`, `Attach`, `PortForward`), `ContainerStats` และ `ImageFsInfo` | Done |
+| **5.3 Real-World Image Config, Log Rotation, Auto-GC & Shell Completion** | `coral-daemon` / `coral-runtime` / `coral-cli` | สืบทอด `ENTRYPOINT`/`CMD`/`ENV`/`WORKDIR`/`USER`, single-UID non-root UserNS remap (`nginx`/`redis`/`postgres`), `SIGTERM` guard, Log Rotation (`--log-max-size-mb`), Background Auto-GC, และ `coral completion` | Done |
+| **5.4 Prometheus `/metrics`, Fuzzing & Coral Desktop macOS `.dmg`** | `coral-daemon` / `fuzz/` / `desktop` | HTTP `/metrics` & `/healthz`, `cargo-fuzz` targets (`oci_spec`, `tar_extract`, `wasm_http_cgi`, `virtio_ring`), UI ใหม่สำหรับ Sign/Verify/SBOM + KVM Boot, และ macOS `.dmg` CI | Done |

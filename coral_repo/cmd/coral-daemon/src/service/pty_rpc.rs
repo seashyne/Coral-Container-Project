@@ -32,13 +32,16 @@ impl CoralDaemonService {
             return Err(Status::invalid_argument("container_id is required"));
         }
 
-        let is_running = {
+        let (cid, is_running) = {
             let store = self.store.read().await;
+            let resolved = store
+                .resolve_container_id(&cid)
+                .ok_or_else(|| Status::not_found(format!("container '{cid}' not found")))?;
             let ctr = store
                 .containers
-                .get(&cid)
+                .get(&resolved)
                 .ok_or_else(|| Status::not_found(format!("container '{cid}' not found")))?;
-            ctr.state == CriContainerState::ContainerRunning
+            (resolved, ctr.state == CriContainerState::ContainerRunning)
         };
         if !is_running {
             return Err(Status::failed_precondition(format!(

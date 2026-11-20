@@ -53,6 +53,11 @@ pub fn run() {
             cri::vmm_probe,
             cri::wasm_run,
             cri::sandbox_run,
+            cri::image_sign,
+            cri::image_verify,
+            cri::image_sbom,
+            cri::vm_setup_kernel,
+            cri::vm_boot,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Coral Desktop")

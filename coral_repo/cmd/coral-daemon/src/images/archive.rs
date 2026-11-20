@@ -1,6 +1,7 @@
 //! Image tagging (`coral tag`), portable archive export (`coral save`),
 //! and offline archive import (`coral load`) supporting `.tar`, `.tar.gz`, and `.tar.zst`.
 
+use super::config::OciImageConfig;
 use super::extract::extract_layer;
 use super::reference::normalize_lookup_tag;
 use super::{StoredImage, dir_size, find_image, remove_dir_force};
@@ -21,6 +22,8 @@ struct ArchivedImageMeta {
     id: String,
     repo_tags: Vec<String>,
     size: u64,
+    #[serde(default)]
+    config: Option<OciImageConfig>,
 }
 
 /// Adds `target_tag` as an alias pointing to the image matching `source_query` in `images`.
@@ -96,6 +99,7 @@ pub fn save_image_archive(
             img.repo_tags.clone()
         },
         size: img.size,
+        config: Some(OciImageConfig::load_for_rootfs(rootfs)),
     };
     let meta_bytes = serde_json::to_vec_pretty(&meta)?;
 
@@ -223,10 +227,15 @@ pub fn load_image_archive(
 
     let abs_rootfs = fs::canonicalize(&dest_rootfs).unwrap_or(dest_rootfs);
     let size = dir_size(&abs_rootfs);
+    if let Some(m) = &meta_opt
+        && let Some(cfg) = &m.config
+    {
+        let _ = cfg.save_for_rootfs(&abs_rootfs);
+    }
     let id = if let Some(m) = meta_opt
         && override_tag.is_none()
     {
-        m.id
+        m.id.clone()
     } else {
         let mut hasher = Sha256::new();
         hasher.update(format!("loaded:{}:{size}", repo_tags.join(",")).as_bytes());

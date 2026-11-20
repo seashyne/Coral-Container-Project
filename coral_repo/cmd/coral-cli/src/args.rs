@@ -1,6 +1,7 @@
 //! Clap command-line interface definitions for `coral` (`Cli`, `Commands`, `PodAction`, `VolumeAction`).
 
 use clap::{Parser, Subcommand};
+use clap_complete::Shell;
 use std::path::PathBuf;
 
 #[derive(Debug, Parser)]
@@ -199,6 +200,22 @@ pub enum VmAction {
         #[arg(long)]
         cmdline: Option<String>,
 
+        /// Attach persistent raw/ext4 disk image via VirtIO-Blk (`/dev/vda`; append `:ro` for read-only)
+        #[arg(long)]
+        disk: Option<String>,
+
+        /// Auto-mount `/dev/vda` onto this guest path inside the MicroVM (requires `--disk`)
+        #[arg(long)]
+        disk_mount: Option<String>,
+
+        /// Enable pure-Rust VirtIO-Net networking (`eth0` 10.0.2.15/24, gateway 10.0.2.2)
+        #[arg(long)]
+        net: bool,
+
+        /// Forward host TCP port into MicroVM (`HOST_PORT:GUEST_PORT`, implies `--net`)
+        #[arg(short = 'p', long = "publish")]
+        ports: Vec<String>,
+
         /// Output structured JSON report
         #[arg(long)]
         json: bool,
@@ -206,6 +223,11 @@ pub enum VmAction {
         /// Command to run as PID 1 inside the separate Linux kernel MicroVM (pass after `--`)
         #[arg(last = true, required = true)]
         cmd: Vec<String>,
+    },
+    /// Manage persistent VirtIO-Blk raw/ext4 disk images for Coral KVM MicroVMs
+    Disk {
+        #[command(subcommand)]
+        action: VmDiskAction,
     },
     /// Boot a raw 64-bit guest payload or Linux bzImage kernel + initramfs inside `/dev/kvm`
     Run {
@@ -239,6 +261,21 @@ pub enum VmAction {
         /// Output structured JSON execution report
         #[arg(long)]
         json: bool,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum VmDiskAction {
+    /// Create a sparse VirtIO-Blk raw (or ext4-formatted) disk image for `coral vm boot --disk`
+    Create {
+        /// Output disk image path (e.g. `./data.img`)
+        path: PathBuf,
+        /// Disk capacity in MiB
+        #[arg(long, default_value_t = 64)]
+        size_mb: u64,
+        /// Format the new disk image with ext4 via host `mkfs.ext4`
+        #[arg(long)]
+        ext4: bool,
     },
 }
 
@@ -641,9 +678,17 @@ pub enum Commands {
         #[arg(long = "pids", default_value_t = 0)]
         pids_limit: i64,
 
-        /// Working directory inside the container (--image mode)
-        #[arg(short = 'w', long, default_value = "/")]
-        workdir: String,
+        /// Working directory inside the container (defaults to image WORKDIR or `/`)
+        #[arg(short = 'w', long)]
+        workdir: Option<String>,
+
+        /// Username or UID[:GID] to run as (defaults to image USER)
+        #[arg(short = 'u', long)]
+        user: Option<String>,
+
+        /// Override the default ENTRYPOINT of the image (`""` clears ENTRYPOINT)
+        #[arg(long)]
+        entrypoint: Option<String>,
 
         /// Container hostname (--image mode)
         #[arg(long)]
@@ -676,6 +721,10 @@ pub enum Commands {
         /// Keep container state.json on disk after exit (local OCI mode)
         #[arg(long)]
         keep: bool,
+
+        /// Automatically remove the container after it exits (Docker compatibility flag)
+        #[arg(long)]
+        rm: bool,
 
         /// Unique container ID (required in --bundle mode; optional in --image mode)
         id: Option<String>,
@@ -908,6 +957,12 @@ pub enum Commands {
         /// Include verbose runtime configuration JSON (same as `crictl info`)
         #[arg(short, long)]
         verbose: bool,
+    },
+
+    /// Generate shell completion script (`coral completion bash|zsh|fish|elvish|powershell`)
+    Completion {
+        /// Target shell (`bash`, `zsh`, `fish`, `elvish`, `powershell`)
+        shell: Shell,
     },
 
     /// Query a running coral-daemon CRI v1 gRPC endpoint for version info

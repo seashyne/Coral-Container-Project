@@ -22,6 +22,13 @@ service RuntimeService {
   rpc ListContainers (ListContainersRequest) returns (ListContainersResponse);
   rpc ContainerStatus (ContainerStatusRequest) returns (ContainerStatusResponse);
   rpc ExecSync (ExecSyncRequest) returns (ExecSyncResponse);
+  rpc Exec (ExecRequest) returns (ExecResponse);
+  rpc Attach (AttachRequest) returns (AttachResponse);
+  rpc PortForward (PortForwardRequest) returns (PortForwardResponse);
+  rpc ContainerStats (ContainerStatsRequest) returns (ContainerStatsResponse);
+  rpc ListContainerStats (ListContainerStatsRequest) returns (ListContainerStatsResponse);
+  rpc UpdateRuntimeConfig (UpdateRuntimeConfigRequest) returns (UpdateRuntimeConfigResponse);
+  rpc ReopenContainerLog (ReopenContainerLogRequest) returns (ReopenContainerLogResponse);
   rpc ExecStream (stream ExecStreamRequest) returns (stream ExecStreamResponse);
 }
 
@@ -31,6 +38,7 @@ service ImageService {
   rpc ImageStatus (ImageStatusRequest) returns (ImageStatusResponse);
   rpc PullImage (PullImageRequest) returns (PullImageResponse);
   rpc RemoveImage (RemoveImageRequest) returns (RemoveImageResponse);
+  rpc ImageFsInfo (ImageFsInfoRequest) returns (ImageFsInfoResponse);
 }
 
 message VersionRequest {
@@ -341,4 +349,127 @@ message PodSandboxStatus {
 message PodSandboxStatusResponse {
   PodSandboxStatus status = 1;
   map<string, string> info = 2;
+}
+
+// Kubernetes kubelet / critest Streaming RPCs (Exec, Attach, PortForward)
+message ExecRequest {
+  string container_id = 1;
+  repeated string cmd = 2;
+  bool tty = 3;
+  bool stdin = 4;
+  bool stdout = 5;
+  bool stderr = 6;
+}
+
+message ExecResponse {
+  string url = 1;
+}
+
+message AttachRequest {
+  string container_id = 1;
+  bool stdin = 2;
+  bool tty = 3;
+  bool stdout = 4;
+  bool stderr = 5;
+}
+
+message AttachResponse {
+  string url = 1;
+}
+
+message PortForwardRequest {
+  string pod_sandbox_id = 1;
+  repeated int32 port = 2;
+}
+
+message PortForwardResponse {
+  string url = 1;
+}
+
+// CRI RuntimeConfig, Log Reopen, Stats & ImageFsInfo
+message NetworkConfig {
+  string pod_cidr = 1;
+}
+
+message RuntimeConfig {
+  NetworkConfig network_config = 1;
+}
+
+message UpdateRuntimeConfigRequest {
+  RuntimeConfig runtime_config = 1;
+}
+
+message UpdateRuntimeConfigResponse {}
+
+message ReopenContainerLogRequest {
+  string container_id = 1;
+}
+
+message ReopenContainerLogResponse {}
+
+message UInt64Value {
+  uint64 value = 1;
+}
+
+message ContainerAttributes {
+  string id = 1;
+  ContainerMetadata metadata = 2;
+  map<string, string> labels = 3;
+  map<string, string> annotations = 4;
+}
+
+message CpuUsage {
+  int64 timestamp = 1;
+  UInt64Value usage_core_nano_seconds = 2;
+}
+
+message MemoryUsage {
+  int64 timestamp = 1;
+  UInt64Value working_set_bytes = 2;
+}
+
+message FilesystemIdentifier {
+  string mountpoint = 1;
+}
+
+message FilesystemUsage {
+  int64 timestamp = 1;
+  FilesystemIdentifier fs_id = 2;
+  UInt64Value used_bytes = 3;
+  UInt64Value inodes_used = 4;
+}
+
+message ContainerStats {
+  ContainerAttributes attributes = 1;
+  CpuUsage cpu = 2;
+  MemoryUsage memory = 3;
+  FilesystemUsage writable_layer = 4;
+}
+
+message ContainerStatsFilter {
+  string id = 1;
+  string pod_sandbox_id = 2;
+  map<string, string> label_selector = 3;
+}
+
+message ContainerStatsRequest {
+  string container_id = 1;
+}
+
+message ContainerStatsResponse {
+  ContainerStats stats = 1;
+}
+
+message ListContainerStatsRequest {
+  ContainerStatsFilter filter = 1;
+}
+
+message ListContainerStatsResponse {
+  repeated ContainerStats stats = 1;
+}
+
+message ImageFsInfoRequest {}
+
+message ImageFsInfoResponse {
+  repeated FilesystemUsage image_filesystems = 1;
 }

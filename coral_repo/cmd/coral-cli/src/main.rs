@@ -11,9 +11,10 @@ mod port_proxy;
 use anyhow::{Context, Result};
 use args::{
     Cli, Commands, ComposeAction, NetworkAction, PodAction, SandboxAction, SystemAction, VmAction,
+    VmDiskAction,
     VolumeAction, WasmAction,
 };
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 use coral_cgroups::CgroupManager;
 use coral_daemon::images;
 use coral_net::CniNetworkConfig;
@@ -450,6 +451,10 @@ fn dispatch(cli: Cli) -> Result<ExitCode> {
                 memory_mb,
                 timeout,
                 cmdline,
+                disk,
+                disk_mount,
+                net,
+                ports,
                 json,
                 cmd,
             } => nextgen::cmd_vm_boot(
@@ -460,9 +465,23 @@ fn dispatch(cli: Cli) -> Result<ExitCode> {
                 memory_mb,
                 timeout,
                 cmdline,
+                disk,
+                disk_mount,
+                net || !ports.is_empty(),
+                ports,
                 &cmd,
                 json,
             ),
+            VmAction::Disk { action } => match action {
+                VmDiskAction::Create {
+                    path,
+                    size_mb,
+                    ext4,
+                } => {
+                    nextgen::cmd_vm_disk_create(&path, size_mb, ext4)?;
+                    Ok(ExitCode::SUCCESS)
+                }
+            },
             VmAction::Run {
                 payload,
                 kernel,
@@ -536,6 +555,8 @@ fn dispatch(cli: Cli) -> Result<ExitCode> {
             cpu_percent,
             pids_limit,
             workdir,
+            user,
+            entrypoint,
             hostname,
             restart,
             health_cmd,
@@ -544,9 +565,11 @@ fn dispatch(cli: Cli) -> Result<ExitCode> {
             daemon,
             detach,
             keep,
+            rm,
             id,
             mut cmd,
         } => {
+            let keep = keep && !rm;
             if let Some(image_ref) = image {
                 // Direct Wasm runtime or auto-detected Wasm OCI image!
                 if runtime.eq_ignore_ascii_case("wasm")
@@ -615,6 +638,8 @@ fn dispatch(cli: Cli) -> Result<ExitCode> {
                             privileged,
                             no_overlay,
                             workdir,
+                            user,
+                            entrypoint,
                             hostname,
                             memory_mb,
                             cpu_percent,
@@ -650,6 +675,8 @@ fn dispatch(cli: Cli) -> Result<ExitCode> {
                         cpu_percent,
                         pids_limit,
                         workdir,
+                        user,
+                        entrypoint,
                         hostname,
                         keep,
                     },
@@ -897,6 +924,19 @@ fn dispatch(cli: Cli) -> Result<ExitCode> {
 
         Commands::CriStatus { verbose } => {
             run_async(daemon_client::cmd_cri_status(&addr, verbose))?;
+            Ok(ExitCode::SUCCESS)
+        }
+
+        Commands::Completion { shell } => {
+            use std::io::Write;
+            let mut cmd = Cli::command();
+            let mut buf = Vec::new();
+            clap_complete::generate(shell, &mut cmd, "coral", &mut buf);
+            if let Err(e) = std::io::stdout().write_all(&buf)
+                && e.kind() != std::io::ErrorKind::BrokenPipe
+            {
+                return Err(e.into());
+            }
             Ok(ExitCode::SUCCESS)
         }
 

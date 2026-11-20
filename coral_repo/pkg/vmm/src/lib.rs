@@ -6,11 +6,17 @@ pub mod kernel;
 pub mod kvm;
 pub mod linux_boot;
 pub mod sandbox;
+pub mod virtio_blk;
+pub mod virtio_mmio;
+pub mod virtio_net;
 
-pub use initramfs::{BzImageInfo, build_initramfs_cpio_gz, inspect_bzimage};
+pub use initramfs::{
+    BzImageInfo, InitramfsOptions, build_initramfs_cpio_gz, build_initramfs_with_options,
+    inspect_bzimage,
+};
 pub use kernel::{
-    KernelInstallReport, default_kernel_path, extract_bzimage_from_apk, install_kernel_from_file,
-    setup_alpine_microvm_kernel,
+    KernelInstallReport, default_kernel_path, default_modules_dir, extract_bzimage_from_apk,
+    install_kernel_from_file, setup_alpine_microvm_kernel,
 };
 pub use kvm::{
     KvmCapabilities, KvmRunOptions, KvmRunResult, build_64bit_selftest_payload, probe_kvm,
@@ -20,8 +26,11 @@ pub use linux_boot::{
     LinuxBootOptions, LinuxBootResult, Uart16550, VirtioMmioConsole, boot_linux_bzimage_kvm,
 };
 pub use sandbox::{
-    SandboxPolicy, SandboxReport, boot_linux_microvm, detect_external_vmm, run_ai_sandbox,
+    SandboxPolicy, SandboxReport, boot_linux_microvm, boot_linux_microvm_with_devices,
+    detect_external_vmm, run_ai_sandbox,
 };
+pub use virtio_blk::{VirtioBlkDevice, create_disk_image};
+pub use virtio_net::{PortForwardRule, VirtioNetDevice};
 
 #[cfg(test)]
 mod tests {

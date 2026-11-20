@@ -3,6 +3,7 @@
 
 pub mod archive;
 pub mod auth;
+pub mod config;
 pub mod extract;
 pub mod push;
 pub mod reference;
@@ -11,6 +12,9 @@ pub mod security;
 
 pub use archive::{load_image_archive, save_image_archive, tag_image};
 pub use auth::{list_logged_in_registries, load_registry_auth, login_registry, logout_registry};
+pub use config::{
+    OciImageConfig, merge_env_vars, resolve_container_user, resolve_entrypoint_and_cmd,
+};
 pub use extract::extract_layer;
 pub use push::{PushResult, push_image};
 pub use reference::{ImageRef, normalize_lookup_tag};

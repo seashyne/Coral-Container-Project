@@ -218,6 +218,65 @@
             <pre id="sbx-output" class="console" style="max-height:120px;margin-top:10px;border-radius:8px;">(sandbox report will appear here)</pre>
           </form>
         </div>
+
+        <div class="nextgen-split">
+          <form id="vm-boot-form" class="panel nextgen-card" aria-label="Pure-Rust KVM Linux Boot">
+            <div class="section-head">
+              <h3>Linux 6.6 KVM Separate-Kernel Boot + VirtIO</h3>
+              <span id="vm-boot-stats" class="section-sub mono">Zero QEMU • VirtIO-Blk &amp; Net</span>
+            </div>
+            <div class="form-grid" style="margin-bottom:10px;">
+              <label>Rootfs Image <input id="vm-boot-image" class="field mono" type="text" list="image-list" value="alpine:3.20" /></label>
+              <label>RAM (MB) <input id="vm-boot-mem" class="field mono" type="number" min="128" max="1024" value="256" /></label>
+              <label>Timeout (s) <input id="vm-boot-timeout" class="field mono" type="number" min="1" max="120" value="15" /></label>
+              <label>VirtIO-Blk Disk (optional <code>path[:ro]</code>) <input id="vm-boot-disk" class="field mono" type="text" placeholder="/tmp/data.img" /></label>
+            </div>
+            <label class="inline-check" style="margin-bottom:8px;">
+              <input id="vm-boot-net" type="checkbox" /> Attach VirtIO-Net (<code>eth0</code> 10.0.2.15/24)
+            </label>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:var(--fs);color:var(--muted);">
+              Guest Kernel PID 1 Command
+              <input id="vm-boot-cmd" class="field mono" type="text" value="uname -a &amp;&amp; ls -la /dev/vda /sys/class/net 2>&amp;1 || true" />
+            </label>
+            <div class="form-row right" style="gap:8px;">
+              <button id="vm-setup-kernel-btn" type="button" class="btn">Setup Alpine 6.6 Kernel</button>
+              <button id="vm-boot-btn" type="submit" class="btn primary">Boot KVM MicroVM</button>
+            </div>
+            <pre id="vm-boot-output" class="console" style="max-height:140px;margin-top:10px;border-radius:8px;">(serial console output will appear here)</pre>
+          </form>
+
+          <div class="panel nextgen-card" aria-label="Supply-Chain Security and Wasm Serverless">
+            <div class="section-head">
+              <h3>Supply-Chain Security (Ed25519 &amp; SPDX SBOM)</h3>
+              <span id="sec-stats" class="section-sub mono">Zero-dependency signing</span>
+            </div>
+            <div class="form-grid" style="margin-bottom:10px;">
+              <label style="grid-column:1 / -1;">Target OCI Image Tag
+                <input id="sec-image" class="field mono" type="text" list="image-list" value="alpine:3.20" />
+              </label>
+            </div>
+            <div class="form-row" style="gap:8px;flex-wrap:wrap;">
+              <button id="sec-sign-btn" type="button" class="btn primary">Sign (Ed25519)</button>
+              <button id="sec-verify-btn" type="button" class="btn">Verify Signature</button>
+              <button id="sec-sbom-btn" type="button" class="btn">Generate SPDX SBOM</button>
+            </div>
+            <pre id="sec-output" class="console" style="max-height:110px;margin-top:10px;border-radius:8px;">(Ed25519 signature / SPDX 2.3 JSON output)</pre>
+
+            <hr style="border:none;border-top:1px solid var(--border);margin:14px 0;" />
+            <div class="section-head" style="margin-bottom:6px;">
+              <h3>Wasm Serverless HTTP Gateway (<code>coral wasm serve</code>)</h3>
+              <span class="section-sub mono">Scale-to-zero per request</span>
+            </div>
+            <div class="form-grid" style="margin-bottom:8px;">
+              <label>Module / Wasm OCI Image <input id="wasm-serve-target" class="field mono" type="text" value="hello-wasm:latest" /></label>
+              <label>Listen Address <input id="wasm-serve-addr" class="field mono" type="text" value="127.0.0.1:8080" /></label>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <code id="wasm-serve-preview" class="field mono" style="flex:1;overflow-x:auto;white-space:nowrap;">coral wasm serve hello-wasm:latest --listen 127.0.0.1:8080</code>
+              <button id="wasm-serve-copy-btn" type="button" class="btn">Copy CLI</button>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 

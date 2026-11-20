@@ -86,3 +86,111 @@ async function submitAiSandbox(e) {
     $("sbx-run-btn").disabled = false;
   }
 }
+
+async function setupMicroVmKernel() {
+  if (!state.connected) {
+    toast("Connect to coral-daemon first", true);
+    return;
+  }
+  $("vm-setup-kernel-btn").disabled = true;
+  $("vm-boot-stats").textContent = "Downloading Alpine 6.6 kernel + VirtIO modules…";
+  try {
+    await guard(async () => {
+      const rep = await invoke("vm_setup_kernel");
+      $("vm-boot-stats").textContent = `Kernel v${rep.protocolVersion || "2.15"} (${rep.sizeBytes || 0} B)`;
+      $("vm-boot-output").textContent =
+        `Installed: ${rep.kernelPath}\nSource:    ${rep.source}`;
+      toast("Alpine 6.6 linux-virt kernel ready");
+    });
+  } finally {
+    $("vm-setup-kernel-btn").disabled = false;
+  }
+}
+
+async function submitVmBoot(e) {
+  e.preventDefault();
+  if (!state.connected) {
+    toast("Connect to coral-daemon first", true);
+    return;
+  }
+  const image = $("vm-boot-image").value.trim() || "alpine:3.20";
+  const cmd = $("vm-boot-cmd").value.trim() || "uname -a";
+  const memoryMb = Number($("vm-boot-mem").value) || 256;
+  const timeoutSecs = Number($("vm-boot-timeout").value) || 15;
+  const disk = $("vm-boot-disk").value.trim() || null;
+  const allowNet = $("vm-boot-net").checked;
+  $("vm-boot-btn").disabled = true;
+  $("vm-boot-stats").textContent = "Booting KVM MicroVM…";
+  try {
+    await guard(async () => {
+      const r = await invoke("vm_boot", {
+        image,
+        cmd,
+        memoryMb,
+        timeoutSecs,
+        disk,
+        allowNet,
+      });
+      $("vm-boot-stats").textContent =
+        `${r.isolationMode || "kvm"} • exit=${r.exitCode} • ${r.durationMs} ms` +
+        (r.timedOut ? " • TIMED OUT" : "");
+      let text = r.stdout || "";
+      if (r.stderr) text += `\n[stderr]\n${r.stderr}`;
+      $("vm-boot-output").textContent = text || "(VM booted cleanly with empty output)";
+    });
+  } finally {
+    $("vm-boot-btn").disabled = false;
+  }
+}
+
+async function runImageSecurityAction(action) {
+  if (!state.connected) {
+    toast("Connect to coral-daemon first", true);
+    return;
+  }
+  const image = $("sec-image").value.trim();
+  if (!image) {
+    toast("Enter an image tag first", true);
+    return;
+  }
+  const btns = ["sec-sign-btn", "sec-verify-btn", "sec-sbom-btn"];
+  btns.forEach((id) => {
+    $(id).disabled = true;
+  });
+  try {
+    await guard(async () => {
+      const cmdMap = { sign: "image_sign", verify: "image_verify", sbom: "image_sbom" };
+      const res = await invoke(cmdMap[action], { image });
+      if (action === "sign") {
+        $("sec-stats").textContent = `Signed (${res.algorithm || "Ed25519"})`;
+      } else if (action === "verify") {
+        $("sec-stats").textContent = res.verified ? "Signature VERIFIED" : "Signature INVALID";
+      } else {
+        const count = Array.isArray(res.packages) ? res.packages.length : 0;
+        $("sec-stats").textContent = `SPDX 2.3 • ${count} packages`;
+      }
+      $("sec-output").textContent = JSON.stringify(res, null, 2);
+    });
+  } finally {
+    btns.forEach((id) => {
+      $(id).disabled = false;
+    });
+  }
+}
+
+function updateWasmServePreview() {
+  const target = $("wasm-serve-target").value.trim() || "hello-wasm:latest";
+  const addr = $("wasm-serve-addr").value.trim() || "127.0.0.1:8080";
+  $("wasm-serve-preview").textContent = `coral wasm serve ${target} --listen ${addr}`;
+}
+
+async function copyWasmServeCmd() {
+  updateWasmServePreview();
+  const cmd = $("wasm-serve-preview").textContent;
+  try {
+    await navigator.clipboard.writeText(cmd);
+    toast("Copied `coral wasm serve` command");
+  } catch {
+    toast(cmd);
+  }
+}

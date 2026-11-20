@@ -3,7 +3,7 @@
 //! Supports `FROM`, `ARG`, `ENV`, `WORKDIR`, `COPY`, `ADD`, `RUN`, `CMD`, `ENTRYPOINT`,
 //! `EXPOSE`, `LABEL`, `USER`, `VOLUME`, executing `RUN` steps inside isolated Coral containers.
 
-use crate::images::{self, StoredImage};
+use crate::images::{self, OciImageConfig, StoredImage};
 use anyhow::{Context, Result, anyhow, bail};
 use coral_oci::OciSpec;
 use coral_runtime::overlay::commit_overlay_to_rootfs;
@@ -63,8 +63,8 @@ pub async fn build_image(opts: BuildOptions<'_>) -> Result<StoredImage> {
     )
     .await;
 
-    let digest_hex = match build_res {
-        Ok(final_key) => final_key,
+    let (digest_hex, built_img_cfg) = match build_res {
+        Ok(res) => res,
         Err(err) => {
             let _ = images::remove_dir_force(&staging_dir);
             return Err(err);
@@ -96,6 +96,7 @@ pub async fn build_image(opts: BuildOptions<'_>) -> Result<StoredImage> {
     let _ = images::remove_dir_force(&staging_dir);
 
     let abs_rootfs = fs::canonicalize(&final_rootfs)?;
+    let _ = built_img_cfg.save_for_rootfs(&abs_rootfs);
     let size = images::dir_size(&abs_rootfs);
     let stored = StoredImage {
         id: format!("sha256:{digest_hex}"),
@@ -122,13 +123,14 @@ async fn execute_build_steps(
     staging_rootfs: &Path,
     opts: &BuildOptions<'_>,
     ts: i64,
-) -> Result<String> {
+) -> Result<(String, OciImageConfig)> {
     let mut has_from = false;
     let mut workdir = "/".to_string();
     let mut envs = vec![
         "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin".to_string(),
         "TERM=xterm".to_string(),
     ];
+    let mut img_cfg = OciImageConfig::default();
     let mut vars: HashMap<String, String> = HashMap::new();
     let cache_root = opts.images_dir.join(".build-cache");
     let mut chain_key = String::from("coral-build-v1");
@@ -157,6 +159,12 @@ async fn execute_build_steps(
                 h.update(base_ref.as_bytes());
                 if base_ref != "scratch" && base_ref != "scratch:latest" {
                     let base_path = resolve_or_pull_base_image(base_ref, opts.images_dir).await?;
+                    let base_cfg = OciImageConfig::load_for_rootfs(&base_path);
+                    envs = images::merge_env_vars(&envs, &base_cfg.env, &[]);
+                    if !base_cfg.working_dir.trim().is_empty() {
+                        workdir = base_cfg.working_dir.clone();
+                    }
+                    img_cfg = base_cfg;
                     h.update(base_path.to_string_lossy().as_bytes());
                     let empty_upper = staging_dir.join("empty-upper");
                     fs::create_dir_all(&empty_upper)?;
@@ -336,8 +344,36 @@ async fn execute_build_steps(
                 }
                 chain_key = next_key;
             }
-            "CMD" | "ENTRYPOINT" | "EXPOSE" | "LABEL" | "USER" | "VOLUME" | "STOPSIGNAL"
-            | "SHELL" | "HEALTHCHECK" | "MAINTAINER" => {
+            "CMD" => {
+                eprintln!("Step {step_num}/{total_steps} : CMD {arg}");
+                img_cfg.cmd = parse_exec_or_shell_instruction(&arg);
+                chain_key = compute_step_key(&chain_key, verb, &arg, &workdir, &envs, b"");
+            }
+            "ENTRYPOINT" => {
+                eprintln!("Step {step_num}/{total_steps} : ENTRYPOINT {arg}");
+                img_cfg.entrypoint = parse_exec_or_shell_instruction(&arg);
+                chain_key = compute_step_key(&chain_key, verb, &arg, &workdir, &envs, b"");
+            }
+            "USER" => {
+                eprintln!("Step {step_num}/{total_steps} : USER {arg}");
+                img_cfg.user = unquote(arg.trim());
+                chain_key = compute_step_key(&chain_key, verb, &arg, &workdir, &envs, b"");
+            }
+            "STOPSIGNAL" => {
+                eprintln!("Step {step_num}/{total_steps} : STOPSIGNAL {arg}");
+                img_cfg.stop_signal = unquote(arg.trim());
+                chain_key = compute_step_key(&chain_key, verb, &arg, &workdir, &envs, b"");
+            }
+            "LABEL" => {
+                eprintln!("Step {step_num}/{total_steps} : LABEL {arg}");
+                if let Some((k, v)) = arg.split_once('=') {
+                    img_cfg
+                        .labels
+                        .insert(unquote(k.trim()), unquote(v.trim()));
+                }
+                chain_key = compute_step_key(&chain_key, verb, &arg, &workdir, &envs, b"");
+            }
+            "EXPOSE" | "VOLUME" | "SHELL" | "HEALTHCHECK" | "MAINTAINER" => {
                 eprintln!("Step {step_num}/{total_steps} : {verb} {arg}");
                 chain_key = compute_step_key(&chain_key, verb, &arg, &workdir, &envs, b"");
             }
@@ -350,7 +386,23 @@ async fn execute_build_steps(
     if !has_from {
         bail!("Dockerfile is missing a FROM instruction");
     }
-    Ok(chain_key)
+    img_cfg.env = envs;
+    img_cfg.working_dir = workdir;
+    Ok((chain_key, img_cfg))
+}
+
+fn parse_exec_or_shell_instruction(arg: &str) -> Vec<String> {
+    let trimmed = arg.trim();
+    if trimmed.starts_with('[')
+        && let Ok(parsed) = serde_json::from_str::<Vec<String>>(trimmed)
+    {
+        return parsed;
+    }
+    if trimmed.is_empty() {
+        Vec::new()
+    } else {
+        vec!["/bin/sh".into(), "-c".into(), trimmed.to_string()]
+    }
 }
 
 fn compute_step_key(

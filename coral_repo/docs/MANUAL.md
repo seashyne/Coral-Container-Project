@@ -216,18 +216,20 @@ cargo clippy --workspace --all-targets -- -D warnings
 
 ---
 
-## 5. ฟีเจอร์ระดับ Next-Gen & Deep-Tech (`v2.0` – `v2.1`)
+## 5. ฟีเจอร์ระดับ Next-Gen & Deep-Tech (`v2.0` – `v2.2`)
 
-### 5.1 Pure-Rust `/dev/kvm` Separate-Kernel Linux MicroVM (Zero QEMU)
+### 5.1 Pure-Rust `/dev/kvm` Separate-Kernel Linux MicroVM + VirtIO-Blk & VirtIO-Net (Zero QEMU)
 ```bash
 # ทดสอบฮาร์ดแวร์ /dev/kvm (VT-x/AMD-V) + 64-bit Long Mode self-test (~2.9 ms)
 coral vm probe
 
-# ดาวน์โหลดและติดตั้ง Guest Linux Kernel (Alpine 3.20 linux-virt) อัตโนมัติ
+# ดาวน์โหลด Guest Linux Kernel (Alpine 3.20 linux-virt) + แยก VirtIO/ext4 `.ko` modules อัตโนมัติ
 coral vm setup-kernel
 
-# บูต Linux Kernel แยกจริง + Alpine container โดยตรงผ่าน Pure-Rust KVM (~760 ms, ไม่ต้องลง QEMU/Firecracker)
-coral vm boot --image alpine:3.20 --timeout 15 -- /bin/sh -c 'echo "Kernel=$(uname -r) PID=$$"'
+# สร้าง VirtIO-Blk disk image (ext4) แล้วบูต Linux 6.6 KVM พร้อม persistent storage + VirtIO-Net
+coral vm disk create ./vmdata.img --size-mb 64 --ext4
+coral vm boot --image alpine:3.20 --disk ./vmdata.img --disk-mount /mnt/data --net -p 8080:80 --timeout 15 -- \
+  /bin/sh -c 'echo "Kernel=$(uname -r)"; ip -4 addr show eth0'
 
 # รันโค้ดที่ไม่ไว้ใจใน AI Agent Sandbox (Air-gapped + Read-Only + Hard Process-Group Timeout)
 coral sandbox run --image alpine:3.20 --timeout 5 --memory 64 --json -- /bin/sh -c 'echo "Safe PID=$$"'
@@ -268,4 +270,14 @@ coral verify alpine:3.20
 
 # สร้างรายงาน Software Bill of Materials มาตรฐาน SPDX 2.3 JSON (รองรับ APK, DPKG และ Wasm)
 coral sbom alpine:3.20 -o alpine-sbom.spdx.json
+```
+
+### 5.5 Prometheus `/metrics`, Log Rotation, Auto-GC & Shell Autocomplete (`v2.2`)
+```bash
+# เปิด coral-daemon พร้อม Prometheus /metrics (ค่าเริ่มต้น 127.0.0.1:9108), Log Rotation และ Auto-GC
+coral-daemon --metrics-listen 127.0.0.1:9108 --log-max-size-mb 10 --log-max-files 3 --auto-gc-interval-secs 300
+curl -s http://127.0.0.1:9108/metrics | grep coral_
+
+# ติดตั้ง Shell Autocomplete (รองรับ bash, zsh, fish, elvish, powershell)
+coral completion bash | sudo tee /etc/bash_completion.d/coral >/dev/null
 ```

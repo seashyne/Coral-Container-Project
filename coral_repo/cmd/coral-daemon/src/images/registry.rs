@@ -2,6 +2,7 @@
 //! index resolution (`linux/amd64` / `linux/arm64`), and SHA-256 verified layer streaming.
 
 use super::auth::{load_registry_auth, registry_scheme};
+use super::config::OciImageConfig;
 use super::extract::extract_layer;
 use super::push::fetch_bearer_token_with_creds;
 use super::reference::{ImageRef, parse_bearer_challenge};
@@ -74,7 +75,7 @@ pub async fn pull_image(image_ref_str: &str, images_dir: &Path) -> Result<Stored
     let manifest_json: serde_json::Value =
         serde_json::from_slice(&manifest_bytes).context("parse manifest JSON")?;
 
-    let (layers, resolved_digest) =
+    let (layers, resolved_digest, config_digest) =
         if let Some(manifests) = manifest_json.get("manifests").and_then(|v| v.as_array()) {
             let chosen_digest = select_linux_platform_digest(manifests)?;
             let child_url =
@@ -100,15 +101,36 @@ pub async fn pull_image(image_ref_str: &str, images_dir: &Path) -> Result<Stored
                 .context("read platform manifest body")?;
             let child_json: serde_json::Value =
                 serde_json::from_slice(&child_bytes).context("parse platform manifest JSON")?;
-            (parse_layers(&child_json)?, child_digest)
+            (
+                parse_layers(&child_json)?,
+                child_digest,
+                parse_config_digest(&child_json),
+            )
         } else {
             let digest = manifest_digest.take().unwrap_or_else(|| {
                 let mut hasher = Sha256::new();
                 hasher.update(&manifest_bytes);
                 format!("sha256:{:x}", hasher.finalize())
             });
-            (parse_layers(&manifest_json)?, digest)
+            (
+                parse_layers(&manifest_json)?,
+                digest,
+                parse_config_digest(&manifest_json),
+            )
         };
+
+    // 1b. Best-effort fetch of OCI Image Config blob (Entrypoint, Cmd, Env, WorkingDir, User, StopSignal).
+    let mut fetched_config: Option<OciImageConfig> = None;
+    if let Some(cfg_digest) = config_digest {
+        let cfg_url = format!("{scheme}://{registry}/v2/{repository}/blobs/{cfg_digest}");
+        if let Ok(cfg_resp) =
+            authorized_get(&client, &cfg_url, None, &mut auth_header, creds.as_ref()).await
+            && let Ok(cfg_bytes) = cfg_resp.bytes().await
+            && let Ok(parsed_cfg) = OciImageConfig::from_oci_blob(&cfg_bytes)
+        {
+            fetched_config = Some(parsed_cfg);
+        }
+    }
 
     // 2. Stage extraction in a temporary directory inside `images_dir/.tmp`.
     let slug = safe_slug(&display_tag);
@@ -203,6 +225,9 @@ pub async fn pull_image(image_ref_str: &str, images_dir: &Path) -> Result<Stored
     let _ = remove_dir_force(&staging_dir);
 
     let abs_rootfs = fs::canonicalize(&final_rootfs)?;
+    if let Some(cfg) = &fetched_config {
+        let _ = cfg.save_for_rootfs(&abs_rootfs);
+    }
     let size = dir_size(&abs_rootfs);
     let repo_tags = vec![display_tag.clone()];
 
@@ -249,6 +274,14 @@ fn parse_layers(manifest: &serde_json::Value) -> Result<Vec<LayerDescriptor>> {
         layers.push(LayerDescriptor { digest, media_type });
     }
     Ok(layers)
+}
+
+fn parse_config_digest(manifest: &serde_json::Value) -> Option<String> {
+    manifest
+        .get("config")
+        .and_then(|c| c.get("digest"))
+        .and_then(|d| d.as_str())
+        .map(str::to_string)
 }
 
 fn host_oci_arch() -> &'static str {

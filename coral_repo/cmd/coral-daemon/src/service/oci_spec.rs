@@ -1,7 +1,7 @@
 //! Translates CRI `ContainerConfig` + `PodSandboxConfig` + Coral annotations into an OCI `OciSpec`.
 
 use super::{CoralDaemonService, DaemonStore};
-use crate::images;
+use crate::images::{self, OciImageConfig, merge_env_vars, resolve_entrypoint_and_cmd};
 use coral_api::{ContainerConfig, PodSandboxConfig};
 use coral_oci::{
     LinuxCpu, LinuxMemory, LinuxNamespace, LinuxNamespaceType, LinuxPids, LinuxResources, OciSpec,
@@ -66,21 +66,43 @@ impl CoralDaemonService {
             spec.hostname = Some(meta.name.clone());
         }
 
-        let mut cmd_args = Vec::new();
-        cmd_args.extend(cfg.command.iter().cloned());
-        cmd_args.extend(cfg.args.iter().cloned());
-        if cmd_args.is_empty() {
-            cmd_args.push("/bin/sh".into());
-        }
+        let img_cfg = OciImageConfig::load_for_rootfs(rootfs);
+
+        let ep_override: Option<Vec<String>> = cfg
+            .annotations
+            .get("coral.entrypoint")
+            .and_then(|s| serde_json::from_str::<Vec<String>>(s).ok())
+            .or_else(|| {
+                cfg.annotations
+                    .get("coral.entrypoint")
+                    .map(|s| vec![s.clone()])
+            });
+
+        let mut user_cmd = Vec::new();
+        user_cmd.extend(cfg.command.iter().cloned());
+        user_cmd.extend(cfg.args.iter().cloned());
+        let final_args =
+            resolve_entrypoint_and_cmd(&img_cfg, ep_override.as_deref(), &user_cmd);
+
+        let user_envs: Vec<String> = cfg
+            .envs
+            .iter()
+            .map(|kv| format!("{}={}", kv.key, kv.value))
+            .collect();
 
         if let Some(proc_cfg) = spec.process.as_mut() {
-            proc_cfg.args = cmd_args;
+            proc_cfg.args = final_args;
             if !cfg.working_dir.trim().is_empty() {
                 proc_cfg.cwd = cfg.working_dir.clone();
+            } else if !img_cfg.working_dir.trim().is_empty() {
+                proc_cfg.cwd = img_cfg.working_dir.clone();
             }
-            for kv in &cfg.envs {
-                proc_cfg.env.push(format!("{}={}", kv.key, kv.value));
-            }
+            proc_cfg.env = merge_env_vars(&proc_cfg.env, &img_cfg.env, &user_envs);
+        }
+
+        if !cfg.annotations.contains_key("coral.user") && !img_cfg.user.trim().is_empty() {
+            spec.annotations
+                .insert("coral.user".into(), img_cfg.user.clone());
         }
 
         let custom_dns: Vec<String> = cfg

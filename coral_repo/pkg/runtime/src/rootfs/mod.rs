@@ -15,6 +15,7 @@ use coral_oci::Mount;
 use nix::mount::{MntFlags, MsFlags, mount, umount2};
 use nix::unistd::{chdir, pivot_root};
 use std::fs::{self, OpenOptions};
+use std::os::unix::fs::{PermissionsExt, symlink};
 use std::path::{Component, Path, PathBuf};
 use tracing::{debug, warn};
 
@@ -78,12 +79,18 @@ pub fn prepare_rootfs(
     )
     .map_err(|e| RuntimeError::nix("bind-mount rootfs", e))?;
 
-    // 4. Prepare essential /dev character nodes via safe bind-mounts from host /dev.
-    setup_dev_nodes(active_rootfs);
+    // 4. Prepare essential /dev character nodes & standard fd symlinks.
+    setup_dev_nodes(active_rootfs, mounts);
 
     // 5. Process OCI mounts (proc, tmpfs, bind volumes, /etc/resolv.conf) before pivoting root.
     for m in mounts {
         apply_oci_mount(active_rootfs, m, rootless)?;
+    }
+
+    // Ensure /tmp exists with world-writable sticky mode even if user omitted tmpfs mount.
+    let tmp_dir = active_rootfs.join("tmp");
+    if tmp_dir.is_dir() {
+        let _ = fs::set_permissions(&tmp_dir, fs::Permissions::from_mode(0o1777));
     }
 
     // 6. Switch root using the safe "pivot_root(new_root, new_root)" idiom (same pattern as runc).
@@ -107,7 +114,7 @@ pub fn prepare_rootfs(
     Ok(())
 }
 
-fn setup_dev_nodes(rootfs: &Path) {
+fn setup_dev_nodes(rootfs: &Path, mounts: &[Mount]) {
     let dev_dir = rootfs.join("dev");
     if !dev_dir.exists() && fs::create_dir_all(&dev_dir).is_err() {
         return;
@@ -136,6 +143,55 @@ fn setup_dev_nodes(rootfs: &Path) {
             MsFlags::MS_BIND,
             None::<&str>,
         );
+    }
+
+    // Standard POSIX/OCI `/dev/{fd,stdin,stdout,stderr}` symlinks (needed by nginx /dev/stderr, bash, python).
+    for (link_name, dest) in [
+        ("fd", "/proc/self/fd"),
+        ("stdin", "/proc/self/fd/0"),
+        ("stdout", "/proc/self/fd/1"),
+        ("stderr", "/proc/self/fd/2"),
+    ] {
+        let link_path = dev_dir.join(link_name);
+        if fs::symlink_metadata(&link_path).is_err() {
+            let _ = symlink(dest, &link_path);
+        }
+    }
+
+    // Best-effort `/dev/ptmx` (bind-mount host ptmx if possible so PTY allocators inside container succeed).
+    let ptmx_target = dev_dir.join("ptmx");
+    let host_ptmx = Path::new("/dev/ptmx");
+    if host_ptmx.exists() {
+        if !ptmx_target.exists() {
+            let _ = OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(false)
+                .open(&ptmx_target);
+        }
+        let _ = mount(
+            Some(host_ptmx),
+            &ptmx_target,
+            None::<&str>,
+            MsFlags::MS_BIND,
+            None::<&str>,
+        );
+    }
+
+    // Mount tmpfs on `/dev/shm` unless explicitly provided by OCI mounts (required by Postgres / Python multiprocessing).
+    let has_shm_mount = mounts.iter().any(|m| m.destination == "/dev/shm");
+    if !has_shm_mount {
+        let shm_dir = dev_dir.join("shm");
+        if fs::create_dir_all(&shm_dir).is_ok() {
+            let _ = mount(
+                Some("tmpfs"),
+                &shm_dir,
+                Some("tmpfs"),
+                MsFlags::MS_NOSUID | MsFlags::MS_NODEV | MsFlags::MS_NOEXEC,
+                Some("mode=1777,size=67108864"),
+            );
+            let _ = fs::set_permissions(&shm_dir, fs::Permissions::from_mode(0o1777));
+        }
     }
 }
 

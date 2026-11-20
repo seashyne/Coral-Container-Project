@@ -7,7 +7,11 @@ use super::CoralDaemonService;
 use crate::images;
 use chrono::Utc;
 use coral_api::ContainerState as CriContainerState;
-use coral_vmm::{KvmCapabilities, KvmRunResult, SandboxPolicy, probe_kvm, run_ai_sandbox, run_kvm_hardware_selftest};
+use coral_vmm::{
+    InitramfsOptions, KvmCapabilities, KvmRunResult, SandboxPolicy, boot_linux_microvm_with_devices,
+    build_initramfs_with_options, default_kernel_path, default_modules_dir, probe_kvm,
+    run_ai_sandbox, run_kvm_hardware_selftest, setup_alpine_microvm_kernel,
+};
 use coral_wasm::{WasmRunOptions, find_wasm_module_in_rootfs, run_wasm_bytes, run_wasm_file};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -299,4 +303,186 @@ impl CoralDaemonService {
         serde_json::to_string(&report)
             .map_err(|e| Status::internal(format!("serialize sandbox report: {e}")))
     }
+
+    #[allow(clippy::result_large_err)]
+    pub(crate) async fn handle_image_sign(
+        &self,
+        annotations: &HashMap<String, String>,
+    ) -> Result<String, Status> {
+        let image_ref = require_image_ref(annotations)?;
+        let custom_priv = annotations
+            .get("coral.image.key")
+            .map(PathBuf::from);
+        let custom_pub = annotations
+            .get("coral.image.pub_key")
+            .map(PathBuf::from);
+        let images_dir = self.images_dir.clone();
+        let out = tokio::task::spawn_blocking(move || {
+            let (def_priv, def_pub) = images::security::default_key_paths();
+            let priv_key = custom_priv.unwrap_or(def_priv);
+            let pub_key = custom_pub.unwrap_or(def_pub);
+            if !priv_key.exists() {
+                images::security::generate_keypair(&priv_key, &pub_key, false)?;
+            }
+            images::security::sign_image(&images_dir, &image_ref, &priv_key)
+        })
+        .await
+        .map_err(|e| Status::internal(format!("join image_sign: {e}")))?
+        .map_err(|e| Status::invalid_argument(format!("sign image failed: {e:#}")))?;
+        serde_json::to_string(&out)
+            .map_err(|e| Status::internal(format!("serialize sign report: {e}")))
+    }
+
+    #[allow(clippy::result_large_err)]
+    pub(crate) async fn handle_image_verify(
+        &self,
+        annotations: &HashMap<String, String>,
+    ) -> Result<String, Status> {
+        let image_ref = require_image_ref(annotations)?;
+        let custom_pub = annotations
+            .get("coral.image.pub_key")
+            .map(PathBuf::from);
+        let images_dir = self.images_dir.clone();
+        let out = tokio::task::spawn_blocking(move || {
+            let (_def_priv, def_pub) = images::security::default_key_paths();
+            let pub_key = custom_pub.unwrap_or(def_pub);
+            images::security::verify_image(&images_dir, &image_ref, &pub_key)
+        })
+        .await
+        .map_err(|e| Status::internal(format!("join image_verify: {e}")))?
+        .map_err(|e| Status::invalid_argument(format!("verify image failed: {e:#}")))?;
+        serde_json::to_string(&out)
+            .map_err(|e| Status::internal(format!("serialize verify report: {e}")))
+    }
+
+    #[allow(clippy::result_large_err)]
+    pub(crate) async fn handle_image_sbom(
+        &self,
+        annotations: &HashMap<String, String>,
+    ) -> Result<String, Status> {
+        let image_ref = require_image_ref(annotations)?;
+        let images_dir = self.images_dir.clone();
+        let sbom = tokio::task::spawn_blocking(move || {
+            images::security::generate_spdx_sbom(&images_dir, &image_ref)
+        })
+        .await
+        .map_err(|e| Status::internal(format!("join image_sbom: {e}")))?
+        .map_err(|e| Status::invalid_argument(format!("generate SBOM failed: {e:#}")))?;
+        serde_json::to_string(&sbom)
+            .map_err(|e| Status::internal(format!("serialize SBOM: {e}")))
+    }
+
+    #[allow(clippy::result_large_err)]
+    pub(crate) async fn handle_vm_setup_kernel(&self) -> Result<String, Status> {
+        let report = tokio::task::spawn_blocking(|| {
+            setup_alpine_microvm_kernel(&default_kernel_path())
+        })
+        .await
+        .map_err(|e| Status::internal(format!("join vm_setup_kernel: {e}")))?
+        .map_err(|e| Status::internal(format!("setup Alpine kernel failed: {e:#}")))?;
+        serde_json::to_string(&report)
+            .map_err(|e| Status::internal(format!("serialize kernel report: {e}")))
+    }
+
+    #[allow(clippy::result_large_err)]
+    pub(crate) async fn handle_vm_boot(
+        &self,
+        annotations: &HashMap<String, String>,
+    ) -> Result<String, Status> {
+        let image = annotations
+            .get("coral.vm.image")
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "alpine:3.20".into());
+        let cmd_str = annotations
+            .get("coral.vm.cmd")
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "uname -a".into());
+        let memory_mb = annotations
+            .get("coral.vm.memory_mb")
+            .and_then(|v| v.parse::<i64>().ok())
+            .unwrap_or(256)
+            .clamp(128, 1024);
+        let timeout_secs = annotations
+            .get("coral.vm.timeout")
+            .and_then(|v| v.parse::<u64>().ok())
+            .unwrap_or(15)
+            .clamp(1, 120);
+        let disk_raw = annotations
+            .get("coral.vm.disk")
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
+        let enable_net = annotations
+            .get("coral.vm.net")
+            .is_some_and(|v| v == "true" || v == "1");
+
+        let rootfs = {
+            let store = self.store.read().await;
+            images::find_image(&store.images, &image)
+                .map(|i| PathBuf::from(&i.rootfs_path))
+                .ok_or_else(|| Status::not_found(format!("image '{image}' not found in daemon")))?
+        };
+        let state_dir = self.runtime_root();
+        let report = tokio::task::spawn_blocking(move || -> anyhow::Result<_> {
+            let kernel_path = default_kernel_path();
+            if !kernel_path.is_file() {
+                anyhow::bail!(
+                    "guest Linux kernel '{}' not found — click 'Setup Alpine 6.6 Kernel' first",
+                    kernel_path.display()
+                );
+            }
+            let (disk_path, disk_ro) = match disk_raw {
+                Some(spec) => {
+                    if let Some(p) = spec.strip_suffix(":ro") {
+                        (Some(PathBuf::from(p)), true)
+                    } else {
+                        (Some(PathBuf::from(spec)), false)
+                    }
+                }
+                None => (None, false),
+            };
+            let mod_dir = default_modules_dir(&kernel_path);
+            let initrd_path = state_dir.join(format!("desktop-vm-initrd-{}.cpio.gz", Utc::now().timestamp_millis()));
+            build_initramfs_with_options(
+                &rootfs,
+                &["/bin/sh".into(), "-c".into(), cmd_str],
+                &initrd_path,
+                &InitramfsOptions {
+                    modules_dir: mod_dir.is_dir().then_some(mod_dir.as_path()),
+                    enable_blk: disk_path.is_some(),
+                    enable_net,
+                    disk_mount: disk_path.as_ref().map(|_| "/mnt/data"),
+                },
+            )?;
+            let res = boot_linux_microvm_with_devices(
+                &kernel_path,
+                &initrd_path,
+                memory_mb,
+                timeout_secs,
+                None,
+                disk_path.as_deref(),
+                disk_ro,
+                enable_net,
+                &[],
+            );
+            let _ = fs::remove_file(&initrd_path);
+            res
+        })
+        .await
+        .map_err(|e| Status::internal(format!("join vm_boot: {e}")))?
+        .map_err(|e| Status::failed_precondition(format!("MicroVM boot failed: {e:#}")))?;
+
+        serde_json::to_string(&report)
+            .map_err(|e| Status::internal(format!("serialize vm_boot report: {e}")))
+    }
+}
+
+#[allow(clippy::result_large_err)]
+fn require_image_ref(annotations: &HashMap<String, String>) -> Result<String, Status> {
+    annotations
+        .get("coral.image.ref")
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| Status::invalid_argument("coral.image.ref is required"))
 }

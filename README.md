@@ -1,19 +1,19 @@
-# Coral Container Project (`v2.1.0`)
+# Coral Container Project (`v2.2.0`)
 
-**Coral** is a next-generation, memory-safe container runtime written in **Rust (Edition 2024)** — uniting a rootless-first **OCI v1.0.2** Linux container engine, **Kubernetes CRI v1 gRPC** daemon (TCP + `unix://` Unix Domain Socket), **WASI Serverless HTTP WebAssembly** runtime (`coral-wasm`), pure-Rust Linux **`/dev/kvm` Separate-Kernel MicroVM & AI Agent Sandbox** (`coral-vmm`, Zero QEMU/Firecracker), **Ed25519 Image Signing + SPDX 2.3 SBOM**, multi-arch **x86_64 & ARM64**, and the cross-platform **Coral Desktop** GUI (Tauri v2).
+**Coral** is a next-generation, memory-safe container runtime written in **Rust (Edition 2024)** — uniting a rootless-first **OCI v1.0.2** Linux container engine, **Kubernetes CRI v1 gRPC** daemon (TCP + `unix://` Unix Domain Socket + CNI plugin chain & streaming), **WASI Serverless HTTP WebAssembly** runtime (`coral-wasm`), pure-Rust Linux **`/dev/kvm` Separate-Kernel MicroVM with VirtIO-Blk & VirtIO-Net** (`coral-vmm`, Zero QEMU/Firecracker), **Prometheus `/metrics`**, **Ed25519 Image Signing + SPDX 2.3 SBOM**, multi-arch **x86_64 & ARM64**, and the cross-platform **Coral Desktop** GUI (Linux / Windows / macOS `.dmg`).
 
 > **Documentation & Downloads:** https://seashyne.github.io/Coral-Container-Project/  
 > **GitHub Releases (`.deb`, `.tar.gz`, Desktop installers):** https://github.com/seashyne/Coral-Container-Project/releases
 
 ---
 
-## Highlights (`v2.1.0`)
+## Highlights (`v2.2.0`)
 
-- **Zero-GC Rust OCI Runtime (`coral`)**: Rootless by default (`CLONE_NEWUSER` + `pivot_root`), OverlayFS Copy-on-Write multi-lowerdir, Cgroups v2 limits & live stats, pure-Rust Seccomp-BPF (27 blocked syscalls), OCI Capability drop, interactive `-it` PTY, and real `setns()` `exec -it`.
-- **Kubernetes CRI v1 & Developer Workflow**: Dual TCP + Kubernetes **Unix Domain Socket (`unix:///.../coral.sock`)** with CRI `Status` (`RuntimeReady`/`NetworkReady`) & `PodSandboxStatus`, plus `coral build` (Step Cache), `coral compose`, `coral login/push/pull`, `coral save/load`, `coral network`, Named Volumes, Healthchecks & Boot Auto-Resume.
+- **Real-World OCI Compatibility & Ergonomics**: Inherits full OCI image config (`ENTRYPOINT`/`CMD`/`ENV`/`WORKDIR`/`USER`), remaps single-UID rootless service users (`redis`, `nginx`, `postgres`), forwards `SIGTERM`/`SIGINT`, binds `/dev/{fd,stdin,stdout,stderr,ptmx,shm}`, rotates logs (`--log-max-size-mb`), runs background Auto-GC, and provides `coral completion bash|zsh|fish`.
+- **Kubernetes CRI v1 Full Lifecycle**: Dual TCP + Kubernetes **Unix Domain Socket (`unix:///.../coral.sock`)**, real CNI v1.0.0 plugin chain execution (`/opt/cni/bin/*`), plus streaming `Exec` / `Attach` / `PortForward`, `ContainerStats`, `ReopenContainerLog`, and `ImageFsInfo`.
 - **WASI Serverless HTTP WebAssembly (`coral-wasm`)**: Run `.wasm`/`.wat` in **326 µs** OR host per-request isolated Serverless HTTP/1.1 microservices (`coral wasm serve`) in **89 µs/req** with deterministic CPU fuel metering & linear memory caps.
-- **Pure-Rust `/dev/kvm` Separate-Kernel Linux MicroVM (`coral-vmm`, Zero QEMU)**: Boot a real separate Linux 6.6 kernel + Alpine initramfs directly via Coral's pure-Rust KVM engine (**766 ms** end-to-end with `coral vm setup-kernel` & `coral vm boot`, **2.94 ms** raw 64-bit Long Mode), plus hardened AI Agent Sandbox (`coral sandbox run`).
-- **Supply-Chain Security & Multi-Arch**: Ed25519 image signing & live rootfs Merkle tamper verification (`coral keygen`/`sign`/`verify`), SPDX 2.3 JSON SBOM (`coral sbom`), and prebuilt **Linux `x86_64` & `arm64`** + **Coral Desktop (Linux & Windows)** installers.
+- **Pure-Rust `/dev/kvm` MicroVM + VirtIO-Blk & VirtIO-Net (`coral-vmm`, Zero QEMU)**: Boot Linux 6.6 + modules directly over `/dev/kvm` with persistent `/dev/vda` ext4/raw storage (`coral vm disk create`, `--disk`) and userspace VirtIO-Net TCP/UDP/DHCP/ICMP + `-p` port forwarding (`--net`) with zero root/TAP.
+- **Observability, Security & Multi-Platform Releases**: Built-in Prometheus `/metrics` & `/healthz`, `cargo-fuzz` + deterministic fuzz regression tests, Ed25519 signing + SPDX 2.3 SBOM, **Linux `x86_64`/`aarch64`**, and **Coral Desktop (Linux, Windows, macOS Apple Silicon `.dmg`)**.
 
 ---
 
@@ -27,10 +27,10 @@ curl -fsSL https://seashyne.github.io/Coral-Container-Project/install.sh | bash
 
 ### Debian / Ubuntu `.deb`
 
-Download `coral-runtime_2.0.0_amd64.deb` from [Releases](https://github.com/seashyne/Coral-Container-Project/releases/latest) and run:
+Download `coral-runtime_2.2.0_amd64.deb` from [Releases](https://github.com/seashyne/Coral-Container-Project/releases/latest) and run:
 
 ```bash
-sudo dpkg -i coral-runtime_2.0.0_amd64.deb
+sudo dpkg -i coral-runtime_2.2.0_amd64.deb
 systemctl --user enable --now coral-daemon.service
 coral version
 ```

@@ -131,6 +131,7 @@ impl CoralDaemonService {
                     state_dir: svc.cfg.state_dir.clone(),
                     coral_bin: svc.cfg.coral_bin.clone(),
                     store: svc.store.clone(),
+                    log_policy: svc.current_log_policy(),
                 });
                 if let Some(prev) = svc.store.write().await.supervisors.insert(cid, sup_handle) {
                     prev.abort();
@@ -296,6 +297,16 @@ impl CoralDaemonService {
             "vmm_probe" => self.handle_vmm_probe().await,
             "wasm_run" => self.handle_wasm_run(annotations).await,
             "sandbox_run" => self.handle_sandbox_run(annotations).await,
+            "image_sign" => self.handle_image_sign(annotations).await,
+            "image_verify" => self.handle_image_verify(annotations).await,
+            "image_sbom" => self.handle_image_sbom(annotations).await,
+            "vm_setup_kernel" => self.handle_vm_setup_kernel().await,
+            "vm_boot" => self.handle_vm_boot(annotations).await,
+            "auto_gc" => {
+                let report = self.run_auto_gc_once().await;
+                serde_json::to_string(&report)
+                    .map_err(|e| Status::internal(format!("serialize auto_gc report: {e}")))
+            }
             other => Err(Status::invalid_argument(format!(
                 "unknown coral.system.action '{other}'"
             ))),
@@ -575,4 +586,210 @@ fn all_used_volumes(store: &DaemonStore) -> HashSet<String> {
         used.extend(container_volume_names(ctr));
     }
     used
+}
+
+#[derive(Debug, Clone, Default, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct AutoGcReport {
+    pub files_removed: usize,
+    pub bytes_reclaimed: u64,
+}
+
+impl CoralDaemonService {
+    /// Spawns a periodic background garbage collector if `interval_secs > 0`.
+    pub(crate) fn spawn_auto_gc_loop(&self, interval_secs: u64) -> Option<tokio::task::JoinHandle<()>> {
+        if interval_secs == 0 {
+            return None;
+        }
+        let svc = self.clone();
+        Some(tokio::spawn(async move {
+            let interval = std::time::Duration::from_secs(interval_secs.max(5));
+            loop {
+                tokio::time::sleep(interval).await;
+                let report = svc.run_auto_gc_once().await;
+                if report.files_removed > 0 {
+                    info!(
+                        files_removed = report.files_removed,
+                        bytes_reclaimed = report.bytes_reclaimed,
+                        "coral-daemon background Auto-GC reclaimed artifacts"
+                    );
+                }
+            }
+        }))
+    }
+
+    /// Runs a single safe garbage-collection pass over orphaned staging dirs, stale exec-bundles,
+    /// excess rotated log archives, and oversized build-cache entries (> 512 MiB).
+    pub(crate) async fn run_auto_gc_once(&self) -> AutoGcReport {
+        self.run_auto_gc_with_age(std::time::Duration::from_secs(3600), 512 * 1024 * 1024)
+            .await
+    }
+
+    pub(crate) async fn run_auto_gc_with_age(
+        &self,
+        orphan_min_age: std::time::Duration,
+        build_cache_cap_bytes: u64,
+    ) -> AutoGcReport {
+        let mut report = AutoGcReport::default();
+        let now = std::time::SystemTime::now();
+        let max_files = self.current_log_policy().max_files;
+
+        let (active_cids, log_paths) = {
+            let store = self.store.read().await;
+            let cids: HashSet<String> = store.containers.keys().cloned().collect();
+            let logs: Vec<std::path::PathBuf> =
+                store.containers.values().map(|c| c.log_path.clone()).collect();
+            (cids, logs)
+        };
+
+        // 1. Reclaim expired `.tmp*` / `.staging*` artifacts in images_dir.
+        if let Ok(rd) = fs::read_dir(&self.images_dir) {
+            for entry in rd.flatten() {
+                let name = entry.file_name().to_string_lossy().into_owned();
+                if name.starts_with(".tmp") || name.starts_with(".staging") || name.ends_with(".tmp")
+                {
+                    let path = entry.path();
+                    if is_older_than(&path, now, orphan_min_age) {
+                        reclaim_path(&path, &mut report);
+                    }
+                }
+            }
+        }
+
+        // 2. Reclaim orphaned `exec-bundles/<id>` dirs not mapped to any known container.
+        let exec_bundles = self.cfg.state_dir.join("exec-bundles");
+        if let Ok(rd) = fs::read_dir(&exec_bundles) {
+            for entry in rd.flatten() {
+                let path = entry.path();
+                let cid = entry.file_name().to_string_lossy().into_owned();
+                if !active_cids.contains(&cid) && is_older_than(&path, now, orphan_min_age) {
+                    reclaim_path(&path, &mut report);
+                }
+            }
+        }
+
+        // 3. Enforce max rotated log files (`.1`..`.N`) per active container log.
+        for log_path in log_paths {
+            let Some(parent) = log_path.parent() else {
+                continue;
+            };
+            let Some(base_name) = log_path.file_name().and_then(|s| s.to_str()) else {
+                continue;
+            };
+            let prefix = format!("{base_name}.");
+            if let Ok(rd) = fs::read_dir(parent) {
+                for entry in rd.flatten() {
+                    let fname = entry.file_name().to_string_lossy().into_owned();
+                    if let Some(idx_str) = fname.strip_prefix(&prefix)
+                        && let Ok(idx) = idx_str.parse::<usize>()
+                        && idx > max_files
+                    {
+                        reclaim_path(&entry.path(), &mut report);
+                    }
+                }
+            }
+        }
+
+        // 4. Trim oldest `build-cache/*` entries if build-cache exceeds threshold.
+        let cache_dir = self.cfg.state_dir.join("build-cache");
+        if build_cache_cap_bytes > 0
+            && let Ok(rd) = fs::read_dir(&cache_dir)
+        {
+            let mut entries: Vec<(std::time::SystemTime, u64, std::path::PathBuf)> = Vec::new();
+            let mut total = 0u64;
+            for entry in rd.flatten() {
+                let p = entry.path();
+                let size = if p.is_dir() {
+                    images::dir_size(&p)
+                } else {
+                    entry.metadata().map(|m| m.len()).unwrap_or(0)
+                };
+                let mtime = entry
+                    .metadata()
+                    .and_then(|m| m.modified())
+                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+                total = total.saturating_add(size);
+                entries.push((mtime, size, p));
+            }
+            if total > build_cache_cap_bytes {
+                entries.sort_by_key(|(t, _, _)| *t);
+                for (_, size, p) in entries {
+                    if total <= build_cache_cap_bytes {
+                        break;
+                    }
+                    reclaim_path(&p, &mut report);
+                    total = total.saturating_sub(size);
+                }
+            }
+        }
+
+        let mut store = self.store.write().await;
+        store.auto_gc_runs = store.auto_gc_runs.saturating_add(1);
+        store.auto_gc_bytes_reclaimed = store
+            .auto_gc_bytes_reclaimed
+            .saturating_add(report.bytes_reclaimed);
+        report
+    }
+}
+
+fn is_older_than(path: &Path, now: std::time::SystemTime, age: std::time::Duration) -> bool {
+    if age.is_zero() {
+        return true;
+    }
+    fs::metadata(path)
+        .and_then(|m| m.modified())
+        .ok()
+        .and_then(|m| now.duration_since(m).ok())
+        .is_some_and(|elapsed| elapsed >= age)
+}
+
+fn reclaim_path(path: &Path, report: &mut AutoGcReport) {
+    if path.is_dir() {
+        let bytes = images::dir_size(path);
+        if fs::remove_dir_all(path).is_ok() {
+            report.files_removed += 1;
+            report.bytes_reclaimed = report.bytes_reclaimed.saturating_add(bytes);
+        }
+    } else if path.is_file() {
+        let bytes = fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+        if fs::remove_file(path).is_ok() {
+            report.files_removed += 1;
+            report.bytes_reclaimed = report.bytes_reclaimed.saturating_add(bytes);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::service::CoralDaemonConfig;
+
+    #[tokio::test]
+    async fn auto_gc_reclaims_stale_staging_exec_bundles_and_build_cache() {
+        let tmp = tempfile::tempdir().unwrap();
+        let state_dir = tmp.path().join("state");
+        let images_dir = tmp.path().join("images");
+        fs::create_dir_all(images_dir.join(".staging-abc")).unwrap();
+        fs::write(images_dir.join(".staging-abc/layer.tar"), vec![7u8; 4096]).unwrap();
+        fs::create_dir_all(state_dir.join("exec-bundles/dead-ctr")).unwrap();
+        fs::write(state_dir.join("exec-bundles/dead-ctr/config.json"), b"{}").unwrap();
+        fs::create_dir_all(state_dir.join("build-cache/entry-1")).unwrap();
+        fs::write(state_dir.join("build-cache/entry-1/blob"), vec![1u8; 8192]).unwrap();
+
+        let svc = CoralDaemonService::new(CoralDaemonConfig {
+            state_dir: state_dir.clone(),
+            images_dir: Some(images_dir.clone()),
+            coral_bin: std::path::PathBuf::from("coral"),
+            default_rootfs: None,
+        })
+        .with_log_rotation(1024, 2);
+
+        let report = svc
+            .run_auto_gc_with_age(std::time::Duration::ZERO, 1024)
+            .await;
+        assert!(report.files_removed >= 3);
+        assert!(report.bytes_reclaimed >= 12_288);
+        assert!(!images_dir.join(".staging-abc").exists());
+        assert!(!state_dir.join("exec-bundles/dead-ctr").exists());
+    }
 }

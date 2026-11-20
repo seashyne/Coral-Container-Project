@@ -4,9 +4,10 @@ use crate::catalog;
 use anyhow::{Context, Result, bail};
 use coral_daemon::images;
 use coral_vmm::{
-    KvmRunOptions, SandboxPolicy, boot_linux_microvm, build_initramfs_cpio_gz, default_kernel_path,
-    install_kernel_from_file, probe_kvm, run_ai_sandbox, run_kvm_hardware_selftest,
-    run_long_mode_payload, setup_alpine_microvm_kernel,
+    InitramfsOptions, KvmRunOptions, PortForwardRule, SandboxPolicy, boot_linux_microvm,
+    boot_linux_microvm_with_devices, build_initramfs_with_options, create_disk_image,
+    default_kernel_path, default_modules_dir, install_kernel_from_file, probe_kvm, run_ai_sandbox,
+    run_kvm_hardware_selftest, run_long_mode_payload, setup_alpine_microvm_kernel,
 };
 use coral_wasm::{
     WasmHttpHandler, WasmHttpOptions, WasmRunOptions, find_wasm_module_in_rootfs, run_wasm_file,
@@ -360,6 +361,17 @@ pub fn cmd_vm_setup_kernel(
     Ok(())
 }
 
+pub fn cmd_vm_disk_create(path: &Path, size_mb: u64, ext4: bool) -> Result<()> {
+    create_disk_image(path, size_mb, ext4)?;
+    println!(
+        "Created VirtIO-Blk disk '{}' ({} MB{})",
+        path.display(),
+        size_mb,
+        if ext4 { ", ext4 formatted" } else { ", raw sparse" }
+    );
+    Ok(())
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn cmd_vm_boot(
     state_root: &Path,
@@ -369,6 +381,10 @@ pub fn cmd_vm_boot(
     memory_mb: usize,
     timeout: u64,
     cmdline: Option<String>,
+    disk: Option<String>,
+    disk_mount: Option<String>,
+    enable_net: bool,
+    ports: Vec<String>,
     cmd: &[String],
     as_json: bool,
 ) -> Result<ExitCode> {
@@ -388,14 +404,52 @@ pub fn cmd_vm_boot(
         PathBuf::from(&img.rootfs_path)
     };
 
+    let (disk_path, disk_ro) = match disk {
+        Some(spec) => {
+            if let Some(p) = spec.strip_suffix(":ro") {
+                (Some(PathBuf::from(p)), true)
+            } else {
+                (Some(PathBuf::from(spec)), false)
+            }
+        }
+        None => (None, false),
+    };
+    let port_rules: Vec<PortForwardRule> = ports
+        .iter()
+        .map(|s| {
+            let (h, g) = s
+                .split_once(':')
+                .ok_or_else(|| anyhow::anyhow!("invalid --publish '{s}' (expected HOST:GUEST)"))?;
+            Ok(PortForwardRule {
+                host_port: h.trim().parse().context("invalid host port")?,
+                guest_port: g.trim().parse().context("invalid guest port")?,
+            })
+        })
+        .collect::<Result<_>>()?;
+
+    let mod_dir = default_modules_dir(&kernel_path);
     let initrd_path = state_root.join(format!("coral-vm-initrd-{}.cpio.gz", std::process::id()));
-    build_initramfs_cpio_gz(&rootfs, cmd, &initrd_path)?;
-    let report = boot_linux_microvm(
+    build_initramfs_with_options(
+        &rootfs,
+        cmd,
+        &initrd_path,
+        &InitramfsOptions {
+            modules_dir: mod_dir.is_dir().then_some(mod_dir.as_path()),
+            enable_blk: disk_path.is_some(),
+            enable_net,
+            disk_mount: disk_mount.as_deref(),
+        },
+    )?;
+    let report = boot_linux_microvm_with_devices(
         &kernel_path,
         &initrd_path,
         memory_mb as i64,
         timeout,
         cmdline.as_deref(),
+        disk_path.as_deref(),
+        disk_ro,
+        enable_net,
+        &port_rules,
     );
     let _ = fs::remove_file(&initrd_path);
     let report = report?;

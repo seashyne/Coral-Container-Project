@@ -1,6 +1,7 @@
 //! CNI v1.0.0 networking configuration and Linux network namespace utilities.
 
 pub mod cni;
+pub mod cni_runner;
 pub mod egress;
 pub mod netns;
 pub mod networks;
@@ -10,6 +11,10 @@ use thiserror::Error;
 
 pub use cni::{
     CNI_SPEC_VERSION, CniInterface, CniIpConfig, CniNetworkConfig, CniResult, CniRoute, IpamConfig,
+};
+pub use cni_runner::{
+    CniAddOutcome, CniExecRequest, CniNetworkList, CniPluginChain, extract_primary_ip,
+    has_cni_configs,
 };
 pub use egress::{EgressBackend, RootlessEgressGuard, detect_egress_backend};
 pub use netns::{PortMapping, bring_loopback_up, connect_container_port};

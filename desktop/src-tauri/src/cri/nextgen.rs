@@ -94,3 +94,89 @@ pub async fn sandbox_run(
     }
     invoke_nextgen(&state, ann).await
 }
+
+#[tauri::command]
+pub async fn image_sign(
+    state: State<'_, AppState>,
+    image: String,
+) -> Result<serde_json::Value, String> {
+    invoke_nextgen(
+        &state,
+        HashMap::from([
+            ("coral.system.action".into(), "image_sign".into()),
+            ("coral.image.ref".into(), image),
+        ]),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn image_verify(
+    state: State<'_, AppState>,
+    image: String,
+) -> Result<serde_json::Value, String> {
+    invoke_nextgen(
+        &state,
+        HashMap::from([
+            ("coral.system.action".into(), "image_verify".into()),
+            ("coral.image.ref".into(), image),
+        ]),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn image_sbom(
+    state: State<'_, AppState>,
+    image: String,
+) -> Result<serde_json::Value, String> {
+    invoke_nextgen(
+        &state,
+        HashMap::from([
+            ("coral.system.action".into(), "image_sbom".into()),
+            ("coral.image.ref".into(), image),
+        ]),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn vm_setup_kernel(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+    invoke_nextgen(
+        &state,
+        HashMap::from([("coral.system.action".into(), "vm_setup_kernel".into())]),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn vm_boot(
+    state: State<'_, AppState>,
+    image: String,
+    cmd: String,
+    memory_mb: Option<i64>,
+    timeout_secs: Option<u64>,
+    disk: Option<String>,
+    allow_net: Option<bool>,
+) -> Result<serde_json::Value, String> {
+    let mut ann = HashMap::from([
+        ("coral.system.action".into(), "vm_boot".into()),
+        ("coral.vm.image".into(), image),
+        ("coral.vm.cmd".into(), cmd),
+    ]);
+    if let Some(m) = memory_mb {
+        ann.insert("coral.vm.memory_mb".into(), m.to_string());
+    }
+    if let Some(t) = timeout_secs {
+        ann.insert("coral.vm.timeout".into(), t.to_string());
+    }
+    if let Some(d) = disk
+        && !d.trim().is_empty()
+    {
+        ann.insert("coral.vm.disk".into(), d.trim().to_string());
+    }
+    if allow_net.unwrap_or(false) {
+        ann.insert("coral.vm.net".into(), "true".into());
+    }
+    invoke_nextgen(&state, ann).await
+}

@@ -31,7 +31,9 @@ pub struct DaemonRunOptions {
     pub extra_hosts: Vec<String>,
     pub privileged: bool,
     pub no_overlay: bool,
-    pub workdir: String,
+    pub workdir: Option<String>,
+    pub user: Option<String>,
+    pub entrypoint: Option<String>,
     pub hostname: Option<String>,
     pub memory_mb: i64,
     pub cpu_percent: i64,
@@ -81,7 +83,7 @@ pub async fn cmd_run_via_daemon(addr: &str, opts: DaemonRunOptions) -> Result<Ex
         .collect();
 
     let (command, args) = if opts.command.is_empty() {
-        (vec!["/bin/sh".into()], Vec::new())
+        (Vec::new(), Vec::new())
     } else {
         (vec![opts.command[0].clone()], opts.command[1..].to_vec())
     };
@@ -122,6 +124,14 @@ pub async fn cmd_run_via_daemon(addr: &str, opts: DaemonRunOptions) -> Result<Ex
     if opts.no_overlay {
         annotations.insert("coral.overlay".into(), "false".into());
     }
+    if let Some(u) = &opts.user
+        && !u.trim().is_empty()
+    {
+        annotations.insert("coral.user".into(), u.trim().to_string());
+    }
+    if let Some(ep) = &opts.entrypoint {
+        annotations.insert("coral.entrypoint".into(), ep.clone());
+    }
     if !opts.restart.trim().is_empty() && !opts.restart.eq_ignore_ascii_case("no") {
         annotations.insert("coral.restart".into(), opts.restart.trim().to_string());
     }
@@ -153,7 +163,7 @@ pub async fn cmd_run_via_daemon(addr: &str, opts: DaemonRunOptions) -> Result<Ex
                 }),
                 command,
                 args,
-                working_dir: opts.workdir,
+                working_dir: opts.workdir.unwrap_or_default(),
                 envs,
                 labels: HashMap::from([("managed-by".into(), "coral-cli".into())]),
                 annotations,

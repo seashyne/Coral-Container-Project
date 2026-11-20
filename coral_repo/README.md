@@ -1,4 +1,4 @@
-# Coral Container Runtime (`v2.1.0`)
+# Coral Container Runtime (`v2.2.0`)
 
 **Coral** is a modular, memory-safe Linux container runtime, Kubernetes CRI v1 gRPC daemon, WebAssembly WASI runtime, and native `/dev/kvm` MicroVM / AI Sandbox engine built in **Rust (Edition 2024)**.
 
@@ -18,6 +18,7 @@ coral_repo/
 │   ├── coral-cli/       # [coral] OCI/Docker-style CLI (run, build, compose, push, wasm, vm, sandbox)
 │   └── coral-daemon/    # [coral-daemon] Async Tokio + Tonic CRI v1 gRPC daemon with persistent state
 ├── tests/               # [coral-e2e-tests] 60 unit, OCI, parity, CRI, Wasm & hardware KVM E2E tests
+├── fuzz/                # [coral-fuzz] cargo-fuzz targets (oci_spec, tar_extract, wasm_http_cgi, virtio_ring)
 ├── scripts/             # setup-rootfs.sh & package-deb.sh
 └── docs/                # ARCHITECTURE.md, ROADMAP.md, MANUAL.md
 ```
@@ -31,8 +32,8 @@ coral_repo/
 # 2. Run full verification suite (60 tests + strict Clippy -D warnings + live container run)
 ./verify.sh
 
-# 3. Build Debian/Ubuntu package (target/packages/coral-runtime_2.0.0_amd64.deb)
-./scripts/package-deb.sh 2.0.0
+# 3. Build Debian/Ubuntu package (target/packages/coral-runtime_2.2.0_amd64.deb)
+./scripts/package-deb.sh 2.2.0
 ```
 
 ## Documentation

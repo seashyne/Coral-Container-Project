@@ -7,13 +7,13 @@ use crate::pty::attach_slave_stdio;
 use crate::rootfs::prepare_rootfs;
 use crate::security;
 use coral_oci::OciSpec;
-use nix::unistd::{chdir, execve, sethostname};
+use nix::unistd::{Gid, Uid, chdir, execve, setgid, sethostname, setuid};
 use std::ffi::CString;
 use std::fs;
 use std::io;
 use std::os::fd::RawFd;
 use std::path::{Path, PathBuf};
-use tracing::debug;
+use tracing::{debug, warn};
 
 pub(crate) fn prepare_overlay_if_requested(
     bundle_abs: &Path,
@@ -79,6 +79,15 @@ pub(crate) fn container_init_exec(
         .as_ref()
         .ok_or_else(|| RuntimeError::InitFailed("missing process in OCI spec".into()))?;
 
+    // Resolve optional `coral.user` (username or uid[:gid]) inside the pivoted container rootfs.
+    let (target_uid, target_gid, user_home) = resolve_target_user(
+        spec.annotations.get("coral.user").map(String::as_str),
+        Some((process.user.uid, process.user.gid)),
+    );
+
+    if process.cwd != "/" {
+        let _ = fs::create_dir_all(&process.cwd);
+    }
     chdir(Path::new(&process.cwd))
         .map_err(|e| RuntimeError::nix(format!("chdir to {}", process.cwd), e))?;
 
@@ -102,7 +111,39 @@ pub(crate) fn container_init_exec(
         security::apply_default_seccomp()?;
     }
 
-    let exe = resolve_executable_in_container(&process.args[0], &process.env)?;
+    if (target_uid != 0 || target_gid != 0)
+        && is_id_mapped("/proc/self/uid_map", target_uid)
+        && is_id_mapped("/proc/self/gid_map", target_gid)
+    {
+        if nix::unistd::getegid().as_raw() != target_gid {
+            setgid(Gid::from_raw(target_gid))
+                .map_err(|e| RuntimeError::nix(format!("setgid({target_gid})"), e))?;
+        }
+        if nix::unistd::geteuid().as_raw() != target_uid {
+            setuid(Uid::from_raw(target_uid))
+                .map_err(|e| RuntimeError::nix(format!("setuid({target_uid})"), e))?;
+        }
+    } else if target_uid != 0 || target_gid != 0 {
+        warn!(
+            uid = target_uid,
+            gid = target_gid,
+            "requested non-root container UID/GID is not mapped in single-UID rootless userns; continuing as container UID 0"
+        );
+    }
+
+    let mut env_vec = process.env.clone();
+    if !env_vec.iter().any(|e| e.starts_with("HOME=")) {
+        let home = user_home.unwrap_or_else(|| {
+            if target_uid == 0 {
+                "/root".to_string()
+            } else {
+                "/tmp".to_string()
+            }
+        });
+        env_vec.push(format!("HOME={home}"));
+    }
+
+    let exe = resolve_executable_in_container(&process.args[0], &env_vec)?;
     let exe_cstr = CString::new(exe.as_str())
         .map_err(|e| RuntimeError::InitFailed(format!("invalid executable NUL byte: {e}")))?;
 
@@ -115,8 +156,7 @@ pub(crate) fn container_init_exec(
         })
         .collect::<Result<_, _>>()?;
 
-    let envp: Vec<CString> = process
-        .env
+    let envp: Vec<CString> = env_vec
         .iter()
         .map(|s| {
             CString::new(s.as_str())
@@ -127,6 +167,95 @@ pub(crate) fn container_init_exec(
     debug!(exe = %exe, args = ?process.args, "execve container entrypoint");
     execve(&exe_cstr, &argv, &envp)
         .map_err(|e| RuntimeError::nix(format!("execve '{exe}'"), e))?;
+}
+
+fn resolve_target_user(
+    user_ann: Option<&str>,
+    spec_user: Option<(u32, u32)>,
+) -> (u32, u32, Option<String>) {
+    resolve_target_user_in(Path::new("/"), user_ann, spec_user)
+}
+
+pub(crate) fn resolve_target_user_in(
+    root: &Path,
+    user_ann: Option<&str>,
+    spec_user: Option<(u32, u32)>,
+) -> (u32, u32, Option<String>) {
+    if let Some(raw) = user_ann.map(str::trim).filter(|s| !s.is_empty()) {
+        let (u_part, g_part) = match raw.split_once(':') {
+            Some((u, g)) => (u.trim(), Some(g.trim())),
+            None => (raw, None),
+        };
+        let mut uid = u_part.parse::<u32>().ok();
+        let mut gid = g_part.and_then(|g| g.parse::<u32>().ok());
+        let mut home = None;
+
+        if let Ok(passwd) = fs::read_to_string(root.join("etc/passwd")) {
+            for line in passwd.lines() {
+                let cols: Vec<&str> = line.split(':').collect();
+                if cols.len() >= 6 {
+                    let row_uid = cols[2].parse::<u32>().ok();
+                    let row_gid = cols[3].parse::<u32>().ok();
+                    let matched = match uid {
+                        Some(u) => row_uid == Some(u),
+                        None => cols[0] == u_part,
+                    };
+                    if matched {
+                        uid = uid.or(row_uid);
+                        if gid.is_none() && g_part.is_none() {
+                            gid = row_gid;
+                        }
+                        if !cols[5].trim().is_empty() {
+                            home = Some(cols[5].trim().to_string());
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        if gid.is_none()
+            && let Some(gname) = g_part
+            && let Ok(group) = fs::read_to_string(root.join("etc/group"))
+        {
+            for line in group.lines() {
+                let cols: Vec<&str> = line.split(':').collect();
+                if cols.len() >= 3 && cols[0] == gname {
+                    gid = cols[2].parse::<u32>().ok();
+                    break;
+                }
+            }
+        }
+        let u = uid.unwrap_or(0);
+        let g = gid.unwrap_or(u);
+        return (u, g, home);
+    }
+
+    if let Some((u, g)) = spec_user {
+        return (u, g, None);
+    }
+    (0, 0, None)
+}
+
+fn is_id_mapped(map_path: &str, id: u32) -> bool {
+    let Ok(content) = fs::read_to_string(map_path) else {
+        return true;
+    };
+    for line in content.lines() {
+        let mut parts = line.split_whitespace();
+        let Some(inside) = parts.next().and_then(|s| s.parse::<u32>().ok()) else {
+            continue;
+        };
+        let Some(_outside) = parts.next().and_then(|s| s.parse::<u32>().ok()) else {
+            continue;
+        };
+        let Some(len) = parts.next().and_then(|s| s.parse::<u32>().ok()) else {
+            continue;
+        };
+        if id >= inside && id < inside.saturating_add(len) {
+            return true;
+        }
+    }
+    false
 }
 
 pub(crate) fn resolve_rootfs(bundle: &Path, spec: &OciSpec) -> Result<PathBuf, RuntimeError> {

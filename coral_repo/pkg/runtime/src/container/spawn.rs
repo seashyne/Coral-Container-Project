@@ -1,10 +1,10 @@
 //! Double-fork + `unshare` + UserNS pipe synchronization + Cgroups v2 attach
 //! for foreground (`run`) and detached (`create`) container execution.
 
-use super::init::container_init_exec;
+use super::init::{container_init_exec, resolve_target_user_in};
 use super::{ContainerExit, ContainerManager};
 use crate::RuntimeError;
-use crate::namespace::{build_namespace_plan, write_userns_mappings};
+use crate::namespace::{NamespacePlan, build_namespace_plan, write_userns_mappings};
 use crate::overlay::OverlayDirs;
 use crate::pty::{PtyPair, relay_pty};
 use coral_cgroups::{CgroupApplyOutcome, CgroupConfig};
@@ -17,7 +17,55 @@ use nix::unistd::{ForkResult, fork, pipe2, read, write};
 use std::fs;
 use std::os::fd::{AsRawFd, OwnedFd, RawFd};
 use std::path::Path;
+use std::sync::atomic::{AtomicI32, Ordering};
 use tracing::info;
+
+static FORWARD_SIGNAL_PID: AtomicI32 = AtomicI32::new(0);
+
+extern "C" fn forward_signal_handler(sig: libc::c_int) {
+    let pid = FORWARD_SIGNAL_PID.load(Ordering::Relaxed);
+    if pid > 0 {
+        unsafe {
+            let _ = libc::kill(pid, sig);
+        }
+    }
+}
+
+struct SignalForwardGuard {
+    saved: [(libc::c_int, libc::sigaction); 4],
+}
+
+impl SignalForwardGuard {
+    fn install(target_pid: i32) -> Self {
+        FORWARD_SIGNAL_PID.store(target_pid, Ordering::SeqCst);
+        let sigs = [libc::SIGTERM, libc::SIGINT, libc::SIGHUP, libc::SIGQUIT];
+        let mut saved: [(libc::c_int, libc::sigaction); 4] =
+            unsafe { std::mem::zeroed() };
+        for (i, &sig) in sigs.iter().enumerate() {
+            unsafe {
+                let mut sa: libc::sigaction = std::mem::zeroed();
+                sa.sa_sigaction = forward_signal_handler as *const () as usize;
+                sa.sa_flags = libc::SA_RESTART;
+                libc::sigemptyset(&mut sa.sa_mask);
+                let mut old: libc::sigaction = std::mem::zeroed();
+                let _ = libc::sigaction(sig, &sa, &mut old);
+                saved[i] = (sig, old);
+            }
+        }
+        Self { saved }
+    }
+}
+
+impl Drop for SignalForwardGuard {
+    fn drop(&mut self) {
+        FORWARD_SIGNAL_PID.store(0, Ordering::SeqCst);
+        for (sig, old) in &self.saved {
+            unsafe {
+                let _ = libc::sigaction(*sig, old, std::ptr::null_mut());
+            }
+        }
+    }
+}
 
 impl ContainerManager {
     #[allow(clippy::too_many_arguments)]
@@ -31,7 +79,8 @@ impl ContainerManager {
         interactive: bool,
         state: &mut ContainerState,
     ) -> Result<ContainerExit, RuntimeError> {
-        let ns_plan = build_namespace_plan(spec);
+        let mut ns_plan = build_namespace_plan(spec);
+        adjust_single_uid_mapping(&mut ns_plan, spec, rootfs);
         let cgroup_cfg = spec
             .linux
             .as_ref()
@@ -123,14 +172,25 @@ impl ContainerManager {
                     return Err(RuntimeError::InitFailed(err_msg));
                 }
 
-                // 7. If TTY is allocated, relay terminal I/O until container closes the PTY.
+                // 7. Forward SIGTERM/SIGINT/SIGHUP/SIGQUIT to container PID 1 while attached,
+                // and relay terminal I/O if a PTY is allocated.
+                let _sig_guard = SignalForwardGuard::install(init_pid);
                 if let Some(master) = pty_master {
                     relay_pty(master.as_raw_fd(), interactive);
                 }
 
                 // 8. Wait for intermediate shim (which waits for container PID 1).
-                let wait_status = waitpid(inter_pid, None)
-                    .map_err(|e| RuntimeError::nix("waitpid intermediate shim", e))?;
+                let wait_status = loop {
+                    match waitpid(inter_pid, None) {
+                        Ok(st) => break st,
+                        Err(nix::errno::Errno::EINTR) => continue,
+                        Err(e) => {
+                            drop(_sig_guard);
+                            return Err(RuntimeError::nix("waitpid intermediate shim", e));
+                        }
+                    }
+                };
+                drop(_sig_guard);
                 let exit_code = wait_status_to_exit_code(wait_status);
 
                 state.status = ContainerStatus::Stopped;
@@ -228,7 +288,8 @@ impl ContainerManager {
         fifo_path: &Path,
         state: &mut ContainerState,
     ) -> Result<(), RuntimeError> {
-        let ns_plan = build_namespace_plan(spec);
+        let mut ns_plan = build_namespace_plan(spec);
+        adjust_single_uid_mapping(&mut ns_plan, spec, rootfs);
         let cgroup_cfg = spec
             .linux
             .as_ref()
@@ -424,5 +485,83 @@ pub(crate) fn wait_status_to_exit_code(status: WaitStatus) -> i32 {
         WaitStatus::Exited(_, code) => code,
         WaitStatus::Signaled(_, sig, _) => 128 + (sig as i32),
         _ => 1,
+    }
+}
+
+/// Maps requested non-root `uid`/`gid` directly to host caller UID/GID when operating in
+/// single-UID rootless UserNS (`0 host 1`), allowing `postgres`/`redis`/`nginx` non-root
+/// services to run natively without `newuidmap`.
+fn adjust_single_uid_mapping(ns_plan: &mut NamespacePlan, spec: &OciSpec, rootfs: &Path) {
+    if !ns_plan.use_user_ns {
+        return;
+    }
+    let single_uid_default = ns_plan.uid_mappings.len() == 1
+        && ns_plan.uid_mappings[0].container_id == 0
+        && ns_plan.uid_mappings[0].size == 1;
+    let single_gid_default = ns_plan.gid_mappings.len() == 1
+        && ns_plan.gid_mappings[0].container_id == 0
+        && ns_plan.gid_mappings[0].size == 1;
+    if !single_uid_default && !single_gid_default {
+        return;
+    }
+    let spec_user = spec.process.as_ref().map(|p| (p.user.uid, p.user.gid));
+    let (target_uid, target_gid, _) = resolve_target_user_in(
+        rootfs,
+        spec.annotations.get("coral.user").map(String::as_str),
+        spec_user,
+    );
+    if single_uid_default && target_uid != 0 {
+        ns_plan.uid_mappings[0].container_id = target_uid;
+    }
+    if single_gid_default && target_gid != 0 {
+        ns_plan.gid_mappings[0].container_id = target_gid;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use coral_oci::spec::LinuxIdMapping;
+
+    #[test]
+    fn adjust_single_uid_mapping_remaps_non_root_service_user() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("etc")).unwrap();
+        std::fs::write(
+            dir.path().join("etc/passwd"),
+            "root:x:0:0:root:/root:/bin/sh\npostgres:x:70:70:Postgres:/var/lib/postgresql:/bin/sh\n",
+        )
+        .unwrap();
+
+        let mut spec = OciSpec::default_spec(true, 1000, 1000);
+        spec.annotations.insert("coral.user".into(), "postgres".into());
+        let mut plan = NamespacePlan {
+            flags: nix::sched::CloneFlags::CLONE_NEWUSER,
+            use_user_ns: true,
+            use_net_ns: false,
+            uid_mappings: vec![LinuxIdMapping {
+                container_id: 0,
+                host_id: 1000,
+                size: 1,
+            }],
+            gid_mappings: vec![LinuxIdMapping {
+                container_id: 0,
+                host_id: 1000,
+                size: 1,
+            }],
+        };
+
+        adjust_single_uid_mapping(&mut plan, &spec, dir.path());
+        assert_eq!(plan.uid_mappings[0].container_id, 70);
+        assert_eq!(plan.gid_mappings[0].container_id, 70);
+
+        // Multi-UID subuid mappings remain untouched so container keeps full 0..65536 range.
+        plan.uid_mappings = vec![LinuxIdMapping {
+            container_id: 0,
+            host_id: 100000,
+            size: 65536,
+        }];
+        adjust_single_uid_mapping(&mut plan, &spec, dir.path());
+        assert_eq!(plan.uid_mappings[0].container_id, 0);
     }
 }

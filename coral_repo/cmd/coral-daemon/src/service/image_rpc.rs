@@ -146,7 +146,10 @@ impl ImageService for CoralDaemonService {
         if let Some(cid) = spec.annotations.get("coral.commit_container") {
             let (lower_rootfs, upperdir) = {
                 let store = self.store.read().await;
-                let ctr = store.containers.get(cid).ok_or_else(|| {
+                let resolved = store.resolve_container_id(cid).ok_or_else(|| {
+                    Status::not_found(format!("container '{cid}' not found for commit"))
+                })?;
+                let ctr = store.containers.get(&resolved).ok_or_else(|| {
                     Status::not_found(format!("container '{cid}' not found for commit"))
                 })?;
                 (
@@ -241,5 +244,23 @@ impl ImageService for CoralDaemonService {
         self.persist_images(&store.images);
 
         Ok(Response::new(RemoveImageResponse {}))
+    }
+
+    async fn image_fs_info(
+        &self,
+        _request: Request<coral_api::ImageFsInfoRequest>,
+    ) -> Result<Response<coral_api::ImageFsInfoResponse>, Status> {
+        let now = chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0);
+        let used = images::dir_size(&self.images_dir);
+        Ok(Response::new(coral_api::ImageFsInfoResponse {
+            image_filesystems: vec![coral_api::FilesystemUsage {
+                timestamp: now,
+                fs_id: Some(coral_api::FilesystemIdentifier {
+                    mountpoint: self.images_dir.display().to_string(),
+                }),
+                used_bytes: Some(coral_api::UInt64Value { value: used }),
+                inodes_used: Some(coral_api::UInt64Value { value: 0 }),
+            }],
+        }))
     }
 }

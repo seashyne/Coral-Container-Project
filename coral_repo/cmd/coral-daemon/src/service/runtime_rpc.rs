@@ -3,31 +3,37 @@
 use super::metrics::collect_container_metrics;
 use super::port_forward::spawn_port_forwarders;
 use super::pty_rpc::ExecStreamOutput;
+use super::streaming::StreamKind;
 use super::supervisor::{SupervisorLaunch, spawn_container_supervisor};
 use super::{CoralDaemonService, ManagedContainer, SandboxRecord};
 use crate::images;
 use chrono::Utc;
 use coral_api::runtime_service_server::RuntimeService;
 use coral_api::{
-    Container, ContainerMetadata, ContainerState as CriContainerState, ContainerStatus,
-    ContainerStatusRequest, ContainerStatusResponse, CreateContainerRequest,
-    CreateContainerResponse, ExecStreamRequest, ExecSyncRequest, ExecSyncResponse,
-    ListContainersRequest, ListContainersResponse, ListPodSandboxRequest, ListPodSandboxResponse,
-    PodSandbox, PodSandboxNetworkStatus, PodSandboxState, PodSandboxStatus,
-    PodSandboxStatusRequest, PodSandboxStatusResponse, RemoveContainerRequest,
+    AttachRequest, AttachResponse, Container, ContainerAttributes, ContainerMetadata,
+    ContainerState as CriContainerState, ContainerStats, ContainerStatsRequest,
+    ContainerStatsResponse, ContainerStatus, ContainerStatusRequest, ContainerStatusResponse,
+    CpuUsage, CreateContainerRequest, CreateContainerResponse, ExecRequest, ExecResponse,
+    ExecStreamRequest, ExecSyncRequest, ExecSyncResponse, FilesystemIdentifier, FilesystemUsage,
+    ListContainerStatsRequest, ListContainerStatsResponse, ListContainersRequest,
+    ListContainersResponse, ListPodSandboxRequest, ListPodSandboxResponse, MemoryUsage, PodSandbox,
+    PodSandboxNetworkStatus, PodSandboxState, PodSandboxStatus, PodSandboxStatusRequest,
+    PodSandboxStatusResponse, PortForwardRequest, PortForwardResponse, RemoveContainerRequest,
     RemoveContainerResponse, RemovePodSandboxRequest, RemovePodSandboxResponse,
-    RunPodSandboxRequest, RunPodSandboxResponse, RuntimeCondition, RuntimeStatus,
-    StartContainerRequest, StartContainerResponse, StatusRequest, StatusResponse,
-    StopContainerRequest, StopContainerResponse, StopPodSandboxRequest, StopPodSandboxResponse,
-    VersionRequest, VersionResponse,
+    ReopenContainerLogRequest, ReopenContainerLogResponse, RunPodSandboxRequest,
+    RunPodSandboxResponse, RuntimeCondition, RuntimeStatus, StartContainerRequest,
+    StartContainerResponse, StatusRequest, StatusResponse, StopContainerRequest,
+    StopContainerResponse, StopPodSandboxRequest, StopPodSandboxResponse, UInt64Value,
+    UpdateRuntimeConfigRequest, UpdateRuntimeConfigResponse, VersionRequest, VersionResponse,
 };
+use coral_net::CniExecRequest;
 use coral_oci::OciSpec;
 use coral_runtime::overlay::diff_overlay;
 use std::collections::HashMap;
 use std::fs;
 use tokio::process::Command;
 use tonic::{Request, Response, Status, Streaming};
-use tracing::info;
+use tracing::{info, warn};
 
 #[tonic::async_trait]
 impl RuntimeService for CoralDaemonService {
@@ -105,7 +111,7 @@ impl RuntimeService for CoralDaemonService {
                 state: sb.state as i32,
                 created_at: sb.created_at,
                 network: Some(PodSandboxNetworkStatus {
-                    ip: "127.0.0.1".into(),
+                    ip: sb.pod_ip.clone().unwrap_or_else(|| "127.0.0.1".into()),
                 }),
                 labels: sb.config.labels.clone(),
                 annotations: sb.config.annotations.clone(),
@@ -153,11 +159,34 @@ impl RuntimeService for CoralDaemonService {
         let id = self.next_id("pod");
         let now = Utc::now().timestamp_nanos_opt().unwrap_or(0);
 
+        // Execute Kubernetes CNI v1.0.0 plugin chain (`ADD`) when CNI configs are present in conf_dir.
+        let cni_req = build_cni_exec_request(&id, &config);
+        let cni = self.cni.clone();
+        let cni_outcome = tokio::task::spawn_blocking(move || cni.add_pod_network(&cni_req))
+            .await
+            .map_err(|e| Status::internal(format!("CNI ADD join error: {e}")))?
+            .map_err(|e| Status::internal(format!("CNI ADD failed: {e:#}")))?;
+
+        let (pod_ip, cni_raw_result) = match cni_outcome {
+            Some(out) => {
+                info!(
+                    pod_sandbox_id = %id,
+                    cni_network = %out.network_name,
+                    pod_ip = ?out.pod_ip,
+                    "CNI plugin chain attached pod network"
+                );
+                (out.pod_ip, Some(out.raw_result))
+            }
+            None => (None, None),
+        };
+
         let record = SandboxRecord {
             id: id.clone(),
             config,
             state: PodSandboxState::SandboxReady,
             created_at: now,
+            pod_ip,
+            cni_raw_result,
         };
 
         let mut store = self.store.write().await;
@@ -173,13 +202,30 @@ impl RuntimeService for CoralDaemonService {
         request: Request<StopPodSandboxRequest>,
     ) -> Result<Response<StopPodSandboxResponse>, Status> {
         let id = request.into_inner().pod_sandbox_id;
-        let mut store = self.store.write().await;
-        let sb = store
-            .sandboxes
-            .get_mut(&id)
-            .ok_or_else(|| Status::not_found(format!("pod sandbox '{id}' not found")))?;
-        sb.state = PodSandboxState::SandboxNotready;
-        self.persist_state(&store);
+        let (id, cni_teardown) = {
+            let mut store = self.store.write().await;
+            let id = store
+                .resolve_sandbox_id(&id)
+                .ok_or_else(|| Status::not_found(format!("pod sandbox '{id}' not found")))?;
+            let sb = store
+                .sandboxes
+                .get_mut(&id)
+                .ok_or_else(|| Status::not_found(format!("pod sandbox '{id}' not found")))?;
+            sb.state = PodSandboxState::SandboxNotready;
+            let prev = sb.cni_raw_result.take();
+            let req = prev.as_ref().map(|_| build_cni_exec_request(&id, &sb.config));
+            self.persist_state(&store);
+            (id, req.zip(prev))
+        };
+        if let Some((cni_req, prev_res)) = cni_teardown {
+            let cni = self.cni.clone();
+            if let Ok(Err(e)) =
+                tokio::task::spawn_blocking(move || cni.del_pod_network(&cni_req, Some(&prev_res)))
+                    .await
+            {
+                warn!(pod_sandbox_id = %id, err = %e, "CNI DEL reported warning during stop_pod_sandbox");
+            }
+        }
         Ok(Response::new(StopPodSandboxResponse {}))
     }
 
@@ -187,22 +233,36 @@ impl RuntimeService for CoralDaemonService {
         &self,
         request: Request<RemovePodSandboxRequest>,
     ) -> Result<Response<RemovePodSandboxResponse>, Status> {
-        let id = request.into_inner().pod_sandbox_id;
-        let mut store = self.store.write().await;
-        let has_containers = store
-            .containers
-            .values()
-            .any(|c| c.pod_sandbox_id == id);
-        if has_containers {
-            return Err(Status::failed_precondition(format!(
-                "cannot remove pod sandbox '{id}' while containers still exist"
-            )));
+        let query = request.into_inner().pod_sandbox_id;
+        let (id, removed) = {
+            let mut store = self.store.write().await;
+            let id = store
+                .resolve_sandbox_id(&query)
+                .ok_or_else(|| Status::not_found(format!("pod sandbox '{query}' not found")))?;
+            let has_containers = store
+                .containers
+                .values()
+                .any(|c| c.pod_sandbox_id == id);
+            if has_containers {
+                return Err(Status::failed_precondition(format!(
+                    "cannot remove pod sandbox '{query}' while containers still exist"
+                )));
+            }
+            let sb = store
+                .sandboxes
+                .remove(&id)
+                .ok_or_else(|| Status::not_found(format!("pod sandbox '{query}' not found")))?;
+            self.persist_state(&store);
+            (id, sb)
+        };
+        if let Some(prev_res) = removed.cni_raw_result {
+            let cni = self.cni.clone();
+            let cni_req = build_cni_exec_request(&id, &removed.config);
+            let _ = tokio::task::spawn_blocking(move || {
+                cni.del_pod_network(&cni_req, Some(&prev_res))
+            })
+            .await;
         }
-        store
-            .sandboxes
-            .remove(&id)
-            .ok_or_else(|| Status::not_found(format!("pod sandbox '{id}' not found")))?;
-        self.persist_state(&store);
         Ok(Response::new(RemovePodSandboxResponse {}))
     }
 
@@ -382,8 +442,9 @@ impl RuntimeService for CoralDaemonService {
         &self,
         request: Request<StartContainerRequest>,
     ) -> Result<Response<StartContainerResponse>, Status> {
-        let id = request.into_inner().container_id;
+        let query = request.into_inner().container_id;
         let (
+            id,
             bundle_dir,
             rootfs_path,
             log_path,
@@ -396,10 +457,13 @@ impl RuntimeService for CoralDaemonService {
             wasm_mem_mb,
         ) = {
             let mut store = self.store.write().await;
+            let id = store
+                .resolve_container_id(&query)
+                .ok_or_else(|| Status::not_found(format!("container '{query}' not found")))?;
             let ctr = store
                 .containers
                 .get_mut(&id)
-                .ok_or_else(|| Status::not_found(format!("container '{id}' not found")))?;
+                .ok_or_else(|| Status::not_found(format!("container '{query}' not found")))?;
             if ctr.state == CriContainerState::ContainerRunning {
                 return Err(Status::failed_precondition(format!(
                     "container '{id}' is already RUNNING"
@@ -442,6 +506,7 @@ impl RuntimeService for CoralDaemonService {
                 .map(|b| (b / (1024 * 1024)).max(1) as usize)
                 .unwrap_or(64);
             let ret = (
+                id,
                 ctr.bundle_dir.clone(),
                 ctr.rootfs_path.clone(),
                 ctr.log_path.clone(),
@@ -492,6 +557,7 @@ impl RuntimeService for CoralDaemonService {
             state_dir: self.cfg.state_dir.clone(),
             coral_bin: self.cfg.coral_bin.clone(),
             store: self.store.clone(),
+            log_policy: self.current_log_policy(),
         });
         if let Some(prev) = self.store.write().await.supervisors.insert(id, sup_handle) {
             prev.abort();
@@ -504,16 +570,20 @@ impl RuntimeService for CoralDaemonService {
         &self,
         request: Request<StopContainerRequest>,
     ) -> Result<Response<StopContainerResponse>, Status> {
-        let id = request.into_inner().container_id;
-        {
+        let query = request.into_inner().container_id;
+        let id = {
             let mut store = self.store.write().await;
+            let id = store
+                .resolve_container_id(&query)
+                .ok_or_else(|| Status::not_found(format!("container '{query}' not found")))?;
             let ctr = store
                 .containers
                 .get_mut(&id)
-                .ok_or_else(|| Status::not_found(format!("container '{id}' not found")))?;
+                .ok_or_else(|| Status::not_found(format!("container '{query}' not found")))?;
             ctr.stopped_by_user = true;
             self.persist_state(&store);
-        }
+            id
+        };
 
         let _ = Command::new(&self.cfg.coral_bin)
             .arg("--root")
@@ -545,9 +615,12 @@ impl RuntimeService for CoralDaemonService {
         &self,
         request: Request<RemoveContainerRequest>,
     ) -> Result<Response<RemoveContainerResponse>, Status> {
-        let id = request.into_inner().container_id;
-        let removed = {
+        let query = request.into_inner().container_id;
+        let (id, removed) = {
             let mut store = self.store.write().await;
+            let id = store
+                .resolve_container_id(&query)
+                .ok_or_else(|| Status::not_found(format!("container '{query}' not found")))?;
             if let Some(sup) = store.supervisors.remove(&id) {
                 sup.abort();
             }
@@ -559,9 +632,9 @@ impl RuntimeService for CoralDaemonService {
             let removed = store
                 .containers
                 .remove(&id)
-                .ok_or_else(|| Status::not_found(format!("container '{id}' not found")))?;
+                .ok_or_else(|| Status::not_found(format!("container '{query}' not found")))?;
             self.persist_state(&store);
-            removed
+            (id, removed)
         };
 
         let _ = Command::new(&self.cfg.coral_bin)
@@ -624,9 +697,14 @@ impl RuntimeService for CoralDaemonService {
     ) -> Result<Response<ContainerStatusResponse>, Status> {
         let req = request.into_inner();
         let store = self.store.read().await;
+        let resolved_id = store
+            .resolve_container_id(&req.container_id)
+            .ok_or_else(|| {
+                Status::not_found(format!("container '{}' not found", req.container_id))
+            })?;
         let ctr = store
             .containers
-            .get(&req.container_id)
+            .get(&resolved_id)
             .ok_or_else(|| {
                 Status::not_found(format!("container '{}' not found", req.container_id))
             })?;
@@ -768,12 +846,16 @@ impl RuntimeService for CoralDaemonService {
             return Err(Status::invalid_argument("exec command must not be empty"));
         }
 
-        let (bundle_dir, is_running) = {
+        let (canonical_cid, bundle_dir, is_running) = {
             let store = self.store.read().await;
-            let ctr = store.containers.get(&req.container_id).ok_or_else(|| {
+            let canonical_cid = store.resolve_container_id(&req.container_id).ok_or_else(|| {
+                Status::not_found(format!("container '{}' not found", req.container_id))
+            })?;
+            let ctr = store.containers.get(&canonical_cid).ok_or_else(|| {
                 Status::not_found(format!("container '{}' not found", req.container_id))
             })?;
             (
+                canonical_cid,
                 ctr.bundle_dir.clone(),
                 ctr.state == CriContainerState::ContainerRunning,
             )
@@ -786,7 +868,7 @@ impl RuntimeService for CoralDaemonService {
                 .arg(self.runtime_root())
                 .arg("exec")
                 .arg("--local")
-                .arg(&req.container_id)
+                .arg(&canonical_cid)
                 .arg("--");
             for arg in &req.cmd {
                 cmd.arg(arg);
@@ -848,11 +930,259 @@ impl RuntimeService for CoralDaemonService {
         }))
     }
 
+    async fn exec(
+        &self,
+        request: Request<ExecRequest>,
+    ) -> Result<Response<ExecResponse>, Status> {
+        let req = request.into_inner();
+        if req.cmd.is_empty() {
+            return Err(Status::invalid_argument("exec command must not be empty"));
+        }
+        let canonical_cid = {
+            let store = self.store.read().await;
+            store.resolve_container_id(&req.container_id).ok_or_else(|| {
+                Status::not_found(format!("container '{}' not found", req.container_id))
+            })?
+        };
+        let url = self
+            .stream_server
+            .issue_url(
+                self.clone(),
+                "exec",
+                StreamKind::Exec {
+                    container_id: canonical_cid,
+                    cmd: req.cmd,
+                    stdout: req.stdout || (!req.stdout && !req.stderr),
+                    stderr: req.stderr,
+                },
+            )
+            .await
+            .map_err(Status::internal)?;
+        Ok(Response::new(ExecResponse { url }))
+    }
+
+    async fn attach(
+        &self,
+        request: Request<AttachRequest>,
+    ) -> Result<Response<AttachResponse>, Status> {
+        let req = request.into_inner();
+        let canonical_cid = {
+            let store = self.store.read().await;
+            store.resolve_container_id(&req.container_id).ok_or_else(|| {
+                Status::not_found(format!("container '{}' not found", req.container_id))
+            })?
+        };
+        let url = self
+            .stream_server
+            .issue_url(
+                self.clone(),
+                "attach",
+                StreamKind::Attach {
+                    container_id: canonical_cid,
+                },
+            )
+            .await
+            .map_err(Status::internal)?;
+        Ok(Response::new(AttachResponse { url }))
+    }
+
+    async fn port_forward(
+        &self,
+        request: Request<PortForwardRequest>,
+    ) -> Result<Response<PortForwardResponse>, Status> {
+        let req = request.into_inner();
+        let canonical_pod_id = {
+            let store = self.store.read().await;
+            store.resolve_sandbox_id(&req.pod_sandbox_id).ok_or_else(|| {
+                Status::not_found(format!("pod sandbox '{}' not found", req.pod_sandbox_id))
+            })?
+        };
+        let url = self
+            .stream_server
+            .issue_url(
+                self.clone(),
+                "portforward",
+                StreamKind::PortForward {
+                    pod_sandbox_id: canonical_pod_id,
+                    ports: req.port,
+                },
+            )
+            .await
+            .map_err(Status::internal)?;
+        Ok(Response::new(PortForwardResponse { url }))
+    }
+
+    async fn container_stats(
+        &self,
+        request: Request<ContainerStatsRequest>,
+    ) -> Result<Response<ContainerStatsResponse>, Status> {
+        let cid = request.into_inner().container_id;
+        let store = self.store.read().await;
+        let resolved = store
+            .resolve_container_id(&cid)
+            .ok_or_else(|| Status::not_found(format!("container '{cid}' not found")))?;
+        let ctr = store
+            .containers
+            .get(&resolved)
+            .ok_or_else(|| Status::not_found(format!("container '{cid}' not found")))?;
+        let stats = self.build_cri_container_stats(ctr);
+        Ok(Response::new(ContainerStatsResponse { stats: Some(stats) }))
+    }
+
+    async fn list_container_stats(
+        &self,
+        request: Request<ListContainerStatsRequest>,
+    ) -> Result<Response<ListContainerStatsResponse>, Status> {
+        let filter = request.into_inner().filter;
+        let store = self.store.read().await;
+        let stats = store
+            .containers
+            .values()
+            .filter(|c| {
+                if let Some(f) = &filter {
+                    if !f.id.is_empty() && c.id != f.id {
+                        return false;
+                    }
+                    if !f.pod_sandbox_id.is_empty() && c.pod_sandbox_id != f.pod_sandbox_id {
+                        return false;
+                    }
+                    for (k, v) in &f.label_selector {
+                        if c.config.labels.get(k) != Some(v) {
+                            return false;
+                        }
+                    }
+                }
+                true
+            })
+            .map(|c| self.build_cri_container_stats(c))
+            .collect();
+        Ok(Response::new(ListContainerStatsResponse { stats }))
+    }
+
+    async fn update_runtime_config(
+        &self,
+        request: Request<UpdateRuntimeConfigRequest>,
+    ) -> Result<Response<UpdateRuntimeConfigResponse>, Status> {
+        let pod_cidr = request
+            .into_inner()
+            .runtime_config
+            .and_then(|rc| rc.network_config)
+            .map(|nc| nc.pod_cidr)
+            .filter(|s| !s.trim().is_empty());
+        if let Some(cidr) = pod_cidr {
+            let mut store = self.store.write().await;
+            store.pod_cidr = Some(cidr.clone());
+            info!(pod_cidr = %cidr, "updated CRI runtime pod CIDR");
+        }
+        Ok(Response::new(UpdateRuntimeConfigResponse {}))
+    }
+
+    async fn reopen_container_log(
+        &self,
+        request: Request<ReopenContainerLogRequest>,
+    ) -> Result<Response<ReopenContainerLogResponse>, Status> {
+        let cid = request.into_inner().container_id;
+        let log_path = {
+            let store = self.store.read().await;
+            let resolved = store
+                .resolve_container_id(&cid)
+                .ok_or_else(|| Status::not_found(format!("container '{cid}' not found")))?;
+            store
+                .containers
+                .get(&resolved)
+                .map(|c| c.log_path.clone())
+                .ok_or_else(|| Status::not_found(format!("container '{cid}' not found")))?
+        };
+        if let Some(parent) = log_path.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&log_path)
+            .map_err(|e| Status::internal(format!("reopen container log '{}': {e}", log_path.display())))?;
+        Ok(Response::new(ReopenContainerLogResponse {}))
+    }
+
     async fn exec_stream(
         &self,
         request: Request<Streaming<ExecStreamRequest>>,
     ) -> Result<Response<Self::ExecStreamStream>, Status> {
         let stream = self.handle_exec_stream(request.into_inner()).await?;
         Ok(Response::new(stream))
+    }
+}
+
+impl CoralDaemonService {
+    fn build_cri_container_stats(&self, ctr: &ManagedContainer) -> ContainerStats {
+        let now = Utc::now().timestamp_nanos_opt().unwrap_or(0);
+        let mem_limit = ctr
+            .config
+            .linux
+            .as_ref()
+            .and_then(|l| l.resources.as_ref())
+            .map(|r| r.memory_limit_in_bytes)
+            .unwrap_or(0);
+        let live = collect_container_metrics(
+            &self.runtime_root(),
+            &ctr.id,
+            mem_limit,
+            ctr.started_at,
+        );
+        let cpu_ns = live
+            .as_ref()
+            .map(|m| m.cpu_usage_usec.saturating_mul(1_000))
+            .unwrap_or(0);
+        let mem_bytes = live.as_ref().map(|m| m.memory_bytes).unwrap_or(0);
+        let upper = ctr.bundle_dir.join("overlay/upper");
+        let writable_bytes = if upper.is_dir() {
+            images::dir_size(&upper)
+        } else {
+            0
+        };
+        ContainerStats {
+            attributes: Some(ContainerAttributes {
+                id: ctr.id.clone(),
+                metadata: ctr.config.metadata.clone(),
+                labels: ctr.config.labels.clone(),
+                annotations: ctr.config.annotations.clone(),
+            }),
+            cpu: Some(CpuUsage {
+                timestamp: now,
+                usage_core_nano_seconds: Some(UInt64Value { value: cpu_ns }),
+            }),
+            memory: Some(MemoryUsage {
+                timestamp: now,
+                working_set_bytes: Some(UInt64Value { value: mem_bytes }),
+            }),
+            writable_layer: Some(FilesystemUsage {
+                timestamp: now,
+                fs_id: Some(FilesystemIdentifier {
+                    mountpoint: ctr.bundle_dir.display().to_string(),
+                }),
+                used_bytes: Some(UInt64Value {
+                    value: writable_bytes,
+                }),
+                inodes_used: Some(UInt64Value { value: 0 }),
+            }),
+        }
+    }
+}
+
+fn build_cni_exec_request(id: &str, config: &coral_api::PodSandboxConfig) -> CniExecRequest {
+    let meta = config.metadata.as_ref();
+    let netns_path = config
+        .annotations
+        .get("coral.cni.netns")
+        .cloned()
+        .unwrap_or_else(|| "/proc/self/ns/net".into());
+    CniExecRequest {
+        container_id: id.to_string(),
+        netns_path,
+        ifname: "eth0".into(),
+        pod_name: meta.map(|m| m.name.clone()).unwrap_or_default(),
+        pod_namespace: meta.map(|m| m.namespace.clone()).unwrap_or_default(),
+        pod_uid: meta.map(|m| m.uid.clone()).unwrap_or_default(),
+        runtime_config: None,
     }
 }

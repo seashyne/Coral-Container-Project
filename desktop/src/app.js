@@ -174,6 +174,14 @@ $("volumes-table").addEventListener("click", (e) => {
 $("kvm-probe-btn").addEventListener("click", probeKvmHardware);
 $("wasm-run-form").addEventListener("submit", submitWasmPlayground);
 $("sandbox-form").addEventListener("submit", submitAiSandbox);
+$("vm-setup-kernel-btn").addEventListener("click", setupMicroVmKernel);
+$("vm-boot-form").addEventListener("submit", submitVmBoot);
+$("sec-sign-btn").addEventListener("click", () => runImageSecurityAction("sign"));
+$("sec-verify-btn").addEventListener("click", () => runImageSecurityAction("verify"));
+$("sec-sbom-btn").addEventListener("click", () => runImageSecurityAction("sbom"));
+$("wasm-serve-target").addEventListener("input", updateWasmServePreview);
+$("wasm-serve-addr").addEventListener("input", updateWasmServePreview);
+$("wasm-serve-copy-btn").addEventListener("click", copyWasmServeCmd);
 
 // Modals & drawer
 document.querySelectorAll("[data-close]").forEach((btn) =>

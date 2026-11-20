@@ -38,12 +38,31 @@ pub fn inspect_bzimage(kernel_path: &Path) -> Result<BzImageInfo> {
     })
 }
 
+/// Options controlling VirtIO driver injection and `/coral-init` bootstrap inside initramfs.
+#[derive(Debug, Clone, Default)]
+pub struct InitramfsOptions<'a> {
+    pub modules_dir: Option<&'a Path>,
+    pub enable_blk: bool,
+    pub enable_net: bool,
+    pub disk_mount: Option<&'a str>,
+}
+
 /// Packs `rootfs_dir` plus an executable `/coral-init` launcher script into a gzipped
 /// Linux `newc` CPIO initramfs image ready to boot via KVM / QEMU / Firecracker.
 pub fn build_initramfs_cpio_gz(
     rootfs_dir: &Path,
     cmd: &[String],
     out_path: &Path,
+) -> Result<u64> {
+    build_initramfs_with_options(rootfs_dir, cmd, out_path, &InitramfsOptions::default())
+}
+
+/// Builds a compressed `newc` initramfs with optional VirtIO/ext4 `.ko` modules injected.
+pub fn build_initramfs_with_options(
+    rootfs_dir: &Path,
+    cmd: &[String],
+    out_path: &Path,
+    opts: &InitramfsOptions<'_>,
 ) -> Result<u64> {
     if let Some(parent) = out_path.parent() {
         fs::create_dir_all(parent)?;
@@ -52,6 +71,39 @@ pub fn build_initramfs_cpio_gz(
         .with_context(|| format!("create initramfs '{}'", out_path.display()))?;
     let mut gz = GzEncoder::new(out_file, Compression::fast());
     let mut ino = 1u32;
+
+    let mut device_setup = String::new();
+    let mut unmount_disk = String::new();
+    if opts.enable_blk {
+        device_setup.push_str(
+            "for m in virtio_blk crc16 mbcache jbd2 libcrc32c crc32c_generic ext4; do \
+             [ -f \"/lib/modules/coral/${m}.ko\" ] && insmod \"/lib/modules/coral/${m}.ko\" 2>/dev/null || true; done\n\
+             command -v mdev >/dev/null 2>&1 && mdev -s 2>/dev/null || true\n\
+             _w=0; while [ ! -b /dev/vda ] && [ $_w -lt 25 ]; do sleep 0.02 2>/dev/null || usleep 20000 2>/dev/null || true; _w=$((_w+1)); done\n",
+        );
+        if let Some(mnt) = opts.disk_mount {
+            let qmnt = mnt.replace('\'', "'\\''");
+            device_setup.push_str(&format!(
+                "mkdir -p '{qmnt}' && (mount /dev/vda '{qmnt}' 2>/dev/null || mount -o ro,noload /dev/vda '{qmnt}' 2>/dev/null || true)\n"
+            ));
+            unmount_disk = format!("sync 2>/dev/null || true; umount '{qmnt}' 2>/dev/null || true\n");
+        }
+    }
+
+    if opts.enable_net {
+        device_setup.push_str(
+            "for m in failover net_failover virtio_net; do \
+             [ -f \"/lib/modules/coral/${m}.ko\" ] && insmod \"/lib/modules/coral/${m}.ko\" 2>/dev/null || true; done\n\
+             ip link set lo up 2>/dev/null || ifconfig lo 127.0.0.1 up 2>/dev/null || true\n\
+             if ip link show eth0 >/dev/null 2>&1 || ifconfig eth0 >/dev/null 2>&1; then \
+               ip link set eth0 up 2>/dev/null || ifconfig eth0 up 2>/dev/null || true; \
+               command -v udhcpc >/dev/null 2>&1 && udhcpc -f -q -n -t 2 -T 1 -i eth0 -s /bin/true 2>/dev/null || true; \
+               ip addr replace 10.0.2.15/24 dev eth0 2>/dev/null || ifconfig eth0 10.0.2.15 netmask 255.255.255.0 up 2>/dev/null || true; \
+               ip route replace default via 10.0.2.2 2>/dev/null || route add default gw 10.0.2.2 2>/dev/null || true; \
+               mkdir -p /etc && echo 'nameserver 10.0.2.2' > /etc/resolv.conf 2>/dev/null || true; \
+             fi\n",
+        );
+    }
 
     // Emit `/coral-init` PID 1 launcher script inside the MicroVM guest kernel.
     let quoted_cmd = cmd
@@ -64,8 +116,11 @@ pub fn build_initramfs_cpio_gz(
          mount -t proc proc /proc 2>/dev/null || true\n\
          mount -t sysfs sysfs /sys 2>/dev/null || true\n\
          mount -t devtmpfs devtmpfs /dev 2>/dev/null || true\n\
+         {device_setup}\
          {}\n\
          EC=$?\n\
+         sync 2>/dev/null || true\n\
+         {unmount_disk}\
          echo \"__CORAL_VMM_EXIT__=$EC\"\n\
          reboot -f 2>/dev/null || poweroff -f 2>/dev/null || exit $EC\n",
         if quoted_cmd.is_empty() { "/bin/sh".into() } else { quoted_cmd }
@@ -74,6 +129,40 @@ pub fn build_initramfs_cpio_gz(
     ino += 1;
 
     append_dir_to_cpio(&mut gz, rootfs_dir, Path::new(""), &mut ino)?;
+
+    // Emit parent dirs & `.ko` modules AFTER rootfs dirs so `lib/` and `lib/modules/` exist.
+    if let Some(mod_dir) = opts.modules_dir
+        && mod_dir.is_dir()
+    {
+        if !rootfs_dir.join("lib").exists() {
+            ino += 1;
+            write_cpio_entry(&mut gz, "lib", 0o040755, ino, &[])?;
+        }
+        if !rootfs_dir.join("lib/modules").exists() {
+            ino += 1;
+            write_cpio_entry(&mut gz, "lib/modules", 0o040755, ino, &[])?;
+        }
+        ino += 1;
+        write_cpio_entry(&mut gz, "lib/modules/coral", 0o040755, ino, &[])?;
+        if let Ok(rd) = fs::read_dir(mod_dir) {
+            for entry in rd.flatten() {
+                let p = entry.path();
+                if p.extension().is_some_and(|e| e == "ko")
+                    && let Ok(bytes) = fs::read(&p)
+                {
+                    let name = entry.file_name().to_string_lossy().into_owned();
+                    ino += 1;
+                    write_cpio_entry(
+                        &mut gz,
+                        &format!("lib/modules/coral/{name}"),
+                        0o100644,
+                        ino,
+                        &bytes,
+                    )?;
+                }
+            }
+        }
+    }
 
     // Standard `newc` trailer entry.
     write_cpio_entry(&mut gz, "TRAILER!!!", 0, 0, &[])?;
@@ -95,7 +184,10 @@ fn append_dir_to_cpio<W: Write>(
         let child_full = entry.path();
         let meta = fs::symlink_metadata(&child_full)?;
         let cpio_name = child_rel.to_string_lossy().replace('\\', "/");
-        if cpio_name == "coral-init" {
+        if cpio_name == "coral-init"
+            || cpio_name == "lib/modules/coral"
+            || cpio_name.starts_with("lib/modules/coral/")
+        {
             continue;
         }
         let mode = meta.mode();

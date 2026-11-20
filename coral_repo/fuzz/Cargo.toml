@@ -1,0 +1,43 @@
+[package]
+name = "coral-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[workspace]
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+coral-oci = { path = "../pkg/oci" }
+coral-daemon = { path = "../cmd/coral-daemon" }
+coral-wasm = { path = "../pkg/wasm" }
+coral-vmm = { path = "../pkg/vmm" }
+serde_json = "1"
+tempfile = "3"
+
+[[bin]]
+name = "oci_spec"
+path = "fuzz_targets/oci_spec.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "tar_extract"
+path = "fuzz_targets/tar_extract.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "wasm_http_cgi"
+path = "fuzz_targets/wasm_http_cgi.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "virtio_ring"
+path = "fuzz_targets/virtio_ring.rs"
+test = false
+doc = false

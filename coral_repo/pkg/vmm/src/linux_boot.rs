@@ -27,6 +27,14 @@ pub struct LinuxBootOptions {
     pub timeout_ms: u64,
     /// Optional VM-exit budget (0 = unlimited, bounded by `timeout_ms`).
     pub max_vm_exits: u64,
+    /// Optional raw/ext4 disk image attached via VirtIO-Blk (`/dev/vda`, `0xD0001000`, IRQ 5).
+    pub disk_image: Option<PathBuf>,
+    /// Attach `disk_image` read-only.
+    pub disk_read_only: bool,
+    /// Attach pure-Rust VirtIO-Net userspace L2/L3 switch (`eth0` `10.0.2.15/24`, IRQ 6).
+    pub enable_net: bool,
+    /// Host-to-guest TCP port forwarding rules when `enable_net` is true.
+    pub port_forwards: Vec<crate::virtio_net::PortForwardRule>,
 }
 
 impl Default for LinuxBootOptions {
@@ -38,6 +46,10 @@ impl Default for LinuxBootOptions {
             memory_mb: 256,
             timeout_ms: 15_000,
             max_vm_exits: 0,
+            disk_image: None,
+            disk_read_only: false,
+            enable_net: false,
+            port_forwards: Vec::new(),
         }
     }
 }
@@ -55,6 +67,10 @@ pub struct LinuxBootResult {
     pub kernel_protocol: String,
     pub timed_out: bool,
     pub virtio_mmio_probed: bool,
+    #[serde(default)]
+    pub virtio_blk_ops: u64,
+    #[serde(default)]
+    pub virtio_net_packets: u64,
 }
 
 /// Pure-Rust VirtIO-MMIO v2 transport state (`0xD000_0000..0xD000_1000`, VirtIO Console device ID 3).
@@ -375,8 +391,22 @@ pub fn boot_linux_bzimage_kvm(opts: &LinuxBootOptions) -> Result<LinuxBootResult
     }
     mem[load_addr..load_addr + kernel_payload.len()].copy_from_slice(kernel_payload);
 
-    // 6. Copy kernel command line to 0x20000.
-    let cmdline_bytes = opts.cmdline.as_bytes();
+    // 6. Copy kernel command line to 0x20000 (adding VirtIO-MMIO devices when enabled).
+    let mut effective_cmdline = opts.cmdline.clone();
+    if opts.disk_image.is_some() || opts.enable_net {
+        effective_cmdline = effective_cmdline
+            .split_whitespace()
+            .filter(|t| *t != "nomodules")
+            .collect::<Vec<_>>()
+            .join(" ");
+    }
+    if opts.disk_image.is_some() && !effective_cmdline.contains("0xd0001000") {
+        effective_cmdline.push_str(" virtio_mmio.device=4K@0xd0001000:5");
+    }
+    if opts.enable_net && !effective_cmdline.contains("0xd0002000") {
+        effective_cmdline.push_str(" virtio_mmio.device=4K@0xd0002000:6");
+    }
+    let cmdline_bytes = effective_cmdline.as_bytes();
     let max_cmdline = 4095usize;
     let copy_len = cmdline_bytes.len().min(max_cmdline);
     mem[CMDLINE_ADDR as usize..CMDLINE_ADDR as usize + copy_len]
@@ -513,11 +543,24 @@ pub fn boot_linux_bzimage_kvm(opts: &LinuxBootOptions) -> Result<LinuxBootResult
         bail!("KVM_SET_REGS failed: {}", io::Error::last_os_error());
     }
 
-    // 9. Install no-op SIGUSR1 handler + watchdog thread so idle HLT never hangs past timeout_ms.
+    let mut virtio_blk = opts
+        .disk_image
+        .as_ref()
+        .map(|p| crate::virtio_blk::VirtioBlkDevice::open(p, opts.disk_read_only))
+        .transpose()?;
+    let mut virtio_net = if opts.enable_net {
+        Some(crate::virtio_net::VirtioNetDevice::new(&opts.port_forwards)?)
+    } else {
+        None
+    };
+
+    // 9. Install no-op SIGUSR1 handler + watchdog thread so idle HLT never hangs past timeout_ms
+    // (and wakes every 15 ms when VirtIO-Net is active so inbound RX packets arrive promptly).
     install_sigusr1_wakeup();
     let deadline = start + Duration::from_millis(opts.timeout_ms.max(250));
     let finished = Arc::new(AtomicBool::new(false));
     let finished_wd = finished.clone();
+    let net_tick = opts.enable_net;
     let vcpu_tid = unsafe { libc::pthread_self() };
     let watchdog = std::thread::spawn(move || {
         while !finished_wd.load(Ordering::Relaxed) {
@@ -526,6 +569,11 @@ pub fn boot_linux_bzimage_kvm(opts: &LinuxBootOptions) -> Result<LinuxBootResult
                     libc::pthread_kill(vcpu_tid, libc::SIGUSR1);
                 }
                 std::thread::sleep(Duration::from_millis(20));
+            } else if net_tick {
+                std::thread::sleep(Duration::from_millis(15));
+                unsafe {
+                    libc::pthread_kill(vcpu_tid, libc::SIGUSR1);
+                }
             } else {
                 std::thread::sleep(Duration::from_millis(25));
             }
@@ -552,6 +600,12 @@ pub fn boot_linux_bzimage_kvm(opts: &LinuxBootOptions) -> Result<LinuxBootResult
             exit_code = 137;
             exit_reason_label = "vm-exit-budget-exceeded".into();
             break;
+        }
+
+        if let Some(net) = virtio_net.as_mut()
+            && net.poll(mem)
+        {
+            pulse_irq_line(vm_fd.as_raw_fd(), crate::virtio_net::VIRTIO_NET_IRQ);
         }
 
         let rc = unsafe { libc::ioctl(vcpu_fd.as_raw_fd(), KVM_RUN, 0) };
@@ -653,6 +707,52 @@ pub fn boot_linux_bzimage_kvm(opts: &LinuxBootOptions) -> Result<LinuxBootResult
                             *(data_ptr as *mut u32) = val;
                         }
                     }
+                } else if (crate::virtio_blk::VIRTIO_BLK_MMIO_BASE
+                    ..crate::virtio_blk::VIRTIO_BLK_MMIO_BASE
+                        + crate::virtio_blk::VIRTIO_BLK_MMIO_SIZE)
+                    .contains(&phys_addr)
+                {
+                    let reg_off = phys_addr - crate::virtio_blk::VIRTIO_BLK_MMIO_BASE;
+                    let safe_len = len.min(8);
+                    if let Some(blk) = virtio_blk.as_mut() {
+                        if is_write {
+                            let slice = unsafe { std::slice::from_raw_parts(data_ptr, safe_len) };
+                            if blk.write_mmio(reg_off, slice, mem) {
+                                pulse_irq_line(vm_fd.as_raw_fd(), crate::virtio_blk::VIRTIO_BLK_IRQ);
+                            }
+                        } else {
+                            let slice =
+                                unsafe { std::slice::from_raw_parts_mut(data_ptr, safe_len) };
+                            blk.read_mmio(reg_off, slice);
+                        }
+                    } else if !is_write {
+                        unsafe {
+                            std::slice::from_raw_parts_mut(data_ptr, safe_len).fill(0);
+                        }
+                    }
+                } else if (crate::virtio_net::VIRTIO_NET_MMIO_BASE
+                    ..crate::virtio_net::VIRTIO_NET_MMIO_BASE
+                        + crate::virtio_net::VIRTIO_NET_MMIO_SIZE)
+                    .contains(&phys_addr)
+                {
+                    let reg_off = phys_addr - crate::virtio_net::VIRTIO_NET_MMIO_BASE;
+                    let safe_len = len.min(8);
+                    if let Some(net) = virtio_net.as_mut() {
+                        if is_write {
+                            let slice = unsafe { std::slice::from_raw_parts(data_ptr, safe_len) };
+                            if net.write_mmio(reg_off, slice, mem) {
+                                pulse_irq_line(vm_fd.as_raw_fd(), crate::virtio_net::VIRTIO_NET_IRQ);
+                            }
+                        } else {
+                            let slice =
+                                unsafe { std::slice::from_raw_parts_mut(data_ptr, safe_len) };
+                            net.read_mmio(reg_off, slice);
+                        }
+                    } else if !is_write {
+                        unsafe {
+                            std::slice::from_raw_parts_mut(data_ptr, safe_len).fill(0);
+                        }
+                    }
                 } else if !is_write {
                     let safe_len = len.min(8);
                     unsafe {
@@ -694,6 +794,15 @@ pub fn boot_linux_bzimage_kvm(opts: &LinuxBootOptions) -> Result<LinuxBootResult
         timed_out = false;
     }
 
+    let virtio_blk_ops = virtio_blk
+        .as_ref()
+        .map(|b| b.reads + b.writes + b.flushes)
+        .unwrap_or(0);
+    let virtio_net_packets = virtio_net
+        .as_ref()
+        .map(|n| n.tx_packets + n.rx_packets)
+        .unwrap_or(0);
+
     Ok(LinuxBootResult {
         exit_code,
         serial_output,
@@ -704,6 +813,8 @@ pub fn boot_linux_bzimage_kvm(opts: &LinuxBootOptions) -> Result<LinuxBootResult
         kernel_protocol,
         timed_out,
         virtio_mmio_probed: virtio_console.probed,
+        virtio_blk_ops,
+        virtio_net_packets,
     })
 }
 

@@ -33,6 +33,8 @@ struct PersistedSandbox {
     annotations: HashMap<String, String>,
     state: i32,
     created_at: i64,
+    #[serde(default)]
+    pod_ip: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -104,6 +106,8 @@ pub(crate) fn load_persisted_store(state_dir: &Path, runtime_root: &Path, store:
                 },
                 state,
                 created_at: sb.created_at,
+                pod_ip: sb.pod_ip,
+                cni_raw_result: None,
             },
         );
     }
@@ -227,6 +231,7 @@ pub(crate) fn save_persisted_store(state_dir: &Path, store: &DaemonStore) {
                 annotations: sb.config.annotations.clone(),
                 state: sb.state as i32,
                 created_at: sb.created_at,
+                pod_ip: sb.pod_ip.clone(),
             }
         })
         .collect();

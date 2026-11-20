@@ -51,6 +51,34 @@ struct Args {
     /// Optional local rootfs directory registered as `alpine:latest`
     #[arg(long)]
     default_rootfs: Option<PathBuf>,
+
+    /// Kubernetes CNI configuration directory (default `/etc/cni/net.d`)
+    #[arg(long, env = "CORAL_CNI_CONF_DIR", default_value = "/etc/cni/net.d")]
+    cni_conf_dir: PathBuf,
+
+    /// Kubernetes CNI plugin binaries directory (default `/opt/cni/bin`)
+    #[arg(long, env = "CORAL_CNI_BIN_DIR", default_value = "/opt/cni/bin")]
+    cni_bin_dir: PathBuf,
+
+    /// Maximum active container log file size in MiB before rotation (`0` disables rotation)
+    #[arg(long, env = "CORAL_LOG_MAX_SIZE_MB", default_value_t = 10)]
+    log_max_size_mb: u64,
+
+    /// Number of archived rotated log files (`.1`..`.N`) kept per container
+    #[arg(long, env = "CORAL_LOG_MAX_FILES", default_value_t = 3)]
+    log_max_files: usize,
+
+    /// Background Auto-GC sweep interval in seconds (`0` disables Auto-GC)
+    #[arg(long, env = "CORAL_AUTO_GC_INTERVAL_SECS", default_value_t = 300)]
+    auto_gc_interval_secs: u64,
+
+    /// HTTP address for Prometheus `/metrics` & `/healthz` endpoint
+    #[arg(long, env = "CORAL_METRICS_LISTEN", default_value = "127.0.0.1:9108")]
+    metrics_listen: SocketAddr,
+
+    /// Disable the Prometheus `/metrics` HTTP listener
+    #[arg(long, default_value_t = false)]
+    no_metrics: bool,
 }
 
 #[tokio::main]
@@ -88,15 +116,49 @@ async fn main() -> Result<()> {
         images_dir: Some(images_dir.clone()),
         coral_bin: args.coral_bin,
         default_rootfs: args.default_rootfs,
-    });
+    })
+    .with_cni(args.cni_conf_dir, args.cni_bin_dir)
+    .with_log_rotation(
+        args.log_max_size_mb.saturating_mul(1024 * 1024),
+        args.log_max_files,
+    )
+    .with_auto_gc(args.auto_gc_interval_secs);
 
     let (shutdown_tx, mut shutdown_rx_tcp) = watch::channel(false);
     let mut shutdown_rx_uds = shutdown_tx.subscribe();
+    let shutdown_rx_metrics = shutdown_tx.subscribe();
     tokio::spawn(async move {
         let _ = tokio::signal::ctrl_c().await;
         info!("received shutdown signal, stopping coral-daemon");
         let _ = shutdown_tx.send(true);
     });
+
+    if !args.no_metrics {
+        let metrics_addr = args.metrics_listen;
+        match tokio::net::TcpListener::bind(metrics_addr).await {
+            Ok(listener) => {
+                let metrics_svc = service.clone();
+                info!(
+                    metrics = %format!("http://{metrics_addr}/metrics"),
+                    "starting Prometheus /metrics & /healthz endpoint"
+                );
+                tokio::spawn(async move {
+                    if let Err(e) = coral_daemon::service::prometheus::serve_prometheus_metrics(
+                        metrics_svc,
+                        listener,
+                        shutdown_rx_metrics,
+                    )
+                    .await
+                    {
+                        tracing::warn!(err = %e, "Prometheus /metrics server exited");
+                    }
+                });
+            }
+            Err(e) => {
+                tracing::warn!(addr = %metrics_addr, err = %e, "could not bind Prometheus /metrics listener (continuing without /metrics)");
+            }
+        }
+    }
 
     let tcp_svc = service.clone();
     let tcp_addr = args.listen;

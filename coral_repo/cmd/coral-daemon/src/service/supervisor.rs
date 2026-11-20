@@ -8,7 +8,7 @@ use chrono::Utc;
 use coral_api::ContainerState as CriContainerState;
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Duration;
@@ -58,6 +58,106 @@ impl RestartPolicy {
     }
 }
 
+/// Log size-based rotation settings applied to supervised container stdout/stderr logs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LogRotationPolicy {
+    /// Maximum size in bytes before rotating (`0` disables rotation).
+    pub max_size_bytes: u64,
+    /// Number of archived `.1`..`.N` rotated log files to retain (`0` truncates active file).
+    pub max_files: usize,
+}
+
+impl Default for LogRotationPolicy {
+    fn default() -> Self {
+        Self {
+            max_size_bytes: 10 * 1024 * 1024,
+            max_files: 3,
+        }
+    }
+}
+
+/// Bounded-size append log writer supporting `.1`..`.N` rotation without restarting containers.
+pub struct RotatingLogWriter {
+    path: PathBuf,
+    file: std::fs::File,
+    written_bytes: u64,
+    policy: LogRotationPolicy,
+    rotations: u64,
+}
+
+impl RotatingLogWriter {
+    pub fn open(path: PathBuf, policy: LogRotationPolicy) -> std::io::Result<Self> {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let file = OpenOptions::new().create(true).append(true).open(&path)?;
+        let written_bytes = file.metadata().map(|m| m.len()).unwrap_or(0);
+        Ok(Self {
+            path,
+            file,
+            written_bytes,
+            policy,
+            rotations: 0,
+        })
+    }
+
+    pub fn write_chunk(&mut self, bytes: &[u8]) -> std::io::Result<()> {
+        if self.policy.max_size_bytes > 0
+            && self.written_bytes > 0
+            && self.written_bytes.saturating_add(bytes.len() as u64) > self.policy.max_size_bytes
+        {
+            self.rotate()?;
+        }
+        self.file.write_all(bytes)?;
+        self.file.flush()?;
+        self.written_bytes = self.written_bytes.saturating_add(bytes.len() as u64);
+        Ok(())
+    }
+
+    fn rotate(&mut self) -> std::io::Result<()> {
+        use std::io::{Seek, SeekFrom};
+        let _ = self.file.flush();
+        if self.policy.max_files == 0 {
+            self.file.set_len(0)?;
+            self.file.seek(SeekFrom::Start(0))?;
+            self.written_bytes = 0;
+            self.rotations = self.rotations.saturating_add(1);
+            return Ok(());
+        }
+
+        let oldest = rotated_log_path(&self.path, self.policy.max_files);
+        let _ = std::fs::remove_file(&oldest);
+        for idx in (1..self.policy.max_files).rev() {
+            let from = rotated_log_path(&self.path, idx);
+            let to = rotated_log_path(&self.path, idx + 1);
+            if from.exists() {
+                let _ = std::fs::rename(&from, &to);
+            }
+        }
+        let first = rotated_log_path(&self.path, 1);
+        if self.path.exists() {
+            std::fs::rename(&self.path, &first)?;
+        }
+        self.file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(&self.path)?;
+        self.written_bytes = 0;
+        self.rotations = self.rotations.saturating_add(1);
+        Ok(())
+    }
+
+    #[cfg(test)]
+    pub(crate) fn rotations(&self) -> u64 {
+        self.rotations
+    }
+}
+
+pub(crate) fn rotated_log_path(base: &Path, index: usize) -> PathBuf {
+    PathBuf::from(format!("{}.{}", base.display(), index))
+}
+
 pub(crate) struct SupervisorLaunch {
     pub cid: String,
     pub bundle_dir: PathBuf,
@@ -66,6 +166,7 @@ pub(crate) struct SupervisorLaunch {
     pub state_dir: PathBuf,
     pub coral_bin: PathBuf,
     pub store: Arc<RwLock<DaemonStore>>,
+    pub log_policy: LogRotationPolicy,
 }
 
 /// Spawns the asynchronous supervisor loop for a container: streams stdout/stderr live
@@ -80,11 +181,12 @@ pub(crate) fn spawn_container_supervisor(launch: SupervisorLaunch) -> JoinHandle
             state_dir,
             coral_bin,
             store,
+            log_policy,
         } = launch;
 
         loop {
-            // Prepare healthcheck monitor & rootless bridge egress if configured.
-            let (health_cfg, backoff_base_ms, want_egress) = {
+            // Prepare healthcheck monitor, rootless bridge egress & log policy overrides.
+            let (health_cfg, backoff_base_ms, want_egress, effective_log_policy) = {
                 let guard = store.read().await;
                 let Some(ctr) = guard.containers.get(&cid) else {
                     break;
@@ -125,7 +227,24 @@ pub(crate) fn spawn_container_supervisor(launch: SupervisorLaunch) -> JoinHandle
                     .unwrap_or("host");
                 let is_bridge = !net_mode.eq_ignore_ascii_case("host")
                     && !net_mode.eq_ignore_ascii_case("none");
-                (hc, backoff, is_bridge)
+                let mut ctr_log_policy = log_policy;
+                if let Some(v) = ctr
+                    .config
+                    .annotations
+                    .get("coral.log.max_size_bytes")
+                    .and_then(|s| s.parse::<u64>().ok())
+                {
+                    ctr_log_policy.max_size_bytes = v;
+                }
+                if let Some(v) = ctr
+                    .config
+                    .annotations
+                    .get("coral.log.max_files")
+                    .and_then(|s| s.parse::<usize>().ok())
+                {
+                    ctr_log_policy.max_files = v;
+                }
+                (hc, backoff, is_bridge, ctr_log_policy)
             };
 
             let egress_handle = if want_egress && coral_net::detect_egress_backend().is_some() {
@@ -169,9 +288,15 @@ pub(crate) fn spawn_container_supervisor(launch: SupervisorLaunch) -> JoinHandle
                 )
             });
 
-            let run_result =
-                run_container_streaming_logs(&coral_bin, &runtime_root, &bundle_dir, &cid, &log_path)
-                    .await;
+            let run_result = run_container_streaming_logs(
+                &coral_bin,
+                &runtime_root,
+                &bundle_dir,
+                &cid,
+                &log_path,
+                effective_log_policy,
+            )
+            .await;
 
             if let Some(h) = egress_handle {
                 h.abort();
@@ -268,7 +393,8 @@ async fn run_container_streaming_logs(
     runtime_root: &PathBuf,
     bundle_dir: &PathBuf,
     cid: &str,
-    log_path: &PathBuf,
+    log_path: &Path,
+    log_policy: LogRotationPolicy,
 ) -> std::io::Result<(i32, String)> {
     // Clean up any stale OCI state left behind after an unclean host reboot or SIGKILL crash.
     if runtime_root.join(cid).exists() {
@@ -285,11 +411,10 @@ async fn run_container_streaming_logs(
             .await;
     }
 
-    let log_file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(log_path)?;
-    let log_writer = Arc::new(StdMutex::new(log_file));
+    let log_writer = Arc::new(StdMutex::new(RotatingLogWriter::open(
+        log_path.to_path_buf(),
+        log_policy,
+    )?));
 
     let mut child = Command::new(coral_bin)
         .arg("--root")
@@ -314,9 +439,8 @@ async fn run_container_streaming_logs(
                 if n == 0 {
                     break;
                 }
-                if let Ok(mut f) = w_out.lock() {
-                    let _ = f.write_all(&buf[..n]);
-                    let _ = f.flush();
+                if let Ok(mut w) = w_out.lock() {
+                    let _ = w.write_chunk(&buf[..n]);
                 }
             }
         }
@@ -331,9 +455,8 @@ async fn run_container_streaming_logs(
                 if n == 0 {
                     break;
                 }
-                if let Ok(mut f) = w_err.lock() {
-                    let _ = f.write_all(&buf[..n]);
-                    let _ = f.flush();
+                if let Ok(mut w) = w_err.lock() {
+                    let _ = w.write_chunk(&buf[..n]);
                 }
                 tail.extend_from_slice(&buf[..n]);
                 if tail.len() > 2048 {
@@ -437,5 +560,26 @@ mod tests {
         assert!(!RestartPolicy::parse("on-failure:3").should_restart(0, 0, false));
         assert!(RestartPolicy::parse("on-failure:3").should_restart(1, 2, false));
         assert!(!RestartPolicy::parse("on-failure:3").should_restart(1, 3, false));
+    }
+
+    #[test]
+    fn rotating_log_writer_rotates_and_caps_archive_count() {
+        let dir = tempfile::tempdir().unwrap();
+        let log_path = dir.path().join("container.log");
+        let policy = LogRotationPolicy {
+            max_size_bytes: 20,
+            max_files: 2,
+        };
+        let mut w = RotatingLogWriter::open(log_path.clone(), policy).unwrap();
+        for i in 0..6 {
+            w.write_chunk(format!("line-{i:02}-payload!!\n").as_bytes())
+                .unwrap();
+        }
+        assert!(w.rotations() >= 4);
+        assert!(log_path.exists());
+        assert!(rotated_log_path(&log_path, 1).exists());
+        assert!(rotated_log_path(&log_path, 2).exists());
+        assert!(!rotated_log_path(&log_path, 3).exists());
+        assert!(std::fs::metadata(&log_path).unwrap().len() <= 20);
     }
 }

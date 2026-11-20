@@ -65,17 +65,46 @@ pub fn boot_linux_microvm(
     timeout_secs: u64,
     extra_cmdline: Option<&str>,
 ) -> Result<SandboxReport> {
+    boot_linux_microvm_with_devices(
+        kernel_path,
+        initrd_path,
+        memory_mb,
+        timeout_secs,
+        extra_cmdline,
+        None,
+        false,
+        false,
+        &[],
+    )
+}
+
+/// Boots a real Linux kernel + initramfs inside Coral's pure-Rust KVM hypervisor (or QEMU),
+/// optionally attaching VirtIO-Blk persistent disk and pure-Rust VirtIO-Net networking.
+#[allow(clippy::too_many_arguments)]
+pub fn boot_linux_microvm_with_devices(
+    kernel_path: &Path,
+    initrd_path: &Path,
+    memory_mb: i64,
+    timeout_secs: u64,
+    extra_cmdline: Option<&str>,
+    disk_image: Option<&Path>,
+    disk_read_only: bool,
+    enable_net: bool,
+    port_forwards: &[crate::virtio_net::PortForwardRule],
+) -> Result<SandboxReport> {
     let start = Instant::now();
     let _hdr = inspect_bzimage(kernel_path)?;
     let kvm = probe_kvm();
 
-    // Primary path (v2.1): Pure-Rust native /dev/kvm x86-64 Linux kernel boot (Zero QEMU/Firecracker!)
+    // Primary path (v2.2): Pure-Rust native /dev/kvm x86-64 Linux kernel boot with VirtIO-Blk & Net.
     #[cfg(target_arch = "x86_64")]
     if kvm.available {
-        let cmdline = format!(
-            "console=ttyS0 earlyprintk=serial,ttyS0,115200 nokaslr reboot=k panic=1 pci=off nomodules quiet rdinit=/coral-init {}",
-            extra_cmdline.unwrap_or("")
-        );
+        let base_flags = if disk_image.is_some() || enable_net {
+            "console=ttyS0 earlyprintk=serial,ttyS0,115200 nokaslr reboot=k panic=1 pci=off quiet rdinit=/coral-init"
+        } else {
+            "console=ttyS0 earlyprintk=serial,ttyS0,115200 nokaslr reboot=k panic=1 pci=off nomodules quiet rdinit=/coral-init"
+        };
+        let cmdline = format!("{base_flags} {}", extra_cmdline.unwrap_or(""));
         let res = crate::linux_boot::boot_linux_bzimage_kvm(&crate::linux_boot::LinuxBootOptions {
             kernel_path: kernel_path.to_path_buf(),
             initrd_path: Some(initrd_path.to_path_buf()),
@@ -83,6 +112,10 @@ pub fn boot_linux_microvm(
             memory_mb: memory_mb.max(128) as usize,
             timeout_ms: timeout_secs.max(1).saturating_mul(1000),
             max_vm_exits: 0,
+            disk_image: disk_image.map(Path::to_path_buf),
+            disk_read_only,
+            enable_net,
+            port_forwards: port_forwards.to_vec(),
         })?;
         let mut clean_stdout = String::new();
         for line in res.serial_output.lines() {

@@ -4,7 +4,9 @@
 use crate::catalog;
 use crate::port_proxy::ForkedPortProxies;
 use anyhow::{Context, Result};
-use coral_daemon::images;
+use coral_daemon::images::{
+    self, OciImageConfig, merge_env_vars, resolve_entrypoint_and_cmd,
+};
 use coral_oci::{
     LinuxCpu, LinuxMemory, LinuxNamespace, LinuxNamespaceType, LinuxPids, LinuxResources, OciSpec,
 };
@@ -56,7 +58,9 @@ pub struct LocalImageRunArgs {
     pub memory_mb: i64,
     pub cpu_percent: i64,
     pub pids_limit: i64,
-    pub workdir: String,
+    pub workdir: Option<String>,
+    pub user: Option<String>,
+    pub entrypoint: Option<String>,
     pub hostname: Option<String>,
     pub keep: bool,
 }
@@ -156,19 +160,40 @@ pub fn run_from_image_local(
         spec.mounts.push(parse_volume_spec(vol)?);
     }
 
+    let img_cfg = OciImageConfig::load_for_rootfs(&rootfs_path);
+    let effective_user = args
+        .user
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(ToOwned::to_owned)
+        .or_else(|| {
+            (!img_cfg.user.trim().is_empty()).then(|| img_cfg.user.clone())
+        });
+    if let Some(u) = effective_user {
+        spec.annotations.insert("coral.user".into(), u);
+    }
+
+    let ep_override = args.entrypoint.map(|s| {
+        if s.trim().is_empty() {
+            vec![String::new()]
+        } else {
+            vec![s]
+        }
+    });
+    let resolved_args = resolve_entrypoint_and_cmd(&img_cfg, ep_override.as_deref(), &args.cmd);
+
     if let Some(proc_cfg) = spec.process.as_mut() {
         proc_cfg.terminal = args.tty;
-        proc_cfg.args = if args.cmd.is_empty() {
-            vec!["/bin/sh".into()]
-        } else {
-            args.cmd
-        };
-        if !args.workdir.trim().is_empty() {
-            proc_cfg.cwd = args.workdir;
+        proc_cfg.args = resolved_args;
+        if let Some(wd) = args.workdir
+            && !wd.trim().is_empty()
+        {
+            proc_cfg.cwd = wd;
+        } else if !img_cfg.working_dir.trim().is_empty() {
+            proc_cfg.cwd = img_cfg.working_dir.clone();
         }
-        for env in args.envs {
-            proc_cfg.env.push(env);
-        }
+        proc_cfg.env = merge_env_vars(&proc_cfg.env, &img_cfg.env, &args.envs);
     }
 
     if (args.memory_mb > 0 || args.cpu_percent > 0 || args.pids_limit > 0)

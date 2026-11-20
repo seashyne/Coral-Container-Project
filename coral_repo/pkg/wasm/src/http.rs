@@ -379,7 +379,7 @@ fn find_double_crlf(buf: &[u8]) -> Option<usize> {
 
 /// Parses optional CGI-style headers (`Status: 201`, `Content-Type: application/json`, blank line)
 /// from Wasm stdout; falls back to `200 OK` raw body if no header block is present.
-fn parse_cgi_or_raw_response(raw: &[u8]) -> (u16, Vec<(String, String)>, Vec<u8>) {
+pub fn parse_cgi_or_raw_response(raw: &[u8]) -> (u16, Vec<(String, String)>, Vec<u8>) {
     let sep = raw
         .windows(4)
         .position(|w| w == b"\r\n\r\n")
