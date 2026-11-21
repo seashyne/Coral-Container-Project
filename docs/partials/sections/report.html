@@ -1,0 +1,174 @@
+      <!-- 7. Measurement Report & Improvement Backlog -->
+      <section id="report" class="doc-section" tabindex="-1">
+        <h2 data-i18n="report.title">รายงานผลวัดล่าสุด &amp; ข้อควรปรับปรุ่ง</h2>
+        <p class="section-lead" data-i18n="report.lead"></p>
+
+        <div class="callout">
+          <strong data-i18n="report.envTitle">สภาพแวดล้อมการวัด</strong>
+          <span data-i18n="report.envDesc"></span>
+        </div>
+
+        <div tabindex="0" role="region" aria-labelledby="report-table-caption" class="table-wrapper">
+          <table class="data-table" id="report-table">
+            <caption id="report-table-caption" data-i18n="report.tableCaption"></caption>
+            <thead>
+              <tr>
+                <th scope="col" data-i18n="report.colWorkload">โหมด / Workload</th>
+                <th scope="col" data-i18n="report.colRuns">Runs</th>
+                <th scope="col" data-i18n="report.colMin">Min</th>
+                <th scope="col" data-i18n="report.colP50">P50</th>
+                <th scope="col" data-i18n="report.colMean">Mean</th>
+                <th scope="col" data-i18n="report.colThr">Throughput</th>
+                <th scope="col" data-i18n="report.colVs">เทียบ Docker bridge</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Coral OCI direct (<code>--bundle</code>, alpine:3.20)</th>
+                <td>30</td>
+                <td>5.00 ms</td>
+                <td class="col-highlight"><strong>5.53 ms</strong></td>
+                <td>6.01 ms</td>
+                <td>166.4 ctr/s</td>
+                <td>38.3×</td>
+              </tr>
+              <tr>
+                <th scope="row">Coral CLI (<code>--image alpine:3.20</code>)</th>
+                <td>30</td>
+                <td>5.36 ms</td>
+                <td class="col-highlight"><strong>6.18 ms</strong></td>
+                <td>7.75 ms</td>
+                <td>129.0 ctr/s</td>
+                <td>34.3×</td>
+              </tr>
+              <tr>
+                <th scope="row">Coral CRI Daemon (gRPC + alpine:3.20)</th>
+                <td>20</td>
+                <td>8.62 ms</td>
+                <td class="col-highlight"><strong>9.49 ms</strong></td>
+                <td>12.05 ms</td>
+                <td>83.0 ctr/s</td>
+                <td>22.3×</td>
+              </tr>
+              <tr>
+                <th scope="row">runc (Docker's own OCI runtime, rootless)</th>
+                <td>30</td>
+                <td>16.31 ms</td>
+                <td>21.19 ms</td>
+                <td>21.50 ms</td>
+                <td>46.5 ctr/s</td>
+                <td>10.0×</td>
+              </tr>
+              <tr>
+                <th scope="row">Docker Engine 29.10.0 (<code>--rm --network=none</code>)</th>
+                <td>20</td>
+                <td>129.33 ms</td>
+                <td><strong>135.27 ms</strong></td>
+                <td>135.52 ms</td>
+                <td>7.4 ctr/s</td>
+                <td>1.57×</td>
+              </tr>
+              <tr>
+                <th scope="row">Docker Engine 29.10.0 (<code>--rm</code> default bridge)</th>
+                <td>20</td>
+                <td>191.73 ms</td>
+                <td><strong>211.96 ms</strong></td>
+                <td>210.22 ms</td>
+                <td>4.8 ctr/s</td>
+                <td>1.00× (base)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 data-i18n="report.findTitle">ข้อค้นพบสำคัญจากรอบวัดนี้</h3>
+        <div class="callout">
+          <strong data-i18n="report.find1Title">การติดตั้งแบบแพ็กเกจไม่เพิ่ม overhead</strong>
+          <span data-i18n="report.find1Desc"></span>
+        </div>
+        <div class="callout">
+          <strong data-i18n="report.find2Title">CRI Daemon เร็วกว่า raw runc ถึง 2.23 เท่า</strong>
+          <span data-i18n="report.find2Desc"></span>
+        </div>
+        <div class="callout">
+          <strong data-i18n="report.find3Title">ต้นทุนของ Docker stack อยู่ที่ bridge network</strong>
+          <span data-i18n="report.find3Desc"></span>
+        </div>
+        <div class="callout">
+          <strong data-i18n="report.find4Title">ขอบเขตของการเทียบเทียบ</strong>
+          <span data-i18n="report.find4Desc"></span>
+        </div>
+
+        <h3 data-i18n="report.backlogTitle">ข้อควรปรับปรุ่ง (Backlog)</h3>
+        <p class="section-lead" data-i18n="report.backlogLead"></p>
+        <div tabindex="0" role="region" aria-labelledby="backlog-caption" class="table-wrapper">
+          <table class="data-table" id="backlog-table">
+            <caption id="backlog-caption" data-i18n="report.backlogCaption"></caption>
+            <thead>
+              <tr>
+                <th scope="col" data-i18n="report.blColNo">#</th>
+                <th scope="col" data-i18n="report.blColArea">หัวข้อ</th>
+                <th scope="col" data-i18n="report.blColFinding">สิ่งที่พบ / หลักฐาน</th>
+                <th scope="col" data-i18n="report.blColAction">สิ่งที่ควรทำ</th>
+                <th scope="col" data-i18n="report.blColStatus">สถานะ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <th scope="row" data-i18n="report.bl1Area">ระเบียบวิธีวัด Benchmark</th>
+                <td data-i18n="report.bl1Finding"></td>
+                <td data-i18n="report.bl1Action"></td>
+                <td><span class="status-badge" data-i18n="report.stOpen">ยังค้าง</span></td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <th scope="row" data-i18n="report.bl2Area">เอกสารเว็บไม่ตรงกับผลวัดล่าสุด</th>
+                <td data-i18n="report.bl2Finding"></td>
+                <td data-i18n="report.bl2Action"></td>
+                <td><span class="status-badge active" data-i18n="report.stDone">แก้แล้วในรอบนี้</span></td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <th scope="row" data-i18n="report.bl3Area">systemd unit ของแพ็กเกจไม่ระบุ state dir</th>
+                <td data-i18n="report.bl3Finding"></td>
+                <td data-i18n="report.bl3Action"></td>
+                <td><span class="status-badge" data-i18n="report.stOpen">ยังค้าง</span></td>
+              </tr>
+              <tr>
+                <td>4</td>
+                <th scope="row" data-i18n="report.bl4Area">AppImage ของ Coral Desktop bundle ไม่ผ่าน</th>
+                <td data-i18n="report.bl4Finding"></td>
+                <td data-i18n="report.bl4Action"></td>
+                <td><span class="status-badge active" data-i18n="report.stDone">แก้แล้วในรอบนี้</span></td>
+              </tr>
+              <tr>
+                <td>5</td>
+                <th scope="row" data-i18n="report.bl5Area">ไม่มีการตรวจสอบหลังติดตั้งแพ็กเกจ</th>
+                <td data-i18n="report.bl5Finding"></td>
+                <td data-i18n="report.bl5Action"></td>
+                <td><span class="status-badge" data-i18n="report.stOpen">ยังค้าง</span></td>
+              </tr>
+              <tr>
+                <td>6</td>
+                <th scope="row" data-i18n="report.bl6Area">ไม่มี CI ที่วัด latency อัตโนมัติ</th>
+                <td data-i18n="report.bl6Finding"></td>
+                <td data-i18n="report.bl6Action"></td>
+                <td><span class="status-badge" data-i18n="report.stOpen">ยังค้าง</span></td>
+              </tr>
+              <tr>
+                <td>7</td>
+                <th scope="row" data-i18n="report.bl7Area">ชุดวัดยังครอบคลุมแค่ alpine:3.20</th>
+                <td data-i18n="report.bl7Finding"></td>
+                <td data-i18n="report.bl7Action"></td>
+                <td><span class="status-badge" data-i18n="report.stOpen">ยังค้าง</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="download-bar">
+          <a class="btn btn-primary" href="https://github.com/seashyne/Coral-Container-Project/blob/main/coral_repo/docs/REPORT_v2.3.md" target="_blank" rel="noopener" data-i18n="report.reportBtn">อ่านรายงานสรุปฉบับเต็ม (REPORT_v2.3.md)</a>
+          <a class="btn btn-secondary" href="https://github.com/seashyne/Coral-Container-Project/blob/main/coral_repo/docs/BENCHMARK.md" target="_blank" rel="noopener" data-i18n="report.rawBtn">ดูข้อมูล Benchmark ละเอียด (BENCHMARK.md)</a>
+        </div>
+      </section>

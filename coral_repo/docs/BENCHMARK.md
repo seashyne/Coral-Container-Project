@@ -52,6 +52,40 @@ xychart-beta
 | **Wasm Cold Start** | **329 µs** (engine) / `5.72 ms` CLI P50 | ต้องใช้ external Wasm shim |
 | **KVM 64-bit Boot** | **963 µs** (self-test) / `16.78 ms` CLI | ต้องใช้ QEMU/Kata แยก |
 
+### รอบวัดที่สอง: Coral แบบติดตั้ง System-wide (21 พฤศจิกายน 2026)
+
+รอบนี้วัดด้วยไบนารีที่ **ติดตั้งจริงแบบ system-wide** จากแพ็กเกจ `coral-runtime_2.3.0_amd64.deb` (`dpkg -i` → `/usr/bin/coral`, `/usr/bin/coral-daemon`) บนโฮสต์ `Ubuntu 26.10` (kernel `7.3.0-11-generic`, 16 CPU) เทียบกับ **Docker Engine 29.10.0 แบบ rootless** (`rootlesskit` + `slirp4netns`, storage driver `overlayfs`)
+
+คำสั่งที่ใช้วัด:
+
+```bash
+CORAL_BIN=/usr/bin/coral CORAL_DAEMON_BIN=/usr/bin/coral-daemon RUNS=30 ./scripts/benchmark.sh
+```
+
+| โหมด / Workload | Runs | Min | **P50 (Median)** | Mean | P95 | Throughput | เทียบ Docker Bridge (P50) |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: | :--- |
+| **Coral OCI direct (`--bundle, alpine:3.20`)** | 30 | 5.00 ms | **5.53 ms** | 6.01 ms | 8.40 ms | **166.4 ctr/s** | **เร็วกว่า 38.3×** |
+| **Coral CLI (`--image alpine:3.20`)** | 30 | 5.36 ms | **6.18 ms** | 7.75 ms | 16.08 ms | **129.0 ctr/s** | **เร็วกว่า 34.3×** |
+| **Coral CRI Daemon (`gRPC + alpine:3.20`)** | 20 | 8.62 ms | **9.49 ms** | 12.05 ms | 22.08 ms | **83.0 ctr/s** | **เร็วกว่า 22.3×** |
+| `runc` (OCI runtime ของ Docker เอง, rootless) | 30 | 16.31 ms | 21.19 ms | 21.50 ms | 25.89 ms | 46.5 ctr/s | เร็วกว่า 10.0× |
+| **Docker Engine 29.10.0 (`--rm --network=none`)** | 20 | 129.33 ms | **135.27 ms** | 135.52 ms | 140.32 ms | 7.4 ctr/s | เร็วกว่า 1.57× |
+| **Docker Engine 29.10.0 (`--rm` default bridge)** | 20 | 191.73 ms | **211.96 ms** | 210.22 ms | 219.83 ms | 4.8 ctr/s | 1.00× (Baseline) |
+
+| เมตริกรอบ system-wide | ค่า |
+| :--- | :--- |
+| **ขนาด Binary ที่ติดตั้ง** | `coral` `18.98 MB` · `coral-daemon` `17.68 MB` |
+| **Daemon RAM (RSS)** | `9.2 MB` (Idle) · `10.7 MB` (หลังรัน 20 รอบ) |
+
+**ข้อสังเกต**
+
+1. **การติดตั้งแบบแพ็กเกจไม่เพิ่ม overhead** — P50 ของ OCI direct (`5.53 ms`) และ CLI (`6.18 ms`) ตรงกับรอบที่วัดด้วย build ในโปรเจกต์ (`5.50` / `6.33 ms`) เพราะแพ็กเกจเป็นเพียงการคัดลอกไบนาร์เดิม
+2. **CRI Daemon เร็วกว่า raw `runc` ถึง 2.23 เท่า** — `9.49 ms` เทียบกับ `21.19 ms` → overhead ที่ซ้อนบน CRI daemon ของ Coral เป็นค่าติดลบเมื่อเทียบกับ OCI runtime ตัวเดียวกับที่ Docker ใช้จริง
+3. **ต้นทุนของ Docker stack อยู่ที่ bridge network** — `211.96 ms` เทียบกับ `runc` ตรง ๆ `21.19 ms` ≈ **+900%**
+4. **ขอบเขต** — รอบนี้วัด Docker แบบ rootless บนโฮสต์เดียวกับ Coral จึงเปรียบเทียบได้เฉพาะสัดส่วน overhead ไม่ใช่ตัวเลขข้ามโฮสต์กับตารางของ Docker Desktop ข้างบน
+5. **ระหว่างรอบชัดเจน** — CRI daemon วัด P50 ได้ `21.49 ms` ในรอบก่อนหน้า และ `9.49 ms` ในรอบนี้ (รอบก่อนมีงาน build แข่งเครื่องและ page cache เย็นกว่า) → ต้องกำหนดระเบียบวิธีวัดให้ชัดเจนก่อนใช้ตัวเลขเปรียบเทียบข้ามรอบ
+
+> รายการข้อควรปรับปรุ่งทั้งหมด (เรียงตามลำดับความสำคัญ) อยู่ที่หัวข้อ 3.2 ของ [`REPORT_v2.3.md`](./REPORT_v2.3.md) และหน้า **Report & Backlog** บนเว็บไซต์เอกสาร
+
 ---
 
 ## 3. การเปรียบเทียบเชิงสถาปัตยกรรมและประวัติ Baseline
@@ -77,6 +111,9 @@ cd /home/seashyne/Documents/Coral-Container-Project/coral_repo
 
 # ทดสอบ Coral (รวม busybox:musl และ debian:bookworm-slim) + Docker บนเครื่องเดียวกัน
 PULL_EXTRA=1 RUNS=30 ./scripts/benchmark.sh
+
+# ทดสอบด้วยไบนารีที่ติดตั้งแบบ system-wide จากแพ็กเกจ .deb
+CORAL_BIN=/usr/bin/coral CORAL_DAEMON_BIN=/usr/bin/coral-daemon RUNS=30 ./scripts/benchmark.sh
 
 # ดูรายงานฉบับเต็มของ v2.3.0
 cat docs/REPORT_v2.3.md

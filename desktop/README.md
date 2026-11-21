@@ -72,6 +72,22 @@ npm run build
 
 CI (`.github/workflows/desktop.yml`) builds both platforms on every push.
 
+#### Linux AppImage prerequisites
+
+The AppImage bundle is produced by `linuxdeploy`, which needs two things that a minimal
+machine may not have:
+
+1. `dpkg-architecture` (package `dpkg-dev`) — the gtk plugin aborts without it.
+2. GNU `cp`. Ubuntu 26.10 ships `uutils coreutils` as `/usr/bin/cp`, whose
+   `cp -r --parents` mishandles absolute source paths and fails with
+   `... and ... are the same file`. Put GNU `cp` (package `gnu-coreutils`, binary
+   `gnucp`) ahead on `PATH` for the bundle step:
+
+```bash
+mkdir -p /tmp/gnu-cp-shim && ln -sf "$(command -v gnucp)" /tmp/gnu-cp-shim/cp
+PATH="/tmp/gnu-cp-shim:$PATH" npx tauri build --bundles appimage
+```
+
 ## Architecture
 
 ```text
