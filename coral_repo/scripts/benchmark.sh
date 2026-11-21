@@ -6,21 +6,28 @@ set -euo pipefail
 #   ./scripts/benchmark.sh              # default: 30 runs (release build)
 #   RUNS=50 ./scripts/benchmark.sh      # custom run count
 #   PULL_EXTRA=1 ./scripts/benchmark.sh # also pull & benchmark busybox:musl + debian:bookworm-slim
+#   CORAL_BIN=/usr/bin/coral CORAL_DAEMON_BIN=/usr/bin/coral-daemon ./scripts/benchmark.sh
+#                                           # benchmark the installed runtime instead of the repo build
+#
+# `CORAL_BIN` / `CORAL_DAEMON_BIN` point the benchmark at an installed build (e.g. the
+# system-wide `coral-runtime` .deb). When both are set, no release build is triggered.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUNS="${RUNS:-30}"
 WARMUP="${WARMUP:-3}"
 PULL_EXTRA="${PULL_EXTRA:-0}"
+CORAL_BIN="${CORAL_BIN:-${ROOT_DIR}/target/release/coral}"
+CORAL_DAEMON_BIN="${CORAL_DAEMON_BIN:-${ROOT_DIR}/target/release/coral-daemon}"
 
 cd "${ROOT_DIR}"
 ./scripts/setup-rootfs.sh >/dev/null
 
-if [[ ! -x "${ROOT_DIR}/target/release/coral" || ! -x "${ROOT_DIR}/target/release/coral-daemon" ]]; then
+if [[ ! -x "${CORAL_BIN}" || ! -x "${CORAL_DAEMON_BIN}" ]]; then
     echo "[bench] Building release binaries (cargo build --release --workspace)..."
     cargo build --release --workspace
 fi
 
-python3 - "${ROOT_DIR}" "${RUNS}" "${WARMUP}" "${PULL_EXTRA}" <<'PY'
+python3 - "${ROOT_DIR}" "${RUNS}" "${WARMUP}" "${PULL_EXTRA}" "${CORAL_BIN}" "${CORAL_DAEMON_BIN}" <<'PY'
 import json
 import os
 import platform
@@ -36,9 +43,8 @@ root_dir = sys.argv[1]
 runs = int(sys.argv[2])
 warmup = int(sys.argv[3])
 pull_extra = sys.argv[4] == "1"
-
-coral_bin = os.path.join(root_dir, "target", "release", "coral")
-daemon_bin = os.path.join(root_dir, "target", "release", "coral-daemon")
+coral_bin = sys.argv[5]
+daemon_bin = sys.argv[6]
 alpine_rootfs = os.path.join(root_dir, "rootfs")
 
 def percentile(sorted_vals, pct):
