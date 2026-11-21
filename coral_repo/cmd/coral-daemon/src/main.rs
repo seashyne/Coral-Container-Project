@@ -123,7 +123,6 @@ async fn main() -> Result<()> {
         args.log_max_files,
     )
     .with_auto_gc(args.auto_gc_interval_secs);
-
     let (shutdown_tx, mut shutdown_rx_tcp) = watch::channel(false);
     let mut shutdown_rx_uds = shutdown_tx.subscribe();
     let shutdown_rx_metrics = shutdown_tx.subscribe();
@@ -172,7 +171,6 @@ async fn main() -> Result<()> {
             .await
             .with_context(|| format!("TCP CRI server on {tcp_addr}"))
     };
-
     if let Some(sock_path) = unix_sock_path {
         if let Some(parent) = sock_path.parent() {
             fs::create_dir_all(parent)
@@ -206,6 +204,13 @@ async fn main() -> Result<()> {
                 .context("Unix socket CRI server")
         };
 
+        // Both listeners are bound at this point, so kubelet/CLI readiness probes succeed
+        // immediately. Boot Auto-Resume (port forwarders + container re-exec) and the Auto-GC
+        // timer both run behind them instead of delaying `CoralDaemonService::new` and the
+        // first CRI calls by their full duration.
+        service.start_boot_auto_resume();
+        service.start_auto_gc();
+
         let res = tokio::try_join!(tcp_fut, uds_fut);
         let _ = fs::remove_file(&sock_path);
         res?;
@@ -216,6 +221,9 @@ async fn main() -> Result<()> {
             images_dir = %images_dir.display(),
             "starting coral-daemon CRI v1 gRPC server (TCP only)"
         );
+        // TCP-only mode: the listener is owned by `serve_with_shutdown`, so resume starts here.
+        service.start_boot_auto_resume();
+        service.start_auto_gc();
         tcp_fut.await?;
     }
 

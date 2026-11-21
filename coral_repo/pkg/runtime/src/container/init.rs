@@ -115,6 +115,25 @@ pub(crate) fn container_init_exec(
         && is_id_mapped("/proc/self/uid_map", target_uid)
         && is_id_mapped("/proc/self/gid_map", target_gid)
     {
+        // In Multi-UID rootless or rootful containers (`setgroups` = allow), drop/set
+        // supplementary groups before dropping privileges; single-UID mode has `setgroups=deny`
+        // so EPERM is expected and harmless there.
+        if nix::unistd::geteuid().as_raw() == 0 {
+            let extra_gids: Vec<Gid> = spec
+                .process
+                .as_ref()
+                .map(|p| &p.user)
+                .map(|u| {
+                    u.additional_gids
+                        .iter()
+                        .copied()
+                        .filter(|g| is_id_mapped("/proc/self/gid_map", *g))
+                        .map(Gid::from_raw)
+                        .collect()
+                })
+                .unwrap_or_default();
+            let _ = nix::unistd::setgroups(&extra_gids);
+        }
         if nix::unistd::getegid().as_raw() != target_gid {
             setgid(Gid::from_raw(target_gid))
                 .map_err(|e| RuntimeError::nix(format!("setgid({target_gid})"), e))?;

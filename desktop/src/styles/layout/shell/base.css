@@ -1,0 +1,190 @@
+/* ==========================================================================
+   Application Shell Layout (Header Strip, Sidebar Rail, Main Workspace, Statusbar)
+   ========================================================================== */
+
+body {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  grid-template-rows: var(--topbar-height) minmax(0, 1fr) var(--statusbar-height);
+  background: var(--bg);
+  color: var(--text);
+  font: var(--fs) / var(--leading-normal) var(--ui-font);
+  overflow: hidden;
+  user-select: none;
+  cursor: default;
+}
+
+body.rail {
+  grid-template-columns: var(--rail) minmax(0, 1fr);
+}
+
+.i > svg,
+.sb > svg,
+.btn > svg {
+  inline-size: 16px;
+  block-size: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---------- Top Header Strip ---------- */
+.strip {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-inline: var(--space-3);
+  background: var(--side);
+  border-block-end: 1px solid var(--line);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-inline: var(--space-1) var(--space-2-5);
+}
+
+.mark {
+  inline-size: 18px;
+  block-size: 18px;
+  border-radius: var(--radius-pill);
+  background: var(--raw-brand-mark);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--raw-brand-glow) 18%, transparent);
+  flex: none;
+}
+
+.mark.lg {
+  inline-size: 26px;
+  block-size: 26px;
+}
+
+.brand-name {
+  font-weight: 650;
+  font-size: var(--fs-head);
+  letter-spacing: -0.01em;
+}
+
+.brand-name.lg {
+  font-size: var(--fs-title);
+}
+
+.drag {
+  flex: 1;
+  align-self: stretch;
+  min-inline-size: var(--space-4);
+}
+
+.sb {
+  inline-size: 28px;
+  block-size: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  flex: none;
+}
+
+.sb:hover {
+  background: color-mix(in oklab, var(--text) 8%, transparent);
+  color: var(--text);
+}
+
+.sb:active {
+  background: color-mix(in oklab, var(--text) 12%, transparent);
+}
+
+.sb:focus-visible {
+  outline: none;
+  box-shadow: var(--input-focus-ring);
+}
+
+.lang-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 28px;
+  padding-inline: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--muted);
+  font: 600 var(--fs-small) var(--ui-font);
+  cursor: pointer;
+  flex: none;
+  transition: border-color var(--duration-fast), color var(--duration-fast), background-color var(--duration-fast);
+}
+
+.lang-pill:hover {
+  border-color: color-mix(in oklab, var(--text) 24%, var(--line));
+  color: var(--text);
+  background: var(--raised);
+}
+
+.lang-pill:focus-visible {
+  outline: none;
+  box-shadow: var(--input-focus-ring);
+}
+
+.lang-pill > svg {
+  inline-size: 13px;
+  block-size: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.theme-trigger {
+  anchor-name: --theme-anchor;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  block-size: 28px;
+  padding-inline: 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--muted);
+  font: 600 var(--fs-small) var(--ui-font);
+  cursor: pointer;
+  flex: none;
+  transition: border-color var(--duration-fast), color var(--duration-fast), background-color var(--duration-fast);
+}
+
+.theme-trigger:hover {
+  border-color: color-mix(in oklab, var(--text) 24%, var(--line));
+  color: var(--text);
+  background: var(--raised);
+}
+
+.theme-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.theme-trigger > span > svg {
+  inline-size: 14px;
+  block-size: 14px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.theme-dot {
+  inline-size: 9px;
+  block-size: 9px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);

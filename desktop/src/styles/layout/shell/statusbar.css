@@ -1,0 +1,38 @@
+/* ---------- Bottom Statusbar ---------- */
+.statusbar {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  block-size: var(--statusbar-height);
+  padding-inline: var(--space-3);
+  border-block-start: 1px solid var(--line);
+  background: var(--side);
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+
+.statusbar .grow {
+  flex: 1;
+}
+
+.statusbar .item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.statusbar .dot {
+  inline-size: 7px;
+  block-size: 7px;
+}
+
+.statusbar .dot.on {
+  background: var(--moss);
+}
+
+.statusbar .sep {
+  color: var(--faint);
+}

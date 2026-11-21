@@ -1,0 +1,42 @@
+/* ==========================================================================
+   Coral Desktop — Main Stylesheet Entrypoint
+   Layered CSS Architecture with 3-Tier Design Tokens
+   ========================================================================== */
+
+@layer tokens, reset, base, layout, components, views, utilities;
+
+/* 1. Design Tokens (Primitives -> Semantic/Themes -> Component Tokens) */
+@import url("./tokens/primitives.css") layer(tokens);
+@import url("./tokens/semantic.css") layer(tokens);
+@import url("./tokens/components.css") layer(tokens);
+
+/* 2. Base */
+@import url("./base/reset.css") layer(reset);
+@import url("./base/utilities.css") layer(utilities);
+
+/* 3. Shell & Responsive Layout */
+@import url("./layout/shell/base.css") layer(layout);
+@import url("./layout/shell/search.css") layer(layout);
+@import url("./layout/shell/sidebar.css") layer(layout);
+@import url("./layout/shell/workspace.css") layer(layout);
+@import url("./layout/shell/statusbar.css") layer(layout);
+@import url("./layout/responsive.css") layer(layout);
+
+/* 4. Reusable UI Components */
+@import url("./components/buttons.css") layer(components);
+@import url("./components/forms.css") layer(components);
+@import url("./components/tables.css") layer(components);
+@import url("./components/cards.css") layer(components);
+@import url("./components/badges.css") layer(components);
+@import url("./components/tabs.css") layer(components);
+@import url("./components/dialogs.css") layer(components);
+@import url("./components/drawer.css") layer(components);
+@import url("./components/terminal.css") layer(components);
+@import url("./components/menu-toast.css") layer(components);
+
+/* 5. Feature Views */
+@import url("./views/containers.css") layer(views);
+@import url("./views/images.css") layer(views);
+@import url("./views/volumes.css") layer(views);
+@import url("./views/nextgen.css") layer(views);
+@import url("./views/settings.css") layer(views);

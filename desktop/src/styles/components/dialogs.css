@@ -1,0 +1,82 @@
+/* ==========================================================================
+   Native <dialog class="modal-dialog"> & Modal Boxes
+   ========================================================================== */
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-block-end: var(--space-4);
+}
+
+.modal-head h3 {
+  font-size: var(--fs-head);
+  font-weight: 650;
+}
+
+dialog.modal-dialog {
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: var(--text);
+  margin: auto;
+  max-inline-size: calc(100vw - 32px);
+  max-block-size: calc(100vh - 32px);
+  overflow: visible;
+}
+
+dialog.modal-dialog::backdrop {
+  background: var(--raw-backdrop-strong);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+dialog.modal-dialog:not([open]) {
+  display: none;
+}
+
+dialog.modal-dialog[open] {
+  display: grid;
+  place-items: center;
+  animation: modal-zoom-in 0.16s var(--ease-out);
+}
+
+@keyframes modal-zoom-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.dialog-box {
+  background: var(--modal-bg);
+  border: 1px solid var(--modal-border);
+  border-radius: var(--modal-radius);
+  padding: 22px;
+  box-shadow: var(--shadow-xl);
+  inline-size: var(--modal-width);
+  max-inline-size: 100%;
+  max-block-size: calc(90vh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.dialog-box.dialog-wide {
+  inline-size: var(--modal-width-wide);
+}
+
+.dialog-box.dialog-medium {
+  inline-size: var(--modal-width-medium);
+}
+
+.dialog-box.dialog-narrow {
+  inline-size: var(--modal-width-narrow);
+}
+
+.modal-section {
+  margin-block-end: var(--space-4);
+}

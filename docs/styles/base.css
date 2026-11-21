@@ -1,0 +1,196 @@
+/* ==========================================================================
+   Coral Container Project v2.0 — Documentation Stylesheet
+   Modern CSS: color-scheme + light-dark() w/ fallbacks, scroll-target-group,
+   @container responsive tables, scroll-driven tab fades, native <dialog>.
+   ========================================================================== */
+
+@property --fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+:root {
+  /* Raw light / dark color palette tokens */
+  --bg-light: #f8fafc;
+  --bg-dark: #090e1a;
+  --surface-light: #ffffff;
+  --surface-dark: #111827;
+  --surface-2-light: #f1f5f9;
+  --surface-2-dark: #182234;
+  --border-light: #e2e8f0;
+  --border-dark: #25334a;
+  --text-light: #0f172a;
+  --text-dark: #f1f5f9;
+  --muted-light: #475569;
+  --muted-dark: #94a3b8;
+  --brand-light: #d94638;
+  --brand-dark: #ff6b57;
+  --brand-hover-light: #b93629;
+  --brand-hover-dark: #ff8573;
+  --brand-soft-light: #fff1ef;
+  --brand-soft-dark: #2b181b;
+  --teal-light: #0f766e;
+  --teal-dark: #2dd4bf;
+  --teal-soft-light: #f0fdfa;
+  --teal-soft-dark: #102a2a;
+  --scroll-track-light: #e2e8f0;
+  --scroll-track-dark: #131c2e;
+  --scroll-thumb-light: #94a3b8;
+  --scroll-thumb-dark: #475569;
+
+  /* Default (light) semantic tokens — fallback for browsers without light-dark() */
+  --bg: var(--bg-light);
+  --surface: var(--surface-light);
+  --surface-2: var(--surface-2-light);
+  --border: var(--border-light);
+  --text: var(--text-light);
+  --muted: var(--muted-light);
+  --brand: var(--brand-light);
+  --brand-hover: var(--brand-hover-light);
+  --brand-soft: var(--brand-soft-light);
+  --teal: var(--teal-light);
+  --teal-soft: var(--teal-soft-light);
+  --scroll-track: var(--scroll-track-light);
+  --scroll-thumb: var(--scroll-thumb-light);
+
+  @media (prefers-color-scheme: dark) {
+    --bg: var(--bg-dark);
+    --surface: var(--surface-dark);
+    --surface-2: var(--surface-2-dark);
+    --border: var(--border-dark);
+    --text: var(--text-dark);
+    --muted: var(--muted-dark);
+    --brand: var(--brand-dark);
+    --brand-hover: var(--brand-hover-dark);
+    --brand-soft: var(--brand-soft-dark);
+    --teal: var(--teal-dark);
+    --teal-soft: var(--teal-soft-dark);
+    --scroll-track: var(--scroll-track-dark);
+    --scroll-thumb: var(--scroll-thumb-dark);
+  }
+
+  /* Mirror manual <meta name="color-scheme"> override for both light-dark() & fallback */
+  color-scheme: light dark;
+
+  &:has(> head > meta[name="color-scheme"][content="dark"]) {
+    color-scheme: dark;
+    --bg: var(--bg-dark);
+    --surface: var(--surface-dark);
+    --surface-2: var(--surface-2-dark);
+    --border: var(--border-dark);
+    --text: var(--text-dark);
+    --muted: var(--muted-dark);
+    --brand: var(--brand-dark);
+    --brand-hover: var(--brand-hover-dark);
+    --brand-soft: var(--brand-soft-dark);
+    --teal: var(--teal-dark);
+    --teal-soft: var(--teal-soft-dark);
+    --scroll-track: var(--scroll-track-dark);
+    --scroll-thumb: var(--scroll-thumb-dark);
+  }
+
+  &:has(> head > meta[name="color-scheme"][content="light"]) {
+    color-scheme: light;
+    --bg: var(--bg-light);
+    --surface: var(--surface-light);
+    --surface-2: var(--surface-2-light);
+    --border: var(--border-light);
+    --text: var(--text-light);
+    --muted: var(--muted-light);
+    --brand: var(--brand-light);
+    --brand-hover: var(--brand-hover-light);
+    --brand-soft: var(--brand-soft-light);
+    --teal: var(--teal-light);
+    --teal-soft: var(--teal-soft-light);
+    --scroll-track: var(--scroll-track-light);
+    --scroll-thumb: var(--scroll-thumb-light);
+  }
+
+  @supports (color: light-dark(white, black)) {
+    --bg: light-dark(var(--bg-light), var(--bg-dark));
+    --surface: light-dark(var(--surface-light), var(--surface-dark));
+    --surface-2: light-dark(var(--surface-2-light), var(--surface-2-dark));
+    --border: light-dark(var(--border-light), var(--border-dark));
+    --text: light-dark(var(--text-light), var(--text-dark));
+    --muted: light-dark(var(--muted-light), var(--muted-dark));
+    --brand: light-dark(var(--brand-light), var(--brand-dark));
+    --brand-hover: light-dark(var(--brand-hover-light), var(--brand-hover-dark));
+    --brand-soft: light-dark(var(--brand-soft-light), var(--brand-soft-dark));
+    --teal: light-dark(var(--teal-light), var(--teal-dark));
+    --teal-soft: light-dark(var(--teal-soft-light), var(--teal-soft-dark));
+    --scroll-track: light-dark(var(--scroll-track-light), var(--scroll-track-dark));
+    --scroll-thumb: light-dark(var(--scroll-thumb-light), var(--scroll-thumb-dark));
+  }
+
+  accent-color: var(--brand);
+  scrollbar-color: var(--scroll-thumb) var(--scroll-track);
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Thai", "Noto Sans", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Monaco, Consolas, monospace;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --header-h: 64px;
+  --code-bg: #0d1322;
+  --code-fg: #e2e8f0;
+  --code-border: #1e293b;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--header-h) + 24px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--brand);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+

@@ -1,0 +1,56 @@
+/* ==========================================================================
+   Tier 3: Component-Scoped Design Tokens
+   Maps Tier 1 & Tier 2 tokens to specific UI component controls.
+   ========================================================================== */
+
+:root {
+  /* Buttons */
+  --btn-height: var(--density-control-h);
+  --btn-sm-height: var(--density-control-sm-h);
+  --btn-radius: var(--radius-md);
+  --btn-sm-radius: var(--radius-sm);
+  --btn-bg: var(--panel);
+  --btn-hover-bg: var(--raised);
+  --btn-active-bg: var(--line);
+  --btn-border: var(--line);
+  --btn-text: var(--text);
+
+  /* Inputs & Selects */
+  --input-height: var(--density-control-h);
+  --input-radius: var(--radius-lg);
+  --input-bg: var(--bg);
+  --input-border: var(--line);
+  --input-focus-border: var(--accent);
+  --input-focus-ring: 0 0 0 3px color-mix(in oklab, var(--accent) 24%, transparent);
+
+  /* Cards & Panels */
+  --card-bg: var(--panel);
+  --card-border: var(--line);
+  --card-radius: var(--radius-xl);
+  --card-padding: var(--density-panel-pad);
+
+  /* Tables */
+  --table-row-py: var(--density-row-py);
+  --table-header-bg: var(--bg);
+  --table-group-bg: color-mix(in oklab, var(--raised) 55%, transparent);
+  --table-group-hover-bg: color-mix(in oklab, var(--raised) 80%, transparent);
+
+  /* Dialogs & Drawers */
+  --modal-bg: var(--panel);
+  --modal-border: var(--line);
+  --modal-radius: var(--radius-2xl);
+  --modal-width: 560px;
+  --modal-width-wide: 640px;
+  --modal-width-narrow: 460px;
+  --modal-width-medium: 600px;
+
+  /* Status & Accent Tints */
+  --accent-soft-bg: color-mix(in oklab, var(--accent) 14%, transparent);
+  --accent-soft-border: color-mix(in oklab, var(--accent) 42%, transparent);
+  --success-soft-bg: color-mix(in oklab, var(--moss) 14%, transparent);
+  --success-soft-border: color-mix(in oklab, var(--moss) 42%, transparent);
+  --warn-soft-bg: color-mix(in oklab, var(--sun) 16%, transparent);
+  --warn-soft-border: color-mix(in oklab, var(--sun) 45%, transparent);
+  --danger-soft-bg: color-mix(in oklab, var(--red) 14%, transparent);
+  --danger-soft-border: color-mix(in oklab, var(--red) 45%, transparent);
+}

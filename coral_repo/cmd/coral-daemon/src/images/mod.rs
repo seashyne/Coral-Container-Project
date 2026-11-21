@@ -5,6 +5,7 @@ pub mod archive;
 pub mod auth;
 pub mod config;
 pub mod extract;
+pub mod progress;
 pub mod push;
 pub mod reference;
 pub mod registry;
@@ -16,6 +17,7 @@ pub use config::{
     OciImageConfig, merge_env_vars, resolve_container_user, resolve_entrypoint_and_cmd,
 };
 pub use extract::extract_layer;
+pub use progress::{PullPhase, PullProgress, PullProgressReporter, render_line};
 pub use push::{PushResult, push_image};
 pub use reference::{ImageRef, normalize_lookup_tag};
 pub use registry::pull_image;
@@ -29,7 +31,7 @@ use coral_api::Image;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs;
-use std::os::unix::fs::{MetadataExt, PermissionsExt};
+use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
 /// Persistent image record stored in `<images_dir>/images.json`.
@@ -233,36 +235,14 @@ pub fn ensure_scratch_image(images_dir: &Path) -> Result<StoredImage> {
     })
 }
 
-/// Recursively removes a directory even if some subdirectories inside are read-only.
+/// Recursively removes a directory even if some subdirectories inside are read-only
+/// or owned by subordinate UIDs/GIDs in a Multi-UID rootless container.
 pub fn remove_dir_force(path: &Path) -> Result<()> {
     if !path.exists() && fs::symlink_metadata(path).is_err() {
         return Ok(());
     }
-    make_tree_writable(path);
-    fs::remove_dir_all(path).with_context(|| format!("remove dir '{}'", path.display()))
-}
-
-fn make_tree_writable(path: &Path) {
-    let mut stack = vec![path.to_path_buf()];
-    while let Some(cur) = stack.pop() {
-        let Ok(meta) = fs::symlink_metadata(&cur) else {
-            continue;
-        };
-        if meta.file_type().is_symlink() {
-            continue;
-        }
-        if meta.is_dir() {
-            let mode = meta.permissions().mode();
-            if mode & 0o700 != 0o700 {
-                let _ = fs::set_permissions(&cur, fs::Permissions::from_mode(mode | 0o700));
-            }
-            if let Ok(entries) = fs::read_dir(&cur) {
-                for entry in entries.flatten() {
-                    stack.push(entry.path());
-                }
-            }
-        }
-    }
+    coral_runtime::remove_dir_all_rootless_safe(path)
+        .with_context(|| format!("remove dir '{}'", path.display()))
 }
 
 /// Computes total unique size in bytes of regular files in a directory tree

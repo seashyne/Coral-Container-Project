@@ -1,7 +1,5 @@
 use coral_oci::{LinuxIdMapping, LinuxNamespaceType, OciSpec};
 use nix::sched::CloneFlags;
-use std::fs;
-use std::path::PathBuf;
 
 use crate::RuntimeError;
 
@@ -96,31 +94,65 @@ pub fn build_namespace_plan(spec: &OciSpec) -> NamespacePlan {
     }
 }
 
+/// Expands default single-UID rootless mappings (`[0 -> host_id, size 1]`) into
+/// full Multi-UID rootless subordinate ranges (`0 -> host_id, 1..65535 -> subid...`)
+/// when `/etc/subuid`, `/etc/subgid`, `newuidmap`, and `newgidmap` are available and
+/// `"coral.userns.single_uid"` is not `"true"`. Returns `true` when expanded.
+pub fn expand_multi_uid_mappings(plan: &mut NamespacePlan, spec: &OciSpec) -> bool {
+    if !plan.use_user_ns {
+        return false;
+    }
+    if spec
+        .annotations
+        .get("coral.userns.single_uid")
+        .is_some_and(|v| v.eq_ignore_ascii_case("true"))
+    {
+        return false;
+    }
+
+    let support = crate::multi_uid::MultiUidSupport::detect();
+    if !support.is_available() {
+        return false;
+    }
+
+    let default_uid = plan.uid_mappings.len() == 1
+        && plan.uid_mappings[0].container_id == 0
+        && plan.uid_mappings[0].host_id == support.host_uid
+        && plan.uid_mappings[0].size == 1;
+    let default_gid = plan.gid_mappings.len() == 1
+        && plan.gid_mappings[0].container_id == 0
+        && plan.gid_mappings[0].host_id == support.host_gid
+        && plan.gid_mappings[0].size == 1;
+
+    if !default_uid || !default_gid {
+        return false;
+    }
+
+    let expanded_uid = support.uid_mappings();
+    let expanded_gid = support.gid_mappings();
+    if expanded_uid.len() <= 1 || expanded_gid.len() <= 1 {
+        return false;
+    }
+
+    plan.uid_mappings = expanded_uid;
+    plan.gid_mappings = expanded_gid;
+    true
+}
+
 /// Writes `/proc/<pid>/setgroups`, `/proc/<pid>/uid_map`, and `/proc/<pid>/gid_map`
-/// from the parent process after the child has called `unshare(CLONE_NEWUSER)`.
+/// from the parent process after the child has called `unshare(CLONE_NEWUSER)`, using
+/// `newuidmap`/`newgidmap` automatically for Multi-UID subordinate ranges.
 pub fn write_userns_mappings(pid: i32, plan: &NamespacePlan) -> Result<(), RuntimeError> {
     if !plan.use_user_ns {
         return Ok(());
     }
 
-    let proc_dir = PathBuf::from(format!("/proc/{pid}"));
-    let is_root = unsafe { libc::geteuid() } == 0;
-
-    // Unprivileged kernels require writing "deny" to setgroups before writing gid_map.
-    if !is_root {
-        fs::write(proc_dir.join("setgroups"), "deny")
-            .map_err(|e| RuntimeError::sys("write /proc/<pid>/setgroups", e))?;
-    }
-
-    let uid_map = format_id_mappings(&plan.uid_mappings);
-    fs::write(proc_dir.join("uid_map"), uid_map)
-        .map_err(|e| RuntimeError::sys("write /proc/<pid>/uid_map", e))?;
-
-    let gid_map = format_id_mappings(&plan.gid_mappings);
-    fs::write(proc_dir.join("gid_map"), gid_map)
-        .map_err(|e| RuntimeError::sys("write /proc/<pid>/gid_map", e))?;
-
-    Ok(())
+    crate::multi_uid::apply_userns_mappings(
+        pid,
+        &plan.uid_mappings,
+        &plan.gid_mappings,
+        format_id_mappings,
+    )
 }
 
 fn format_id_mappings(mappings: &[LinuxIdMapping]) -> String {

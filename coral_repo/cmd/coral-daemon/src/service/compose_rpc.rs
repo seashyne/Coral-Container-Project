@@ -2,18 +2,18 @@
 //! (Local, WSL2, or Remote) and gRPC clients can launch multi-container stacks atomically.
 
 use super::CoralDaemonService;
-use crate::compose::ComposeSpec;
+use crate::compose::{ComposeSpec, DependsCondition};
 use crate::images;
 use coral_api::runtime_service_server::RuntimeService;
 use coral_api::{
-    ContainerConfig, ContainerMetadata, CreateContainerRequest, ImageSpec, KeyValue,
-    LinuxContainerConfig, LinuxContainerResources, PodSandboxConfig, PodSandboxMetadata,
-    RunPodSandboxRequest, StartContainerRequest,
+    ContainerState, ContainerStatusRequest, CreateContainerRequest, RunPodSandboxRequest,
+    StartContainerRequest,
 };
 use coral_runtime::rootfs::{default_volumes_dir, ensure_named_volume};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
+use std::time::{Duration, Instant};
 use tonic::{Request, Status};
 
 impl CoralDaemonService {
@@ -45,8 +45,22 @@ impl CoralDaemonService {
             })?;
         }
 
-        let mut started_ids = Vec::with_capacity(spec.services.len());
-        for svc in &spec.services {
+        let selected = spec
+            .select_services(&[], &[], false)
+            .map_err(|e| Status::invalid_argument(format!("select compose services: {e:#}")))?;
+
+        let mut started_map: HashMap<String, String> = HashMap::new();
+        let mut started_ids = Vec::with_capacity(selected.len());
+        for svc in selected {
+            for dep in &svc.depends_on_conditions {
+                if let Some(dep_cid) = started_map.get(&dep.service)
+                    && dep.condition != DependsCondition::ServiceStarted
+                {
+                    self.wait_for_compose_dependency(&dep.service, dep_cid, dep.condition)
+                        .await?;
+                }
+            }
+
             let image_name = svc
                 .image
                 .clone()
@@ -77,6 +91,8 @@ impl CoralDaemonService {
                     state_dir: &self.cfg.state_dir,
                     coral_bin: &self.cfg.coral_bin,
                     no_cache: false,
+                    target: svc.build_target.as_deref(),
+                    build_args: &svc.build_args,
                 })
                 .await
                 .map_err(|e| {
@@ -92,118 +108,20 @@ impl CoralDaemonService {
                 self.persist_images(&store.images);
             }
 
-            let labels = HashMap::from([
-                ("managed-by".into(), "coral-compose".into()),
-                ("coral.compose.project".into(), project.clone()),
-                ("coral.compose.service".into(), svc.name.clone()),
-            ]);
-
+            let launch = svc.to_launch_spec(&project, &image_name);
             let pod_id = self
                 .run_pod_sandbox(Request::new(RunPodSandboxRequest {
-                    config: Some(PodSandboxConfig {
-                        metadata: Some(PodSandboxMetadata {
-                            name: format!("{project}-{}-pod", svc.name),
-                            uid: format!("{project}-{}", svc.name),
-                            namespace: project.clone(),
-                            attempt: 0,
-                        }),
-                        hostname: svc.hostname.clone().unwrap_or_else(|| svc.name.clone()),
-                        log_directory: String::new(),
-                        labels: labels.clone(),
-                        annotations: HashMap::new(),
-                    }),
+                    config: Some(launch.pod_config),
                     runtime_handler: "coral".into(),
                 }))
                 .await?
                 .into_inner()
                 .pod_sandbox_id;
 
-            let envs = svc
-                .envs
-                .iter()
-                .filter_map(|e| {
-                    e.split_once('=').map(|(k, v)| KeyValue {
-                        key: k.trim().to_string(),
-                        value: v.to_string(),
-                    })
-                })
-                .filter(|kv| !kv.key.is_empty())
-                .collect();
-
-            let (command, args) = if svc.command.is_empty() {
-                (vec!["/bin/sh".into()], Vec::new())
-            } else {
-                (vec![svc.command[0].clone()], svc.command[1..].to_vec())
-            };
-
-            let mut annotations = HashMap::new();
-            if !svc.volumes.is_empty() {
-                annotations.insert("coral.mounts".into(), svc.volumes.join("\n"));
-            }
-            if !svc.ports.is_empty() {
-                annotations.insert("coral.ports".into(), svc.ports.join(","));
-            }
-            if !svc.network.trim().is_empty() {
-                annotations.insert("coral.network".into(), svc.network.trim().to_string());
-            }
-            if !svc.dns.is_empty() {
-                annotations.insert("coral.dns".into(), svc.dns.join(","));
-            }
-            if !svc.extra_hosts.is_empty() {
-                annotations.insert("coral.extra_hosts".into(), svc.extra_hosts.join("\n"));
-            }
-            if !svc.restart.trim().is_empty() && !svc.restart.eq_ignore_ascii_case("no") {
-                annotations.insert("coral.restart".into(), svc.restart.trim().to_string());
-            }
-            if let Some(hc) = &svc.health_cmd
-                && !hc.trim().is_empty()
-            {
-                annotations.insert("coral.health.cmd".into(), hc.trim().to_string());
-                annotations.insert(
-                    "coral.health.interval_ms".into(),
-                    svc.health_interval_ms.to_string(),
-                );
-                annotations.insert(
-                    "coral.health.retries".into(),
-                    svc.health_retries.to_string(),
-                );
-            }
-
-            let linux = if svc.memory_mb > 0 || svc.cpu_percent > 0 || svc.pids_limit > 0 {
-                Some(LinuxContainerConfig {
-                    resources: Some(LinuxContainerResources {
-                        cpu_period: if svc.cpu_percent > 0 { 100_000 } else { 0 },
-                        cpu_quota: svc.cpu_percent * 1_000,
-                        cpu_shares: if svc.cpu_percent > 0 { 1024 } else { 0 },
-                        memory_limit_in_bytes: svc.memory_mb * 1024 * 1024,
-                        pids_limit: svc.pids_limit,
-                    }),
-                })
-            } else {
-                None
-            };
-
             let ctr_id = self
                 .create_container(Request::new(CreateContainerRequest {
                     pod_sandbox_id: pod_id,
-                    config: Some(ContainerConfig {
-                        metadata: Some(ContainerMetadata {
-                            name: format!("{project}_{}", svc.name),
-                            attempt: 0,
-                        }),
-                        image: Some(ImageSpec {
-                            image: image_name,
-                            annotations: HashMap::new(),
-                        }),
-                        command,
-                        args,
-                        working_dir: svc.working_dir.clone(),
-                        envs,
-                        labels,
-                        annotations,
-                        log_path: String::new(),
-                        linux,
-                    }),
+                    config: Some(launch.container_config),
                     sandbox_config: None,
                 }))
                 .await?
@@ -215,9 +133,72 @@ impl CoralDaemonService {
             }))
             .await?;
 
+            started_map.insert(svc.name.clone(), ctr_id.clone());
             started_ids.push(ctr_id);
         }
 
         Ok(format!("{project}:{}", started_ids.join(",")))
+    }
+
+    #[allow(clippy::result_large_err)]
+    async fn wait_for_compose_dependency(
+        &self,
+        dep_service: &str,
+        dep_cid: &str,
+        condition: DependsCondition,
+    ) -> Result<(), Status> {
+        let deadline = Instant::now() + Duration::from_secs(90);
+        loop {
+            let resp = self
+                .container_status(Request::new(ContainerStatusRequest {
+                    container_id: dep_cid.to_string(),
+                    verbose: true,
+                }))
+                .await?
+                .into_inner();
+            let state = resp.status.as_ref().map(|s| s.state).unwrap_or(0);
+            let exit_code = resp.status.as_ref().map(|s| s.exit_code).unwrap_or(-1);
+            let health = resp
+                .info
+                .get("healthStatus")
+                .map(String::as_str)
+                .unwrap_or("none");
+
+            match condition {
+                DependsCondition::ServiceStarted => return Ok(()),
+                DependsCondition::ServiceHealthy => {
+                    if health == "healthy" {
+                        return Ok(());
+                    }
+                    if state == ContainerState::ContainerExited as i32 {
+                        return Err(Status::failed_precondition(format!(
+                            "dependency service '{dep_service}' exited with code {exit_code} before becoming healthy"
+                        )));
+                    }
+                    if health == "unhealthy" {
+                        return Err(Status::failed_precondition(format!(
+                            "dependency service '{dep_service}' reported unhealthy"
+                        )));
+                    }
+                }
+                DependsCondition::ServiceCompletedSuccessfully => {
+                    if state == ContainerState::ContainerExited as i32 {
+                        if exit_code == 0 {
+                            return Ok(());
+                        }
+                        return Err(Status::failed_precondition(format!(
+                            "dependency service '{dep_service}' exited with code {exit_code}"
+                        )));
+                    }
+                }
+            }
+
+            if Instant::now() >= deadline {
+                return Err(Status::deadline_exceeded(format!(
+                    "timed out waiting for dependency service '{dep_service}'"
+                )));
+            }
+            tokio::time::sleep(Duration::from_millis(120)).await;
+        }
     }
 }

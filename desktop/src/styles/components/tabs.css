@@ -1,0 +1,49 @@
+/* ==========================================================================
+   Segmented Sub-Tablists & Panel Visibility
+   ========================================================================== */
+
+.subtablist {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklab, var(--line) 45%, transparent);
+}
+
+.toolbar .subtablist {
+  margin-inline-start: var(--space-3);
+}
+
+.subtablist [role="tab"] {
+  position: relative;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: 500 var(--fs) var(--ui-font);
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--duration-fast), background-color var(--duration-fast);
+}
+
+.subtablist [role="tab"]:hover {
+  color: var(--text);
+}
+
+.subtablist [role="tab"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.subtablist [role="tab"][aria-selected="true"] {
+  color: var(--text);
+  font-weight: 600;
+  background: var(--panel);
+  box-shadow: var(--shadow-xs);
+}
+
+[role="tabpanel"][hidden] {
+  display: none !important;
+}

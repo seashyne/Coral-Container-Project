@@ -6,14 +6,17 @@ pub mod images;
 pub mod pods;
 pub mod system;
 
-pub use compose::{cmd_compose_down, cmd_compose_logs, cmd_compose_ps, cmd_compose_up};
+pub use compose::{
+    cmd_compose_build, cmd_compose_config, cmd_compose_down, cmd_compose_exec, cmd_compose_logs,
+    cmd_compose_ps, cmd_compose_restart, cmd_compose_start, cmd_compose_stop, cmd_compose_up,
+};
 pub use containers::{
     DaemonRunOptions, cmd_diff_via_daemon, cmd_exec, cmd_logs, cmd_ps, cmd_rm, cmd_run_via_daemon,
     cmd_stats, cmd_stop,
 };
 pub use images::{
-    cmd_build, cmd_catalog, cmd_commit_via_daemon, cmd_images, cmd_load, cmd_pull, cmd_rmi,
-    cmd_save, cmd_tag,
+    ProgressMode, cmd_build, cmd_catalog, cmd_commit_via_daemon, cmd_images, cmd_load, cmd_pull,
+    cmd_rmi, cmd_save, cmd_tag,
 };
 pub use pods::{cmd_pods_list, cmd_pods_rm, cmd_pods_stop};
 pub use system::{
@@ -104,6 +107,27 @@ pub(crate) fn short_id(id: &str) -> String {
 pub async fn cmd_version(addr: &str, strict: bool) -> Result<()> {
     if !strict {
         println!("coral CLI v{}", env!("CARGO_PKG_VERSION"));
+        let uid_support = coral_runtime::MultiUidSupport::detect();
+        if uid_support.host_uid == 0 {
+            println!("userns: rootful (host uid 0)");
+        } else if uid_support.is_available() {
+            let sub_u = uid_support
+                .subuid_ranges
+                .first()
+                .map(|r| format!("{}:{}", r.start, r.count))
+                .unwrap_or_default();
+            let sub_g = uid_support
+                .subgid_ranges
+                .first()
+                .map(|r| format!("{}:{}", r.start, r.count))
+                .unwrap_or_default();
+            println!("userns: multi-uid rootless (subuid={sub_u}, subgid={sub_g})");
+        } else {
+            println!(
+                "userns: single-uid rootless ({})",
+                uid_support.unavailable_reason()
+            );
+        }
     }
     let ch = if strict {
         Some(connect_channel(addr, 5).await?)

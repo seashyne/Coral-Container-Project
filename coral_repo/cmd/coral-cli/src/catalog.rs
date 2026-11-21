@@ -106,9 +106,11 @@ pub fn print_catalog(installed: &[Image], source_label: &str) {
     println!("{}", "-".repeat(108));
 
     for entry in BASE_CATALOG {
-        let matched = installed
-            .iter()
-            .find(|img| img.repo_tags.iter().any(|t| entry.match_tags.contains(&t.as_str())));
+        let matched = installed.iter().find(|img| {
+            img.repo_tags
+                .iter()
+                .any(|t| entry.match_tags.contains(&t.as_str()))
+        });
         let status = match matched {
             Some(img) => format!("installed ({})", format_bytes(img.size)),
             None => "available".to_string(),
@@ -121,5 +123,7 @@ pub fn print_catalog(installed: &[Image], source_label: &str) {
     }
 
     println!("\nPull any image:  coral pull <IMAGE REF>");
-    println!("Run a container: coral run --image <IMAGE REF> -- /bin/sh -c \"cat /etc/os-release\"");
+    println!(
+        "Run a container: coral run --image <IMAGE REF> -- /bin/sh -c \"cat /etc/os-release\""
+    );
 }

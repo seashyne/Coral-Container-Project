@@ -120,3 +120,20 @@ pub async fn compose_down(
 
     Ok(count)
 }
+
+#[tauri::command]
+pub async fn read_compose_file(path: String) -> Result<String, String> {
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        return Err("compose file path must not be empty".into());
+    }
+    let meta = tokio::fs::metadata(trimmed)
+        .await
+        .map_err(|e| format!("stat '{trimmed}': {e}"))?;
+    if meta.len() > 1024 * 1024 {
+        return Err("compose file exceeds 1 MiB limit".into());
+    }
+    tokio::fs::read_to_string(trimmed)
+        .await
+        .map_err(|e| format!("read '{trimmed}': {e}"))
+}

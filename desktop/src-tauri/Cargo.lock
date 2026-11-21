@@ -460,7 +460,7 @@ dependencies = [
 
 [[package]]
 name = "coral-api"
-version = "2.1.0"
+version = "2.3.0"
 dependencies = [
  "prost",
  "protoc-bin-vendored",
@@ -470,7 +470,7 @@ dependencies = [
 
 [[package]]
 name = "coral-desktop"
-version = "2.2.0"
+version = "2.3.0"
 dependencies = [
  "anyhow",
  "coral-api",
@@ -481,6 +481,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-dialog",
  "tokio",
+ "tokio-stream",
  "tonic",
 ]
 

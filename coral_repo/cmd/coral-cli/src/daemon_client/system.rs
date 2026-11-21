@@ -14,10 +14,7 @@ use coral_runtime::rootfs::{default_volumes_dir, list_named_volumes};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
-async fn invoke_system_action(
-    addr: &str,
-    annotations: HashMap<String, String>,
-) -> Result<String> {
+async fn invoke_system_action(addr: &str, annotations: HashMap<String, String>) -> Result<String> {
     let ch = connect_channel(addr, 5).await?;
     let mut rt = RuntimeServiceClient::new(ch);
     let resp = rt
@@ -156,9 +153,15 @@ pub async fn cmd_system_prune(addr: &str, prune_all: bool, prune_volumes: bool) 
     let json = invoke_system_action(addr, ann).await?;
     let report = serde_json::from_str::<PruneReport>(&json).context("parse prune report JSON")?;
     println!("Pruned Coral daemon state:");
-    println!("  Stopped containers removed: {}", report.containers_removed);
+    println!(
+        "  Stopped containers removed: {}",
+        report.containers_removed
+    );
     println!("  Unused pod sandboxes:       {}", report.pods_removed);
-    println!("  Build cache entries purged: {}", report.cache_entries_removed);
+    println!(
+        "  Build cache entries purged: {}",
+        report.cache_entries_removed
+    );
     if prune_volumes {
         println!("  Unused volumes removed:     {}", report.volumes_removed);
     }
@@ -189,12 +192,7 @@ pub async fn cmd_inspect_via_daemon(addr: &str, id: &str) -> Result<Option<Strin
     Ok(resp.into_inner().info.get("inspectJson").cloned())
 }
 
-pub async fn cmd_login(
-    addr: &str,
-    registry: &str,
-    username: &str,
-    password: &str,
-) -> Result<()> {
+pub async fn cmd_login(addr: &str, registry: &str, username: &str, password: &str) -> Result<()> {
     // Store locally AND forward to coral-daemon if connected (so WSL2/Remote daemons also receive auth).
     let key = images::login_registry(registry, username, password)?;
     if try_connect_channel(addr).await.is_some() {
@@ -233,12 +231,7 @@ pub async fn cmd_logout(addr: &str, registry: &str) -> Result<()> {
     Ok(())
 }
 
-pub async fn cmd_push(
-    addr: &str,
-    images_dir: &Path,
-    image_ref: &str,
-    local: bool,
-) -> Result<()> {
+pub async fn cmd_push(addr: &str, images_dir: &Path, image_ref: &str, local: bool) -> Result<()> {
     if !local && try_connect_channel(addr).await.is_some() {
         let json = invoke_system_action(
             addr,

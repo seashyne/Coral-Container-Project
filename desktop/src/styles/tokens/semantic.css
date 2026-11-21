@@ -1,0 +1,293 @@
+/* ==========================================================================
+   Tier 2: Semantic Design Tokens & Theme Engine
+   - Follows modern-web-guidance: color-scheme: light dark on :root,
+     <meta name="color-scheme"> reflection, light-dark() with @media fallbacks,
+     accent palette presets, UI density, and Forced Colors Mode support.
+   ========================================================================== */
+
+:root {
+  /* MANDATORY: Let root adapt automatically to system preferences unless overridden */
+  color-scheme: light dark;
+
+  /* ---------- Active Palette Pair (Default: Ocean Blue) ---------- */
+  --accent-light: var(--ocean-light);
+  --accent-dark: var(--ocean-dark);
+  --accent-hover-light: var(--ocean-light-hover);
+  --accent-hover-dark: var(--ocean-dark-hover);
+  --accent-active-light: var(--ocean-light-active);
+  --accent-active-dark: var(--ocean-dark-active);
+  --accent-text-light: var(--ocean-light-text);
+  --accent-text-dark: var(--ocean-dark-text);
+
+  /* ---------- Density Tokens (Default: Comfortable) ---------- */
+  --density-row-py: 10px;
+  --density-control-h: 34px;
+  --density-control-sm-h: 28px;
+  --density-panel-pad: 18px;
+  --density-toolbar-h: 62px;
+  --density-nav-h: 34px;
+  --density-gap: 16px;
+
+  /* ---------- Fallback Resolution (Light default, switched via media & attrs) ---------- */
+  --bg: var(--neutral-light-bg);
+  --side: var(--neutral-light-side);
+  --panel: var(--neutral-light-panel);
+  --raised: var(--neutral-light-raised);
+  --line: var(--neutral-light-line);
+  --text: var(--neutral-light-text);
+  --muted: var(--neutral-light-muted);
+  --faint: var(--neutral-light-faint);
+  --row-hover: var(--neutral-light-hover);
+
+  --accent: var(--accent-light);
+  --accent-hover: var(--accent-hover-light);
+  --accent-active: var(--accent-active-light);
+  --accent-text: var(--accent-text-light);
+
+  --moss: var(--status-success-light);
+  --sun: var(--status-warn);
+  --sun-text: var(--status-warn-light);
+  --red: var(--status-danger);
+  --red-text: var(--status-danger-light);
+
+  --distro-alpine-fg: var(--distro-alpine-fg-light);
+  --distro-debian-fg: var(--distro-debian-fg-light);
+  --distro-ubuntu-fg: var(--distro-ubuntu-fg-light);
+  --distro-busybox-fg: var(--distro-busybox-fg-light);
+  --distro-rocky-fg: var(--distro-rocky-fg-light);
+  --distro-ubi-fg: var(--distro-ubi-fg-light);
+
+  --scrollbar-track: #e9edf3;
+  --scrollbar-thumb: #9aa3af;
+
+  /* Legacy aliases kept for semantic consistency */
+  --blue: var(--accent);
+  --blue-hover: var(--accent-hover);
+  --blue-active: var(--accent-active);
+  --blue-light: var(--accent-text);
+  --console-bg: var(--raw-console-bg);
+  --console-text: var(--raw-console-text);
+
+  --ui-font: var(--font-sans);
+  --mono-font: var(--font-mono);
+  --fs-small: var(--text-xs);
+  --fs: var(--text-sm);
+  --fs-mono: var(--text-mono);
+  --fs-head: var(--text-md);
+  --fs-title: var(--text-xl);
+  --rail: var(--rail-width);
+
+  accent-color: var(--accent);
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* Fallback for browsers without light-dark() when OS prefers dark */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: var(--neutral-dark-bg);
+    --side: var(--neutral-dark-side);
+    --panel: var(--neutral-dark-panel);
+    --raised: var(--neutral-dark-raised);
+    --line: var(--neutral-dark-line);
+    --text: var(--neutral-dark-text);
+    --muted: var(--neutral-dark-muted);
+    --faint: var(--neutral-dark-faint);
+    --row-hover: var(--neutral-dark-hover);
+    --accent: var(--accent-dark);
+    --accent-hover: var(--accent-hover-dark);
+    --accent-active: var(--accent-active-dark);
+    --accent-text: var(--accent-text-dark);
+    --moss: var(--status-success-dark);
+    --sun-text: var(--status-warn-dark);
+    --red-text: var(--status-danger-dark);
+    --distro-alpine-fg: var(--distro-alpine-fg-dark);
+    --distro-debian-fg: var(--distro-debian-fg-dark);
+    --distro-ubuntu-fg: var(--distro-ubuntu-fg-dark);
+    --distro-busybox-fg: var(--distro-busybox-fg-dark);
+    --distro-rocky-fg: var(--distro-rocky-fg-dark);
+    --distro-ubi-fg: var(--distro-ubi-fg-dark);
+    --scrollbar-track: #121820;
+    --scrollbar-thumb: #3b4452;
+  }
+}
+
+/* Mirror explicit <meta name="color-scheme"> or [data-theme] overrides */
+:root:where(:has(> head > meta[name="color-scheme"][content="dark"]), [data-theme="dark"]) {
+  color-scheme: dark;
+  --bg: var(--neutral-dark-bg);
+  --side: var(--neutral-dark-side);
+  --panel: var(--neutral-dark-panel);
+  --raised: var(--neutral-dark-raised);
+  --line: var(--neutral-dark-line);
+  --text: var(--neutral-dark-text);
+  --muted: var(--neutral-dark-muted);
+  --faint: var(--neutral-dark-faint);
+  --row-hover: var(--neutral-dark-hover);
+  --accent: var(--accent-dark);
+  --accent-hover: var(--accent-hover-dark);
+  --accent-active: var(--accent-active-dark);
+  --accent-text: var(--accent-text-dark);
+  --moss: var(--status-success-dark);
+  --sun-text: var(--status-warn-dark);
+  --red-text: var(--status-danger-dark);
+  --distro-alpine-fg: var(--distro-alpine-fg-dark);
+  --distro-debian-fg: var(--distro-debian-fg-dark);
+  --distro-ubuntu-fg: var(--distro-ubuntu-fg-dark);
+  --distro-busybox-fg: var(--distro-busybox-fg-dark);
+  --distro-rocky-fg: var(--distro-rocky-fg-dark);
+  --distro-ubi-fg: var(--distro-ubi-fg-dark);
+  --scrollbar-track: #121820;
+  --scrollbar-thumb: #3b4452;
+}
+
+:root:where(:has(> head > meta[name="color-scheme"][content="light"]), [data-theme="light"]) {
+  color-scheme: light;
+  --bg: var(--neutral-light-bg);
+  --side: var(--neutral-light-side);
+  --panel: var(--neutral-light-panel);
+  --raised: var(--neutral-light-raised);
+  --line: var(--neutral-light-line);
+  --text: var(--neutral-light-text);
+  --muted: var(--neutral-light-muted);
+  --faint: var(--neutral-light-faint);
+  --row-hover: var(--neutral-light-hover);
+  --accent: var(--accent-light);
+  --accent-hover: var(--accent-hover-light);
+  --accent-active: var(--accent-active-light);
+  --accent-text: var(--accent-text-light);
+  --moss: var(--status-success-light);
+  --sun-text: var(--status-warn-light);
+  --red-text: var(--status-danger-light);
+  --distro-alpine-fg: var(--distro-alpine-fg-light);
+  --distro-debian-fg: var(--distro-debian-fg-light);
+  --distro-ubuntu-fg: var(--distro-ubuntu-fg-light);
+  --distro-busybox-fg: var(--distro-busybox-fg-light);
+  --distro-rocky-fg: var(--distro-rocky-fg-light);
+  --distro-ubi-fg: var(--distro-ubi-fg-light);
+  --scrollbar-track: #e9edf3;
+  --scrollbar-thumb: #9aa3af;
+}
+
+/* Progressive enhancement: automatic light-dark() resolution */
+@supports (color: light-dark(white, black)) {
+  :root {
+    --bg: light-dark(var(--neutral-light-bg), var(--neutral-dark-bg));
+    --side: light-dark(var(--neutral-light-side), var(--neutral-dark-side));
+    --panel: light-dark(var(--neutral-light-panel), var(--neutral-dark-panel));
+    --raised: light-dark(var(--neutral-light-raised), var(--neutral-dark-raised));
+    --line: light-dark(var(--neutral-light-line), var(--neutral-dark-line));
+    --text: light-dark(var(--neutral-light-text), var(--neutral-dark-text));
+    --muted: light-dark(var(--neutral-light-muted), var(--neutral-dark-muted));
+    --faint: light-dark(var(--neutral-light-faint), var(--neutral-dark-faint));
+    --row-hover: light-dark(var(--neutral-light-hover), var(--neutral-dark-hover));
+
+    --accent: light-dark(var(--accent-light), var(--accent-dark));
+    --accent-hover: light-dark(var(--accent-hover-light), var(--accent-hover-dark));
+    --accent-active: light-dark(var(--accent-active-light), var(--accent-active-dark));
+    --accent-text: light-dark(var(--accent-text-light), var(--accent-text-dark));
+
+    --moss: light-dark(var(--status-success-light), var(--status-success-dark));
+    --sun-text: light-dark(var(--status-warn-light), var(--status-warn-dark));
+    --red-text: light-dark(var(--status-danger-light), var(--status-danger-dark));
+
+    --distro-alpine-fg: light-dark(var(--distro-alpine-fg-light), var(--distro-alpine-fg-dark));
+    --distro-debian-fg: light-dark(var(--distro-debian-fg-light), var(--distro-debian-fg-dark));
+    --distro-ubuntu-fg: light-dark(var(--distro-ubuntu-fg-light), var(--distro-ubuntu-fg-dark));
+    --distro-busybox-fg: light-dark(var(--distro-busybox-fg-light), var(--distro-busybox-fg-dark));
+    --distro-rocky-fg: light-dark(var(--distro-rocky-fg-light), var(--distro-rocky-fg-dark));
+    --distro-ubi-fg: light-dark(var(--distro-ubi-fg-light), var(--distro-ubi-fg-dark));
+
+    --scrollbar-track: light-dark(#e9edf3, #121820);
+    --scrollbar-thumb: light-dark(#9aa3af, #3b4452);
+  }
+}
+
+/* ---------- Accent Palette Presets (data-palette) ---------- */
+:root[data-palette="coral"] {
+  --accent-light: var(--coral-light);
+  --accent-dark: var(--coral-dark);
+  --accent-hover-light: var(--coral-light-hover);
+  --accent-hover-dark: var(--coral-dark-hover);
+  --accent-active-light: var(--coral-light-active);
+  --accent-active-dark: var(--coral-dark-active);
+  --accent-text-light: var(--coral-light-text);
+  --accent-text-dark: var(--coral-dark-text);
+}
+
+:root[data-palette="emerald"] {
+  --accent-light: var(--emerald-light);
+  --accent-dark: var(--emerald-dark);
+  --accent-hover-light: var(--emerald-light-hover);
+  --accent-hover-dark: var(--emerald-dark-hover);
+  --accent-active-light: var(--emerald-light-active);
+  --accent-active-dark: var(--emerald-dark-active);
+  --accent-text-light: var(--emerald-light-text);
+  --accent-text-dark: var(--emerald-dark-text);
+}
+
+:root[data-palette="indigo"] {
+  --accent-light: var(--indigo-light);
+  --accent-dark: var(--indigo-dark);
+  --accent-hover-light: var(--indigo-light-hover);
+  --accent-hover-dark: var(--indigo-dark-hover);
+  --accent-active-light: var(--indigo-light-active);
+  --accent-active-dark: var(--indigo-dark-active);
+  --accent-text-light: var(--indigo-light-text);
+  --accent-text-dark: var(--indigo-dark-text);
+}
+
+:root[data-palette="amber"] {
+  --accent-light: var(--amber-light);
+  --accent-dark: var(--amber-dark);
+  --accent-hover-light: var(--amber-light-hover);
+  --accent-hover-dark: var(--amber-dark-hover);
+  --accent-active-light: var(--amber-light-active);
+  --accent-active-dark: var(--amber-dark-active);
+  --accent-text-light: var(--amber-light-text);
+  --accent-text-dark: var(--amber-dark-text);
+}
+
+/* ---------- UI Density Presets (data-density) ---------- */
+:root[data-density="compact"] {
+  --density-row-py: 6px;
+  --density-control-h: 28px;
+  --density-control-sm-h: 24px;
+  --density-panel-pad: 14px;
+  --density-toolbar-h: 52px;
+  --density-nav-h: 28px;
+  --density-gap: 12px;
+}
+
+/* ---------- Scrollbar Legacy Fallback ---------- */
+@supports not (scrollbar-color: auto) {
+  :where(.content, .console, .dialog-box, .drawer) {
+    scrollbar-width: auto;
+  }
+  :where(.content, .console, .dialog-box, .drawer)::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  :where(.content, .console, .dialog-box, .drawer)::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+  :where(.content, .console, .dialog-box, .drawer)::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: var(--radius-pill);
+  }
+}
+
+/* ---------- High Contrast / Forced Colors Mode ---------- */
+@media (forced-colors: active) {
+  :root {
+    --bg: Canvas;
+    --side: Canvas;
+    --panel: Canvas;
+    --raised: Canvas;
+    --text: CanvasText;
+    --muted: GrayText;
+    --faint: GrayText;
+    --line: ButtonBorder;
+    --accent: Highlight;
+    --accent-text: LinkText;
+  }
+}

@@ -1,0 +1,312 @@
+/* ---------- Tabs (Modern Web Guidance compliant) ---------- */
+.tabs {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.tablist {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  scrollbar-width: none;
+  scroll-snap-type: inline proximity;
+  --fade-size: 2.5rem;
+  --fade-dir: right;
+  --fade-start-pos: 0;
+  --fade-end-pos: 100%;
+  scroll-padding-inline: var(--fade-size);
+  mask:
+    linear-gradient(black, black) no-clip subtract,
+    linear-gradient(to var(--fade-dir), black, transparent) var(--fade-start-pos) 0 / var(--fade-start) 100% no-repeat no-clip,
+    linear-gradient(to var(--fade-dir), transparent, black) var(--fade-end-pos) 0 / var(--fade-end) 100% no-repeat no-clip;
+  animation: reveal-fade-start linear both, hide-fade-end linear both;
+  animation-timeline: scroll(self inline);
+  animation-range: 0 var(--fade-size), calc(100% - var(--fade-size)) 100%;
+}
+
+.tablist::-webkit-scrollbar {
+  display: none;
+}
+
+@supports not (animation-timeline: scroll()) {
+  .tablist {
+    transition: --fade-start 0.2s, --fade-end 0.2s;
+  }
+  .tablist.more-start {
+    --fade-start: var(--fade-size);
+  }
+  .tablist.more-end {
+    --fade-end: var(--fade-size);
+  }
+}
+
+@keyframes reveal-fade-start {
+  to {
+    --fade-start: var(--fade-size);
+  }
+}
+
+@keyframes hide-fade-end {
+  from {
+    --fade-end: var(--fade-size);
+  }
+}
+
+.tablist [role="tab"] {
+  position: relative;
+  flex: none;
+  scroll-snap-align: start;
+  padding: 12px 18px;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tablist [role="tab"]:hover {
+  color: var(--text);
+}
+
+/* Visual indicator via border-block-end on ::after (survives Forced Colors Mode,
+   causes zero dimension/layout shift when selected) */
+.tablist [role="tab"][aria-selected="true"] {
+  color: var(--brand);
+}
+
+.tablist [role="tab"][aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  inset: auto 10px 0 10px;
+  border-block-end: 3px solid var(--brand);
+}
+
+/* Panels share one grid cell with zero gap; NO padding/border/margin on [role="tabpanel"]
+   itself so hidden="until-found" never leaves an empty strip */
+.tab-panels {
+  display: grid;
+}
+
+.tab-panels > [role="tabpanel"] {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+
+.tab-panel-body {
+  padding: 22px;
+}
+
+.tab-panel-body > p:first-child {
+  margin-top: 0;
+}
+
+/* ---------- Code Blocks (forced dark color-scheme) ---------- */
+.code-block {
+  position: relative;
+  margin: 12px 0 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--code-border);
+  background: var(--code-bg);
+  color-scheme: dark;
+  accent-color: var(--brand-dark);
+  scrollbar-color: var(--scroll-thumb-dark) var(--scroll-track-dark);
+}
+
+.code-block pre {
+  margin: 0;
+  padding: 16px 76px 16px 16px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--code-fg);
+}
+
+.copy-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #334155;
+  background: #1e293b;
+  color: #e2e8f0;
+  font-family: var(--font-sans);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.copy-btn:hover {
+  border-color: var(--brand-dark);
+  color: #ffffff;
+}
+
+code.inline {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.download-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 14px 0 18px;
+}
+
+.callout {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border-inline-start: 4px solid var(--teal);
+  font-size: 0.9rem;
+}
+
+.callout strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* ---------- Responsive Tables (@container + sticky headers) ---------- */
+.table-wrapper {
+  overflow: auto;
+  max-inline-size: 100%;
+  max-block-size: min(560px, 78vh);
+  container-type: inline-size;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.9rem;
+}
+
+.data-table caption {
+  text-align: start;
+  padding: 12px 16px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--muted);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.data-table thead {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+}
+
+.data-table thead th {
+  text-align: start;
+  padding: 12px 16px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.data-table tbody th,
+.data-table tbody td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.data-table tbody tr:last-child th,
+.data-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.data-table tbody th {
+  position: sticky;
+  inset-inline-start: 0;
+  background: var(--surface);
+  text-align: start;
+  font-weight: 650;
+}
+
+.col-highlight {
+  color: var(--brand);
+  font-weight: 650;
+}
+
+@container (width < 640px) {
+  .data-table,
+  .data-table thead,
+  .data-table tbody,
+  .data-table tr,
+  .data-table th,
+  .data-table td {
+    display: block;
+  }
+
+  .data-table thead {
+    display: none;
+  }
+
+  .data-table tbody {
+    padding: 12px;
+  }
+
+  .data-table tr {
+    margin-block-end: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--surface);
+  }
+
+  .data-table tbody th {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 2;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .data-table td {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .data-table td:last-child {
+    border-bottom: 0;
+  }
+
+  .data-table td::before {
+    display: block;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
+  }
+
+  .data-table td:nth-child(2)::before {
+    content: var(--label-2);
+  }
+  .data-table td:nth-child(3)::before {
+    content: var(--label-3);
+  }
+  .data-table td:nth-child(4)::before {
+    content: var(--label-4);
+  }
+}
+

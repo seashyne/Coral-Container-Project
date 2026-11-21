@@ -1,19 +1,28 @@
-# Coral Container Project (`v2.2.0`)
+<p align="center">
+  <img src="docs/assets/coral-icon.png" alt="Coral Container Project Logo" width="88" />
+</p>
 
-**Coral** is a next-generation, memory-safe container runtime written in **Rust (Edition 2024)** — uniting a rootless-first **OCI v1.0.2** Linux container engine, **Kubernetes CRI v1 gRPC** daemon (TCP + `unix://` Unix Domain Socket + CNI plugin chain & streaming), **WASI Serverless HTTP WebAssembly** runtime (`coral-wasm`), pure-Rust Linux **`/dev/kvm` Separate-Kernel MicroVM with VirtIO-Blk & VirtIO-Net** (`coral-vmm`, Zero QEMU/Firecracker), **Prometheus `/metrics`**, **Ed25519 Image Signing + SPDX 2.3 SBOM**, multi-arch **x86_64 & ARM64**, and the cross-platform **Coral Desktop** GUI (Linux / Windows / macOS `.dmg`).
+<h1 align="center">Coral Container Project (<code>v2.3.0</code>)</h1>
 
-> **Documentation & Downloads:** https://seashyne.github.io/Coral-Container-Project/  
+**Coral** is a next-generation, memory-safe container runtime written in **Rust (Edition 2024)** — uniting a rootless-first **OCI v1.0.2** Linux container engine, **Kubernetes CRI v1 gRPC** daemon (TCP + `unix://` Unix Domain Socket + CNI plugin chain & streaming), **WASI Serverless HTTP WebAssembly** runtime (`coral-wasm`), pure-Rust Linux **`/dev/kvm` Separate-Kernel MicroVM with VirtIO-Blk & VirtIO-Net** (`coral-vmm`, Zero QEMU/Firecracker), **Prometheus `/metrics`**, **Ed25519 Image Signing + SPDX 2.3 SBOM**, multi-arch **x86_64 & ARM64**, and the redesigned **Coral Desktop** GUI (Linux / Windows / macOS `.dmg`).
+
+> **Online Docs & Visual Guides:** https://seashyne.github.io/Coral-Container-Project/  
+> **v2.3.0 Evaluation & Docker Benchmark Report:** [REPORT_v2.3.md](coral_repo/docs/REPORT_v2.3.md) · [BENCHMARK.md](coral_repo/docs/BENCHMARK.md)  
 > **GitHub Releases (`.deb`, `.tar.gz`, Desktop installers):** https://github.com/seashyne/Coral-Container-Project/releases
+
+![Coral v2.3.0 Visual Quick Guide](docs/assets/coral-usage-guide.png)
 
 ---
 
-## Highlights (`v2.2.0`)
+## Highlights (`v2.3.0`)
 
-- **Real-World OCI Compatibility & Ergonomics**: Inherits full OCI image config (`ENTRYPOINT`/`CMD`/`ENV`/`WORKDIR`/`USER`), remaps single-UID rootless service users (`redis`, `nginx`, `postgres`), forwards `SIGTERM`/`SIGINT`, binds `/dev/{fd,stdin,stdout,stderr,ptmx,shm}`, rotates logs (`--log-max-size-mb`), runs background Auto-GC, and provides `coral completion bash|zsh|fish`.
-- **Kubernetes CRI v1 Full Lifecycle**: Dual TCP + Kubernetes **Unix Domain Socket (`unix:///.../coral.sock`)**, real CNI v1.0.0 plugin chain execution (`/opt/cni/bin/*`), plus streaming `Exec` / `Attach` / `PortForward`, `ContainerStats`, `ReopenContainerLog`, and `ImageFsInfo`.
-- **WASI Serverless HTTP WebAssembly (`coral-wasm`)**: Run `.wasm`/`.wat` in **326 µs** OR host per-request isolated Serverless HTTP/1.1 microservices (`coral wasm serve`) in **89 µs/req** with deterministic CPU fuel metering & linear memory caps.
-- **Pure-Rust `/dev/kvm` MicroVM + VirtIO-Blk & VirtIO-Net (`coral-vmm`, Zero QEMU)**: Boot Linux 6.6 + modules directly over `/dev/kvm` with persistent `/dev/vda` ext4/raw storage (`coral vm disk create`, `--disk`) and userspace VirtIO-Net TCP/UDP/DHCP/ICMP + `-p` port forwarding (`--net`) with zero root/TAP.
-- **Observability, Security & Multi-Platform Releases**: Built-in Prometheus `/metrics` & `/healthz`, `cargo-fuzz` + deterministic fuzz regression tests, Ed25519 signing + SPDX 2.3 SBOM, **Linux `x86_64`/`aarch64`**, and **Coral Desktop (Linux, Windows, macOS Apple Silicon `.dmg`)**.
+- **Docker-Compatible `coral run` Ergonomics**: Run positional images & commands without boilerplate (`coral run -d -p 25565:25565 -m 4G -v mc-data:/data -e EULA=TRUE -e TYPE=PAPER itzg/minecraft-server`), human-friendly memory units (`-m 4G`, `512m`), `--pull missing|always|never` auto-pull, and `-d` auto-daemon routing.
+- **Redesigned Coral Desktop GUI**: Crisp Design-Token CSS UI with Topbar **Theme Popover** (`System`/`Light`/`Dark`, 5 palettes: **Coral**, **Ocean**, **Emerald**, **Indigo**, **Amber**, Compact/Comfortable density, EN/ไทย switching), **Run Quick Fill** presets, inline **Discover & Quick Pull**, and automatic `~/.local/bin` discovery for desktop menu launches.
+- **7.3×–11.2× Faster Startup than Docker on the Same Host**: `coral run --image alpine:3.20` starts rootlessly with OverlayFS CoW + DNS + Seccomp-BPF + Cap Drop in **23.22 ms P50** vs Docker Engine **168.95–260.58 ms P50**, with `coral-daemon` idle RAM at **9.1 MB**.
+- **Real-World OCI & Kubernetes CRI v1**: Inherits full `ENTRYPOINT`/`CMD`/`ENV`/`WORKDIR`/`USER`, single-UID non-root remapping, UDS + CNI v1.0.0 chain + streaming `Exec`/`Attach`/`PortForward`, Prometheus `/metrics`, log rotation, Auto-GC, and `coral completion`.
+- **WASI WebAssembly & Pure-Rust `/dev/kvm` MicroVM**: Execute WASI modules in **329 µs** (`coral-wasm`) and 64-bit `/dev/kvm` self-test in **963 µs** (`coral-vmm`) with persistent VirtIO-Blk + VirtIO-Net, Ed25519 signing, and SPDX 2.3 SBOM.
+
+![Coral v2.3.0 vs Docker Benchmark Chart](docs/assets/coral-vs-docker-benchmark.png)
 
 ---
 
@@ -27,10 +36,10 @@ curl -fsSL https://seashyne.github.io/Coral-Container-Project/install.sh | bash
 
 ### Debian / Ubuntu `.deb`
 
-Download `coral-runtime_2.2.0_amd64.deb` from [Releases](https://github.com/seashyne/Coral-Container-Project/releases/latest) and run:
+Download `coral-runtime_2.3.0_amd64.deb` (and `Coral Desktop_2.3.0_amd64.deb`) from [Releases](https://github.com/seashyne/Coral-Container-Project/releases/latest) and run:
 
 ```bash
-sudo dpkg -i coral-runtime_2.2.0_amd64.deb
+sudo dpkg -i coral-runtime_2.3.0_amd64.deb
 systemctl --user enable --now coral-daemon.service
 coral version
 ```
@@ -68,14 +77,15 @@ coral sandbox run --image alpine:3.20 --timeout 5 -- /bin/sh -c 'echo "Safe sand
 
 ```text
 .
+├── Makefile             # Unified workspace commands (`make build`, `make verify`, `make desktop-dev`)
 ├── coral_repo/          # 10-crate Rust workspace (OCI, CRI v1 gRPC, Wasm, KVM VMM)
 │   ├── api/             # [coral-api] Kubernetes CRI v1 Protobuf & Tonic gRPC bindings
 │   ├── pkg/             # oci, cgroups, networking, runtime, wasm, vmm
 │   ├── cmd/             # coral-cli (`coral`) + coral-daemon
-│   ├── tests/           # 60 unit, OCI, parity, CRI, Wasm & KVM E2E tests
-│   ├── scripts/         # setup-rootfs.sh & package-deb.sh
-│   └── docs/            # ARCHITECTURE.md, ROADMAP.md, MANUAL.md
-├── desktop/             # Tauri v2 Coral Desktop GUI (Linux & Windows WSL2)
+│   ├── tests/           # Unit, OCI, Docker-parity, CRI, Wasm & KVM E2E tests
+│   ├── scripts/         # setup-rootfs.sh, package-deb.sh, benchmark.sh, push_coral.sh
+│   └── docs/            # ARCHITECTURE.md, ROADMAP.md, MANUAL.md, BENCHMARK.md
+├── desktop/             # Tauri v2 Coral Desktop GUI (Theme/Token CSS, EN/TH i18n, Linux/Win/macOS)
 ├── docs/                # GitHub Pages Docs website (TH/EN, install guides, sponsor cards)
 ├── infra/               # Containerized build Dockerfile & compose
 └── .github/workflows/   # CI/CD: release.yml, desktop.yml, pages.yml

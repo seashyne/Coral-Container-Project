@@ -13,6 +13,12 @@ path = "src/main.rs"
 name = "coral_daemon"
 path = "src/lib.rs"
 
+[features]
+# Exposes `#[doc(hidden)]` test-only helpers (e.g. `age_sandboxes_for_test`) to the
+# `tests/` integration crate, which links `coral_daemon` as an ordinary library and so
+# cannot see `#[cfg(test)]` items. Never enable this in a released binary.
+test-helpers = []
+
 [dependencies]
 anyhow.workspace = true
 chrono.workspace = true

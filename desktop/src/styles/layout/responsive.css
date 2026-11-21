@@ -1,0 +1,29 @@
+/* ==========================================================================
+   Responsive Rules & Reduced Motion
+   ========================================================================== */
+
+@media (max-width: 900px) {
+  .gfind {
+    inline-size: 180px;
+  }
+
+  .gfind:focus-within {
+    inline-size: 240px;
+  }
+
+  .hright .btn.primary .hlbl {
+    display: none;
+  }
+
+  .form-grid,
+  .modal .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

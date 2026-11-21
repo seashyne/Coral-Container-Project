@@ -6,6 +6,7 @@
 
 pub mod container;
 pub mod exec;
+pub mod multi_uid;
 pub mod namespace;
 pub mod overlay;
 pub mod pty;
@@ -15,6 +16,7 @@ pub mod store;
 
 pub use container::{ContainerExit, ContainerManager, RunOptions};
 pub use exec::ExecOptions;
+pub use multi_uid::{MultiUidSupport, remove_dir_all_rootless_safe};
 pub use store::{StateStore, default_state_root};
 
 use coral_cgroups::CgroupError;

@@ -1,0 +1,102 @@
+  border: 1px solid color-mix(in oklab, var(--text) 20%, transparent);
+  flex: none;
+}
+
+/* Global Search Input */
+.gfind {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  inline-size: 280px;
+  block-size: 30px;
+  padding-inline: 10px 6px;
+  border-radius: var(--radius-md);
+  cursor: text;
+  flex: none;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  transition: inline-size var(--duration-normal) ease, border-color var(--duration-fast), box-shadow var(--duration-fast);
+}
+
+.search-clear {
+  flex: none;
+  inline-size: 20px;
+  block-size: 20px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.search-clear:hover {
+  background: color-mix(in oklab, var(--text) 10%, transparent);
+  color: var(--text);
+}
+
+.search-clear > svg {
+  inline-size: 12px;
+  block-size: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.gfind:hover {
+  border-color: color-mix(in oklab, var(--text) 22%, var(--line));
+}
+
+.gfind:focus-within {
+  inline-size: 380px;
+  border-color: var(--accent);
+  box-shadow: var(--input-focus-ring);
+}
+
+.gfind .s-ic > svg {
+  inline-size: 14px;
+  block-size: 14px;
+  color: var(--muted);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.gfind input {
+  flex: 1;
+  min-inline-size: 0;
+  block-size: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: var(--fs) var(--ui-font);
+  outline: none;
+  user-select: text;
+}
+
+.gfind input::placeholder {
+  color: var(--faint);
+}
+
+.gfind kbd {
+  flex: none;
+  block-size: 18px;
+  padding-inline: 6px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  font: 500 var(--fs-small) var(--ui-font);
+  color: var(--faint);
+  background: color-mix(in oklab, var(--text) 6%, transparent);
+}
+
+.gfind:focus-within kbd {
+  opacity: 0;
+}
+

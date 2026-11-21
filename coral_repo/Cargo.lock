@@ -317,7 +317,7 @@ checksum = "1d07550c9036bf2ae0c684c4297d503f838287c83c53686d05370d0e139ae570"
 
 [[package]]
 name = "coral-api"
-version = "2.2.0"
+version = "2.3.0"
 dependencies = [
  "prost",
  "protoc-bin-vendored",
@@ -327,7 +327,7 @@ dependencies = [
 
 [[package]]
 name = "coral-cgroups"
-version = "2.2.0"
+version = "2.3.0"
 dependencies = [
  "coral-oci",
  "libc",
@@ -339,7 +339,7 @@ dependencies = [
 
 [[package]]
 name = "coral-cli"
-version = "2.2.0"
+version = "2.3.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -357,6 +357,7 @@ dependencies = [
  "libc",
  "serde_json",
  "tar",
+ "tempfile",
  "tokio",
  "tonic",
  "tower 0.5.3",
@@ -366,7 +367,7 @@ dependencies = [
 
 [[package]]
 name = "coral-daemon"
-version = "2.2.0"
+version = "2.3.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -397,7 +398,7 @@ dependencies = [
 
 [[package]]
 name = "coral-e2e-tests"
-version = "2.2.0"
+version = "2.3.0"
 dependencies = [
  "coral-api",
  "coral-cgroups",
@@ -421,7 +422,7 @@ dependencies = [
 
 [[package]]
 name = "coral-net"
-version = "2.2.0"
+version = "2.3.0"
 dependencies = [
  "anyhow",
  "libc",
@@ -433,7 +434,7 @@ dependencies = [
 
 [[package]]
 name = "coral-oci"
-version = "2.2.0"
+version = "2.3.0"
 dependencies = [
  "chrono",
  "serde",
@@ -444,7 +445,7 @@ dependencies = [
 
 [[package]]
 name = "coral-runtime"
-version = "2.2.0"
+version = "2.3.0"
 dependencies = [
  "chrono",
  "coral-cgroups",
@@ -461,7 +462,7 @@ dependencies = [
 
 [[package]]
 name = "coral-vmm"
-version = "2.2.0"
+version = "2.3.0"
 dependencies = [
  "anyhow",
  "flate2",
@@ -473,7 +474,7 @@ dependencies = [
 
 [[package]]
 name = "coral-wasm"
-version = "2.2.0"
+version = "2.3.0"
 dependencies = [
  "anyhow",
  "serde",

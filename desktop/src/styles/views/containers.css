@@ -1,0 +1,180 @@
+/* ==========================================================================
+   Containers View (Empty States, Welcome Hub, Quick Starters)
+   ========================================================================== */
+
+.empty {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  block-size: 100%;
+  min-block-size: 280px;
+}
+
+.empty .art {
+  inline-size: 56px;
+  block-size: 56px;
+  margin: 0 auto 14px;
+  color: var(--faint);
+}
+
+.empty .art > svg {
+  inline-size: 56px;
+  block-size: 56px;
+  stroke-width: 1.2;
+}
+
+.empty h2,
+.empty h3 {
+  font-size: var(--fs-head);
+  margin-block-end: 6px;
+}
+
+.empty p {
+  color: var(--muted);
+  max-inline-size: 360px;
+  margin-inline: auto;
+}
+
+.empty-actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.welcome-hub {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  max-inline-size: 760px;
+  margin-inline: auto;
+}
+
+.welcome-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding-block-end: var(--space-1);
+}
+
+.welcome-icon {
+  inline-size: 48px;
+  block-size: 48px;
+  border-radius: var(--radius-xl);
+  background: var(--accent-soft-bg);
+  border: 1px solid var(--accent-soft-border);
+  color: var(--accent-text);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.welcome-icon > svg {
+  inline-size: 24px;
+  block-size: 24px;
+}
+
+.welcome-head h3 {
+  font-size: var(--fs-head);
+  font-weight: 650;
+  margin-block-end: var(--space-1);
+  letter-spacing: -0.01em;
+}
+
+.welcome-head p {
+  color: var(--muted);
+  line-height: 1.45;
+  font-size: var(--fs);
+}
+
+.starter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-3);
+}
+
+.starter-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 12px 14px;
+  border-radius: var(--radius-xl);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--text);
+  cursor: pointer;
+  text-align: start;
+  transition: border-color var(--duration-fast), background-color var(--duration-fast), transform var(--duration-fast);
+}
+
+.starter-card:hover {
+  background: var(--raised);
+  border-color: color-mix(in oklab, var(--text) 25%, var(--line));
+  transform: translateY(-1px);
+}
+
+.starter-card:active {
+  transform: translateY(0);
+}
+
+.starter-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.starter-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-inline-size: 0;
+  flex: 1;
+}
+
+.starter-meta strong {
+  font-size: var(--text-base);
+  font-weight: 650;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.starter-meta small {
+  color: var(--muted);
+  font-size: var(--fs-small);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.starter-go {
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--moss);
+  opacity: 0.85;
+  flex: none;
+}
+
+.starter-go > svg {
+  inline-size: 14px;
+  block-size: 14px;
+}
+
+.starter-card:hover .starter-go {
+  opacity: 1;
+}
+
+.welcome-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+  flex-wrap: wrap;
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--line);
+}

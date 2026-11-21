@@ -1,0 +1,250 @@
+/* ==========================================================================
+   Floating Row Context Menu, Toasts & Status Banners
+   ========================================================================== */
+
+.menu {
+  position: fixed;
+  z-index: var(--z-menu);
+  min-inline-size: 180px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 5px;
+  box-shadow: var(--shadow-md);
+}
+
+.menu button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  inline-size: 100%;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text);
+  font: var(--fs) var(--ui-font);
+  cursor: pointer;
+  text-align: start;
+}
+
+.menu button:hover {
+  background: var(--row-hover);
+}
+
+.menu button > svg {
+  inline-size: 15px;
+  block-size: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: var(--muted);
+}
+
+.menu button.danger {
+  color: var(--red-text);
+}
+
+.menu button.danger > svg {
+  color: var(--red-text);
+}
+
+.menu .sep {
+  block-size: 1px;
+  background: var(--line);
+  margin: 4px 2px;
+}
+
+.toasts {
+  position: fixed;
+  inset-inline-end: 18px;
+  inset-block-end: 38px;
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-end;
+}
+
+.toast {
+  background: var(--raised);
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: var(--radius-lg);
+  font-size: var(--fs);
+  box-shadow: var(--shadow-md);
+  max-inline-size: 380px;
+  animation: tin 0.16s ease-out;
+}
+
+.toast.error {
+  border-color: var(--danger-soft-border);
+  color: var(--red-text);
+}
+
+@keyframes tin {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.status-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+  padding: 10px 14px;
+  border-radius: var(--radius-lg);
+  background: var(--accent-soft-bg);
+  border: 1px solid var(--accent-soft-border);
+  color: var(--text);
+  font-size: var(--fs);
+}
+
+.status-banner .spinner {
+  inline-size: 14px;
+  block-size: 14px;
+  border-radius: var(--radius-pill);
+  flex: none;
+  border: 2px solid color-mix(in oklab, var(--accent) 28%, transparent);
+  border-block-start-color: var(--accent-text);
+  animation: coral-spin 0.8s linear infinite;
+}
+
+@keyframes coral-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Viewport-Aware Topbar Theme & Appearance Popover ---------- */
+[popover].theme-popover {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: var(--radius-xl);
+  padding: var(--space-3-5);
+  box-shadow: var(--shadow-lg);
+  inline-size: min(328px, calc(100vw - 24px));
+  max-block-size: calc(100vh - 64px);
+  overflow-y: auto;
+  z-index: var(--z-menu);
+}
+
+@supports (position-area: block-end) {
+  [popover].theme-popover {
+    position: fixed;
+    position-anchor: --theme-anchor;
+    position-area: block-end span-inline-start;
+    position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+    inset: auto;
+    margin: 6px 0 0;
+  }
+}
+
+@supports not (position-area: block-end) {
+  [popover].theme-popover {
+    position: fixed;
+    inset-block-start: calc(var(--topbar-height) + 6px);
+    inset-inline-end: 14px;
+    inset-inline-start: auto;
+    inset-block-end: auto;
+    margin: 0;
+  }
+}
+
+html.no-popover .theme-popover {
+  display: none;
+}
+
+html.no-popover .theme-popover.is-open {
+  display: block;
+}
+
+.pop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-block-end: var(--space-2-5);
+  margin-block-end: var(--space-2-5);
+  border-block-end: 1px solid var(--line);
+}
+
+.pop-head strong {
+  font-size: var(--fs-head);
+  font-weight: 650;
+}
+
+.pop-link {
+  border: 0;
+  background: transparent;
+  color: var(--accent-text);
+  font: 600 var(--fs-small) var(--ui-font);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.pop-link:hover {
+  background: var(--accent-soft-bg);
+}
+
+.pop-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.pop-group + .pop-group {
+  margin-block-start: var(--space-3);
+}
+
+.pop-label {
+  display: block;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--muted);
+  margin-block-end: var(--space-1-5);
+}
+
+.pop-segmented {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  padding: 3px;
+  border-radius: var(--radius-md);
+  background: var(--raised);
+  border: 1px solid var(--line);
+}
+
+.pop-opt {
+  block-size: 28px;
+  padding-inline: 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font: 500 var(--fs-small) var(--ui-font);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pop-opt:hover {
+  color: var(--text);
+}
+
+.pop-opt[aria-pressed="true"] {
+  background: var(--panel);
+  color: var(--accent-text);
+  font-weight: 650;
+  box-shadow: inset 0 0 0 1px var(--accent-soft-border);
+}
+
+.pop-opt:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}

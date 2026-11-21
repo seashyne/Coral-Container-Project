@@ -25,6 +25,8 @@ pub async fn render_prometheus_metrics(svc: &CoralDaemonService) -> String {
         images_bytes,
         auto_gc_runs,
         auto_gc_bytes,
+        auto_gc_pods,
+        orphaned_pods,
         ctr_snapshots,
     ) = {
         let store = svc.store.read().await;
@@ -48,6 +50,15 @@ pub async fn render_prometheus_metrics(svc: &CoralDaemonService) -> String {
                 pods_notready += 1;
             }
         }
+        // A sandbox owned by no container is exactly what Auto-GC will reap once it is old
+        // enough; expose the live count so operators can alert before a sweep runs.
+        let active_pods: HashSet<&String> =
+            store.containers.values().map(|c| &c.pod_sandbox_id).collect();
+        let orphaned_pods = store
+            .sandboxes
+            .keys()
+            .filter(|id| !active_pods.contains(id))
+            .count();
         let mut seen = HashSet::new();
         let mut img_bytes = 0u64;
         for img in &store.images {
@@ -93,6 +104,8 @@ pub async fn render_prometheus_metrics(svc: &CoralDaemonService) -> String {
             img_bytes,
             store.auto_gc_runs,
             store.auto_gc_bytes_reclaimed,
+            store.auto_gc_pods_reaped,
+            orphaned_pods,
             snapshots,
         )
     };
@@ -132,6 +145,20 @@ pub async fn render_prometheus_metrics(svc: &CoralDaemonService) -> String {
     );
     let _ = writeln!(out, "# TYPE coral_daemon_auto_gc_bytes_reclaimed_total counter");
     let _ = writeln!(out, "coral_daemon_auto_gc_bytes_reclaimed_total {auto_gc_bytes}");
+
+    let _ = writeln!(
+        out,
+        "# HELP coral_daemon_auto_gc_pods_reaped_total Orphaned pod sandboxes reaped by background Auto-GC."
+    );
+    let _ = writeln!(out, "# TYPE coral_daemon_auto_gc_pods_reaped_total counter");
+    let _ = writeln!(out, "coral_daemon_auto_gc_pods_reaped_total {auto_gc_pods}");
+
+    let _ = writeln!(
+        out,
+        "# HELP coral_daemon_orphaned_pods Pod sandboxes owned by no container (candidates for Auto-GC)."
+    );
+    let _ = writeln!(out, "# TYPE coral_daemon_orphaned_pods gauge");
+    let _ = writeln!(out, "coral_daemon_orphaned_pods {orphaned_pods}");
 
     let _ = writeln!(out, "# HELP coral_container_restarts_total Supervisor restart count per container.");
     let _ = writeln!(out, "# TYPE coral_container_restarts_total counter");

@@ -241,7 +241,7 @@ fn copy_tree_layer(
         if is_upper && ft.is_char_device() && meta.rdev() == 0 {
             if let Ok(dmeta) = fs::symlink_metadata(&dst_path) {
                 if dmeta.is_dir() && !dmeta.file_type().is_symlink() {
-                    let _ = fs::remove_dir_all(&dst_path);
+                    let _ = crate::multi_uid::remove_dir_all_rootless_safe(&dst_path);
                 } else {
                     let _ = fs::remove_file(&dst_path);
                 }
@@ -290,7 +290,7 @@ fn copy_tree_layer(
 fn remove_existing_entry(path: &Path) {
     if let Ok(meta) = fs::symlink_metadata(path) {
         if meta.is_dir() && !meta.file_type().is_symlink() {
-            let _ = fs::remove_dir_all(path);
+            let _ = crate::multi_uid::remove_dir_all_rootless_safe(path);
         } else {
             let _ = fs::remove_file(path);
         }

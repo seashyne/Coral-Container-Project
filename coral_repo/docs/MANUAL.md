@@ -1,26 +1,53 @@
-# คู่มือการใช้งานและพัฒนา Coral Container Runtime (v1.0 Manual)
+# คู่มือการใช้งานและพัฒนา Coral Container Runtime (`v2.3.0` Manual)
 
-คู่มือนี้อธิบายขั้นตอนการ Build, การเตรียม Alpine Rootfs, การใช้งาน CLI (`coral`), การรัน CRI gRPC Daemon (`coral-daemon`), และการรันชุดทดสอบอัตโนมัติ (Quality Gates)
+คู่มือนี้อธิบายขั้นตอนการติดตั้ง, การเตรียม Alpine Rootfs, การใช้งาน CLI (`coral`), การรันคอนเทนเนอร์สไตล์เดียวกับ Docker (`coral run`), การใช้ **Coral Desktop v2.3.0**, CRI gRPC Daemon (`coral-daemon`), และ Quality Gates
+
+![Visual Quick Guide — Coral v2.3.0](../../docs/assets/coral-usage-guide.png)
 
 ---
 
-## 1. การเตรียมสภาพแวดล้อมและ Build โปรเจกต์
+## 1. การเตรียมสภาพแวดล้อมและติดตั้ง / Build โปรเจกต์
 
 Coral ใช้ `protoc-bin-vendored` ในขั้นตอนการคอมไพล์ Protobuf จึง**ไม่จำเป็นต้องติดตั้ง `protobuf-compiler` ด้วย `sudo`** บนเครื่องโฮสต์
 
 ```bash
-cd "/home/seashyne/Documents/bluecoral project/coral_repo"
+cd /home/seashyne/Documents/Coral-Container-Project/coral_repo
 
-# 1. ดาวน์โหลดและแตกไฟล์ Alpine Linux 3.20 minirootfs ลงใน ./rootfs (หากยังไม่มี)
+# ตัวเลือก A: บิลด์ release และติดตั้งลง ~/.local/bin + เปิด systemd user service
+./install.sh
+
+# ตัวเลือก B: พัฒนาและบิลด์แบบ debug
 ./scripts/setup-rootfs.sh
-
-# 2. คอมไพล์ทุก Crate ใน Workspace
 cargo build --workspace
 ```
 
-Binary ที่ได้จะอยู่ที่:
-- `target/debug/coral` — OCI Container Runtime CLI
-- `target/debug/coral-daemon` — Kubernetes CRI v1 gRPC Daemon
+Binary ที่ได้จะอยู่ที่ `~/.local/bin/` (หลังรัน `./install.sh`) หรือ `target/debug/`:
+- `coral` — OCI & Docker-compatible Runtime CLI (`v2.3.0`)
+- `coral-daemon` — Kubernetes CRI v1 gRPC Daemon (`v2.3.0`)
+- `coral-desktop` — แอปจัดการแบบกราฟิก (Tauri v2)
+
+### 1.1 คำสั่งสั้นสไตล์เดียวกับ Docker (`coral run v2.3.0`)
+
+ตั้งแต่ `v2.3.0` สามารถรันอิมเมจจาก Docker Hub / GHCR ได้โดยตรงโดยไม่ต้องพิมพ์ `--image` หรือ `--`, รองรับ `-m 4G` / `64m`, `--pull missing|always|never` (ค่าเริ่มต้น `missing`) และ `-d` ส่งเข้า daemon อัตโนมัติ:
+
+```bash
+# รันเว็บเซิร์ฟเวอร์ Nginx
+coral run -d --name web -p 8080:80 nginx:alpine
+
+# รัน Minecraft Server (PaperMC) แบบ persistent volume
+coral run -d --name mc-server \
+  -p 25565:25565 \
+  -m 4G \
+  -e EULA=TRUE -e TYPE=PAPER -e VERSION=LATEST -e MEMORY=3G \
+  -v mc-data:/data \
+  --restart unless-stopped \
+  itzg/minecraft-server
+
+# ดูคอนเทนเนอร์, ติดตาม log สด, หรือเปิดเชลล์
+coral ps
+coral logs -f mc-server
+coral exec -it mc-server /bin/sh
+```
 
 ---
 
@@ -281,3 +308,23 @@ curl -s http://127.0.0.1:9108/metrics | grep coral_
 # ติดตั้ง Shell Autocomplete (รองรับ bash, zsh, fish, elvish, powershell)
 coral completion bash | sudo tee /etc/bash_completion.d/coral >/dev/null
 ```
+
+---
+
+## 6. การใช้งาน Coral Desktop (`v2.3.0` GUI)
+
+เปิดแอปผ่านเมนูแอปพลิเคชัน (**Coral Desktop**) หรือรัน `~/.local/bin/coral-desktop` โดยจุดเด่นของ `v2.3.0` ได้แก่:
+
+1. **Topbar Theme Popover (`ปุ่ม Theme` ด้านขวาบน):**
+   - คลิกที่ปุ่ม **Theme** เพื่อปรับได้ทันทีจากทุกหน้าจอโดยไม่ต้องสลับไปหน้า Settings:
+     - **Color Mode:** `System (ตามระบบ)` / `Light` / `Dark`
+     - **Accent Palette (5 ชุดสี):** `Coral`, `Ocean`, `Emerald`, `Indigo`, `Amber`
+     - **Interface Density:** `Comfortable` / `Compact`
+     - **Language:** `English` / `ไทย`
+2. **สร้างคอนเทนเนอร์ง่าย (`Run container` → Quick Fill):**
+   - กดแถบ **Quick Fill** ด้านบนของหน้าต่าง (`Nginx`, `Redis`, `PostgreSQL`, `Alpine Shell`, `Minecraft PaperMC`) เพื่อเติม Image, พอร์ต, Volumes, Env และ RAM ให้อัตโนมัติ
+   - ช่อง **Container Name** สามารถเว้นว่างไว้ให้ระบบตั้งชื่อให้ได้ทันที
+3. **ดึงอิมเมจได้ตรงจากหน้า Images (`Discover & Quick Pull`):**
+   - พิมพ์ชื่ออิมเมจใดก็ได้ (เช่น `itzg/minecraft-server`, `postgres:16-alpine`, `ghcr.io/org/app:v1`) ในช่อง **Quick Pull Any OCI Image** ด้านบนสุด แล้วกด Pull ได้ในขั้นตอนเดียว
+4. **Live Terminal (PTY), Logs & OverlayFS Diff:**
+   - คลิกที่แถวคอนเทนเนอร์เพื่อเปิด Drawer ดู Logs แบบ Auto-scroll, เปิด Live PTY Terminal, ดูกราฟ CPU/RAM, และตรวจสอบไฟล์ OverlayFS diff พร้อม Commit เป็น Image ใหม่ได้ทันที

@@ -17,7 +17,9 @@ pub use cni_runner::{
     has_cni_configs,
 };
 pub use egress::{EgressBackend, RootlessEgressGuard, detect_egress_backend};
-pub use netns::{PortMapping, bring_loopback_up, connect_container_port};
+pub use netns::{
+    PortMapping, PortProtocol, bring_loopback_up, connect_container_port, connect_container_udp,
+};
 pub use networks::{
     NetworkRecord, builtin_networks, create_network, create_network_at, default_networks_file,
     find_network, find_network_at, is_valid_network_name, list_networks, list_networks_at,

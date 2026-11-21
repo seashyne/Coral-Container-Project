@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Coral Container Runtime v2.2 — Rust OCI, Wasm &amp; KVM MicroVM Docs</title>
-  <meta name="description" content="Coral v2.0 — Memory-safe Rust OCI v1.0.2 container runtime, Kubernetes CRI v1 gRPC daemon, WASI WebAssembly runtime (coral-wasm), native /dev/kvm MicroVM &amp; AI Agent Sandbox (coral-vmm), and Coral Desktop.">
+  <title>Coral Container Runtime v2.3.0 — Rust OCI, Wasm &amp; KVM MicroVM Docs</title>
+  <meta name="description" content="Coral v2.3.0 — Memory-safe Rust OCI v1.0.2 container runtime, Docker-compatible CLI, Kubernetes CRI v1 gRPC daemon, WASI WebAssembly runtime (coral-wasm), native /dev/kvm MicroVM &amp; AI Agent Sandbox (coral-vmm), and Coral Desktop.">
   <meta name="color-scheme" content="light dark">
   <script>
     try {
@@ -21,9 +21,9 @@
   <header class="topbar">
     <div class="topbar-inner">
       <a class="brand-link" href="#overview">
-        <img class="brand-icon" src="assets/coral-icon.png" alt="" width="32" height="32">
+        <img class="brand-icon" src="assets/coral-icon.png" alt="Coral Logo" width="32" height="32">
         <span>Coral Runtime</span>
-        <span class="version-pill" id="topbar-version">v2.2.0</span>
+        <span class="version-pill" id="topbar-version">v2.3.0</span>
       </a>
 
       <div class="topbar-actions">
@@ -72,38 +72,42 @@
       <!-- 1. Overview / Hero -->
       <section id="overview" class="doc-section" tabindex="-1">
         <div class="hero">
-          <div class="hero-badge" data-i18n="hero.badge">Release v2.0.0 · Rust Edition 2024 · Apache-2.0</div>
+          <div class="hero-top">
+            <img class="hero-logo" src="assets/coral-icon.png" alt="Coral Container Project Logo" width="56" height="56" fetchpriority="high">
+            <div class="hero-badge" data-i18n="hero.badge">Release v2.3.0 · Rust Edition 2024 · Apache-2.0</div>
+          </div>
           <h1 data-i18n="hero.title">Container Runtime ยุคใหม่ด้วย Rust</h1>
           <p class="hero-subtitle" data-i18n="hero.subtitle">
             รันคอนเทนเนอร์ OCI แบบ Rootless, จัดการผ่าน Kubernetes CRI v1 gRPC, รัน WebAssembly ระดับไมโครวินาที (coral-wasm) และแยกเคอร์เนลด้วย KVM 64-bit MicroVM &amp; AI Agent Sandbox (coral-vmm) ครบจบในชุดเดียว
           </p>
 
           <div class="hero-actions">
-            <a class="btn btn-primary" href="#install" data-i18n="hero.ctaInstall">ดาวน์โหลด &amp; ติดตั้ง v2.0.0</a>
+            <a class="btn btn-primary" href="#install" data-i18n="hero.ctaInstall">ดาวน์โหลด &amp; ติดตั้ง v2.3.0</a>
+            <a class="btn btn-secondary" href="#benchmarks" data-i18n="hero.ctaBench">ผลเทียบกับ Docker &amp; รายงาน</a>
             <a class="btn btn-secondary" href="https://github.com/seashyne/Coral-Container-Project" target="_blank" rel="noopener" data-i18n="hero.ctaGithub">ดูซอร์สโค้ดบน GitHub</a>
             <a class="btn btn-teal" href="#support" data-i18n="hero.ctaSupport">สนับสนุนโปรเจกต์</a>
           </div>
 
           <div class="metrics-grid">
             <div class="metric-card">
-              <div class="metric-value">326 µs</div>
-              <div class="metric-label" data-i18n="metric.wasmLabel">WASI WebAssembly Cold Start</div>
+              <div class="metric-value">23.2 ms</div>
+              <div class="metric-label" data-i18n="metric.startLabel">OCI Container P50 Startup</div>
+              <div class="metric-sub" data-i18n="metric.startSub">เร็วกว่า Docker 7.3×–11.2× บนเครื่องเดียวกัน</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value">329 µs</div>
+              <div class="metric-label" data-i18n="metric.wasmLabel">WASI WebAssembly Execution</div>
               <div class="metric-sub" data-i18n="metric.wasmSub">coral-wasm · wasmi 2.0 (Fuel + RAM cap)</div>
             </div>
             <div class="metric-card">
-              <div class="metric-value">2.94 ms</div>
+              <div class="metric-value">963 µs</div>
               <div class="metric-label" data-i18n="metric.kvmLabel">Native /dev/kvm 64-bit Boot</div>
-              <div class="metric-sub" data-i18n="metric.kvmSub">coral-vmm · Pure-Rust Long Mode MicroVM</div>
+              <div class="metric-sub" data-i18n="metric.kvmSub">coral-vmm · Pure-Rust Long Mode Self-Test</div>
             </div>
             <div class="metric-card">
-              <div class="metric-value">41 ms</div>
-              <div class="metric-label" data-i18n="metric.sandboxLabel">AI Agent Sandbox Execution</div>
-              <div class="metric-sub" data-i18n="metric.sandboxSub">Zero-network · Read-Only · Hard timeout</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-value">66 / 66</div>
-              <div class="metric-label" data-i18n="metric.testsLabel">Automated E2E &amp; Unit Tests</div>
-              <div class="metric-sub" data-i18n="metric.testsSub">0 Clippy warnings · 10 Rust Crates</div>
+              <div class="metric-value">9.1 MB</div>
+              <div class="metric-label" data-i18n="metric.memLabel">coral-daemon Idle RAM</div>
+              <div class="metric-sub" data-i18n="metric.memSub">0 Clippy warnings · 10 Rust Crates</div>
             </div>
           </div>
         </div>
@@ -175,13 +179,13 @@ coral run alpine:3.20 /bin/sh -c 'echo "Hello from Coral PID=$$"'</code></pre>
               <div class="tab-panel-body">
                 <p data-i18n="install.debDesc"></p>
                 <div class="download-bar">
-                  <a class="btn btn-primary" id="dl-deb-link" href="https://github.com/seashyne/Coral-Container-Project/releases/download/v2.2.0/coral-runtime_2.2.0_amd64.deb" target="_blank" rel="noopener" data-i18n="install.downloadDeb">ดาวน์โหลด coral-runtime_2.2.0_amd64.deb</a>
-                  <a class="btn btn-secondary" id="dl-tar-link" href="https://github.com/seashyne/Coral-Container-Project/releases/download/v2.2.0/coral-v2.2.0-linux-x86_64.tar.gz" target="_blank" rel="noopener" data-i18n="install.downloadTar">ดาวน์โหลด coral-v2.2.0-linux-x86_64.tar.gz</a>
+                  <a class="btn btn-primary" id="dl-deb-link" href="https://github.com/seashyne/Coral-Container-Project/releases/download/v2.3.0/coral-runtime_2.3.0_amd64.deb" target="_blank" rel="noopener" data-i18n="install.downloadDeb">ดาวน์โหลด coral-runtime_2.3.0_amd64.deb</a>
+                  <a class="btn btn-secondary" id="dl-tar-link" href="https://github.com/seashyne/Coral-Container-Project/releases/download/v2.3.0/coral-v2.3.0-linux-x86_64.tar.gz" target="_blank" rel="noopener" data-i18n="install.downloadTar">ดาวน์โหลด coral-v2.3.0-linux-x86_64.tar.gz</a>
                 </div>
                 <div class="code-block">
                   <button type="button" class="copy-btn" data-copy-target="code-deb" data-i18n="copy.btn">คัดลอก</button>
-                  <pre id="code-deb"><code>curl -fsSLO https://github.com/seashyne/Coral-Container-Project/releases/download/v2.2.0/coral-runtime_2.2.0_amd64.deb
-sudo dpkg -i coral-runtime_2.2.0_amd64.deb
+                  <pre id="code-deb"><code>curl -fsSLO https://github.com/seashyne/Coral-Container-Project/releases/download/v2.3.0/coral-runtime_2.3.0_amd64.deb
+sudo dpkg -i coral-runtime_2.3.0_amd64.deb
 systemctl --user enable --now coral-daemon.service
 coral version</code></pre>
                 </div>
@@ -246,18 +250,21 @@ cd Coral-Container-Project/coral_repo
               <div class="tab-panel-body">
                 <div class="code-block">
                   <button type="button" class="copy-btn" data-copy-target="code-cli-1" data-i18n="copy.btn">คัดลอก</button>
-                  <pre id="code-cli-1"><code># Run interactive rootless container with memory/PID limits &amp; named volume
-coral volume create app-data
-coral run -it --name web --memory 128m --pids-limit 64 -v app-data:/data -p 8080:80 alpine:3.20 /bin/sh
+                  <pre id="code-cli-1"><code># Docker-style syntax (no --image or -- required, auto-pulls missing images!)
+coral run -d --name web -p 8080:80 -m 256m --pids-limit 64 nginx:alpine
 
-# Detached container with live healthcheck &amp; auto-restart across daemon reboot
+# Minecraft PaperMC Server in one command (persistent volume + 4 GB RAM cap)
+coral run -d --name mc-server -p 25565:25565 -m 4G \
+  -e EULA=TRUE -e TYPE=PAPER -e VERSION=LATEST \
+  -v mc-data:/data --restart unless-stopped itzg/minecraft-server
+
+# Detached worker with live healthcheck, logs, interactive shell &amp; stats
 coral run -d --name worker --restart always \
   --health-cmd "test -f /tmp/ready" --health-interval 5 \
   alpine:3.20 /bin/sh -c 'touch /tmp/ready; sleep 3600'
 
-# Inspect, live logs, real setns exec, live CPU/RAM metrics &amp; file copy
 coral ps
-coral logs -f --tail 50 worker
+coral logs -f --tail 50 mc-server
 coral exec -it worker /bin/sh
 coral stats --watch worker
 coral cp ./config.yaml worker:/data/config.yaml</code></pre>
@@ -331,11 +338,22 @@ coral sandbox run --image alpine:3.20 --timeout 5 --memory 64 --json -- \
             </div>
           </div>
         </div>
+
+        <figure class="guide-figure">
+          <img
+            src="assets/coral-usage-guide.png"
+            alt="Coral v2.3.0 Visual Quick Guide displaying the Coral logo, install command, Docker-compatible CLI examples, Coral Desktop theme popover, and Wasm/KVM workflows"
+            width="1440"
+            height="980"
+            loading="lazy"
+          />
+          <figcaption data-i18n="cli.guideCaption">รูปคู่มือสรุปขั้นตอนการติดตั้งและใช้งาน Coral CLI + Coral Desktop v2.3.0 ในภาพเดียว</figcaption>
+        </figure>
       </section>
 
       <!-- 4. Next-Gen Deep Dive -->
       <section id="nextgen" class="doc-section" tabindex="-1">
-        <h2 data-i18n="nextgen.title">เจาะลึกฟีเจอร์ Next-Gen (v2.0)</h2>
+        <h2 data-i18n="nextgen.title">เจาะลึกฟีเจอร์ Next-Gen (v2.3.0)</h2>
         <p class="section-lead" data-i18n="nextgen.lead"></p>
 
         <div class="cards-grid">
@@ -394,8 +412,24 @@ coral sandbox run --image alpine:3.20 --timeout 5 --memory 64 --json -- \
 
       <!-- 6. Benchmarks & Comparison Table -->
       <section id="benchmarks" class="doc-section" tabindex="-1">
-        <h2 data-i18n="bench.title">ผลทดสอบจริง &amp; ตารางเปรียบเทียบ</h2>
+        <h2 data-i18n="bench.title">ผลทดสอบจริง &amp; ตารางเปรียบเทียบกับ Docker</h2>
         <p class="section-lead" data-i18n="bench.lead"></p>
+
+        <figure class="guide-figure" style="margin-bottom: 20px;">
+          <img
+            src="assets/coral-vs-docker-benchmark.png"
+            alt="Benchmark comparison chart of Coral v2.3.0 vs Docker Engine 29.9.3 on Intel Core i5-13400F Linux"
+            width="1440"
+            height="920"
+            loading="lazy"
+          />
+          <figcaption data-i18n="bench.chartCaption">ผลวัดความเร็วเริ่มต้นคอนเทนเนอร์และทรัพยากรจริงบนเครื่องเดียวกัน (Coral v2.3.0 vs Docker Engine 29.9.3)</figcaption>
+        </figure>
+
+        <div class="download-bar">
+          <a class="btn btn-primary" href="https://github.com/seashyne/Coral-Container-Project/blob/main/coral_repo/docs/REPORT_v2.3.md" target="_blank" rel="noopener" data-i18n="bench.reportBtn">อ่านรายงานสรุปฉบับเต็ม (REPORT_v2.3.md)</a>
+          <a class="btn btn-secondary" href="https://github.com/seashyne/Coral-Container-Project/blob/main/coral_repo/docs/BENCHMARK.md" target="_blank" rel="noopener" data-i18n="bench.rawBtn">ดูข้อมูล Benchmark ละเอียด (BENCHMARK.md)</a>
+        </div>
 
         <div tabindex="0" role="region" aria-labelledby="bench-caption" class="table-wrapper">
           <table class="data-table" id="bench-table">
@@ -403,9 +437,9 @@ coral sandbox run --image alpine:3.20 --timeout 5 --memory 64 --json -- \
             <thead>
               <tr>
                 <th scope="col" data-i18n="bench.colFeature">คุณสมบัติ / ตัวชี้วัด</th>
-                <th scope="col" data-i18n="bench.colCoral">Coral v2.0 (Rust)</th>
-                <th scope="col" data-i18n="bench.colRunc">runc (Go)</th>
-                <th scope="col" data-i18n="bench.colDocker">Docker Engine</th>
+                <th scope="col" data-i18n="bench.colCoral">Coral v2.3.0 (Rust)</th>
+                <th scope="col" data-i18n="bench.colRunc">Coral Daemon (CRI v1)</th>
+                <th scope="col" data-i18n="bench.colDocker">Docker 29.10 / 29.9.3</th>
               </tr>
             </thead>
             <tbody>
@@ -604,8 +638,9 @@ coral sandbox run --image alpine:3.20 --timeout 5 --memory 64 --json -- \
 
   <footer class="site-footer">
     <div class="footer-inner">
-      <span data-i18n="footer.copy">Coral Container Project v2.0.0 · Open-Source ภายใต้ Apache License 2.0</span>
+      <span data-i18n="footer.copy">Coral Container Project v2.3.0 · Open-Source ภายใต้ Apache License 2.0</span>
       <div class="footer-links">
+        <a href="https://github.com/seashyne/Coral-Container-Project/blob/main/coral_repo/docs/REPORT_v2.3.md" target="_blank" rel="noopener" data-i18n="footer.reportLink">รายงานสรุป (REPORT_v2.3.md)</a>
         <a href="https://github.com/seashyne/Coral-Container-Project/blob/main/coral_repo/docs/MANUAL.md" target="_blank" rel="noopener" data-i18n="footer.docsLink">คู่มือฉบับเต็ม (MANUAL.md)</a>
         <a href="https://github.com/seashyne/Coral-Container-Project/blob/main/coral_repo/docs/ROADMAP.md" target="_blank" rel="noopener" data-i18n="footer.roadmapLink">Roadmap</a>
         <a href="https://github.com/seashyne/Coral-Container-Project/issues" target="_blank" rel="noopener" data-i18n="footer.issuesLink">แจ้งบั๊ก / ขอฟีเจอร์</a>

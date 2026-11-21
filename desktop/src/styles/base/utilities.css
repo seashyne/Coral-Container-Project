@@ -1,0 +1,118 @@
+/* ==========================================================================
+   Base Utility Classes (replaces inline styles in markup)
+   ========================================================================== */
+
+.hidden,
+[hidden]:not([hidden="until-found"]) {
+  display: none !important;
+}
+
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.mono {
+  font: var(--fs-mono) var(--mono-font);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: var(--fs-small);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.col-span-full {
+  grid-column: 1 / -1;
+}
+
+.stack-sm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.stack-md {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.row-inline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+}
+
+.row-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.flex-1 {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.w-auto {
+  inline-size: auto;
+}
+
+.mr-auto {
+  margin-inline-end: auto;
+}
+
+.mt-0 {
+  margin-block-start: 0;
+}
+
+.mt-sm {
+  margin-block-start: var(--space-2-5);
+}
+
+.mt-md {
+  margin-block-start: var(--space-3);
+}
+
+.mt-lg {
+  margin-block-start: var(--space-4);
+}
+
+.mb-sm {
+  margin-block-end: var(--space-2-5);
+}
+
+.mb-md {
+  margin-block-end: var(--space-3);
+}
+
+.mb-lg {
+  margin-block-end: var(--space-4);
+}
+
+.divider-line {
+  border: none;
+  border-block-start: 1px solid var(--line);
+  margin-block: var(--space-3-5);
+}
+
+.nowrap-scroll {
+  flex: 1;
+  overflow-x: auto;
+  white-space: nowrap;
+}

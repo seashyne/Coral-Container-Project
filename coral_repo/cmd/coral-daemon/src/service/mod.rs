@@ -22,11 +22,14 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use streaming::CriStreamServer;
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 use tracing::warn;
+
+/// How long the `images_dir` size walk behind `ImageFsInfo` is considered fresh.
+const IMAGES_SIZE_CACHE_TTL: std::time::Duration = std::time::Duration::from_secs(10);
 
 /// Configuration for `CoralDaemonService`.
 #[derive(Debug, Clone)]
@@ -84,6 +87,8 @@ pub(crate) struct DaemonStore {
     pub pod_cidr: Option<String>,
     pub auto_gc_runs: u64,
     pub auto_gc_bytes_reclaimed: u64,
+    /// Orphaned pod sandboxes reaped by background Auto-GC since daemon start.
+    pub auto_gc_pods_reaped: u64,
 }
 
 impl DaemonStore {
@@ -159,7 +164,31 @@ pub struct CoralDaemonService {
     pub(crate) cni: Arc<CniPluginChain>,
     pub(crate) stream_server: Arc<CriStreamServer>,
     pub(crate) log_policy: Arc<std::sync::RwLock<supervisor::LogRotationPolicy>>,
+    /// Short-lived cache for the recursive `images_dir` size walk behind `ImageFsInfo` and
+    /// `system df`. Kubelet polls `ImageFsInfo` on a fixed cadence, and the walk is O(inodes)
+    /// over every image rootfs, so it must not run per request.
+    pub(crate) images_size_cache: Arc<std::sync::Mutex<Option<(std::time::Instant, u64)>>>,
+    /// Auto-GC interval requested via [`Self::with_auto_gc`] (`0` = disabled).
+    ///
+    /// [`Self::new`] returns before the CRI listeners are bound, so starting the timer there
+    /// would let the very first pass land while kubelet is still doing its initial
+    /// `Version`/`Status` handshake. `main` therefore calls [`Self::start_auto_gc`] once the
+    /// listeners are up; the requested interval is parked here in the meantime.
+    pub(crate) auto_gc_interval_secs: Arc<AtomicU64>,
+    /// One-shot guard so Boot Auto-Resume runs at most once per daemon instance.
+    pub(crate) boot_auto_resume_started: Arc<AtomicBool>,
+    /// One-shot guard so the background Auto-GC loop starts at most once per daemon instance.
+    pub(crate) auto_gc_started: Arc<AtomicBool>,
 }
+
+/// Delay before the in-process fallback kicks in Boot Auto-Resume / Auto-GC.
+///
+/// The `coral-daemon` binary triggers both explicitly once its CRI listeners are bound
+/// (see `main`), so this fallback never fires there. It exists for embedders that build
+/// [`CoralDaemonService`] in-process and serve it from their own gRPC server: without it
+/// such a daemon would silently never resume `--restart always|unless-stopped` containers
+/// and never reclaim stale state.
+const INPROCESS_STARTUP_GRACE: std::time::Duration = std::time::Duration::from_millis(300);
 
 impl CoralDaemonService {
     pub fn new(cfg: CoralDaemonConfig) -> Self {
@@ -210,8 +239,24 @@ impl CoralDaemonService {
             log_policy: Arc::new(std::sync::RwLock::new(
                 supervisor::LogRotationPolicy::default(),
             )),
+            images_size_cache: Arc::new(std::sync::Mutex::new(None)),
+            auto_gc_interval_secs: Arc::new(AtomicU64::new(0)),
+            boot_auto_resume_started: Arc::new(AtomicBool::new(false)),
+            auto_gc_started: Arc::new(AtomicBool::new(false)),
         };
-        svc.spawn_boot_auto_resume();
+        // Boot Auto-Resume and Auto-GC are normally started by `main` once the CRI listeners
+        // are bound (see `start_boot_auto_resume`). In-process embedders that serve the
+        // service from their own gRPC server never reach that code path, so schedule a
+        // short-grace fallback here; both starts are one-shot, so an explicit call from
+        // `main` always wins and this fallback becomes a no-op.
+        if let Ok(handle) = tokio::runtime::Handle::try_current() {
+            let fallback = svc.clone();
+            handle.spawn(async move {
+                tokio::time::sleep(INPROCESS_STARTUP_GRACE).await;
+                fallback.start_boot_auto_resume();
+                fallback.start_auto_gc();
+            });
+        }
         svc
     }
 
@@ -220,6 +265,20 @@ impl CoralDaemonService {
     pub fn with_cni(mut self, conf_dir: impl Into<PathBuf>, bin_dir: impl Into<PathBuf>) -> Self {
         self.cni = Arc::new(CniPluginChain::new(conf_dir, bin_dir));
         self
+    }
+
+    /// Starts Boot Auto-Resume for `--restart always|unless-stopped` containers.
+    ///
+    /// The `coral-daemon` binary calls this right after its CRI listeners are bound, so
+    /// kubelet's first `Status`/`ListPodSandbox` is answered immediately instead of waiting
+    /// behind the resume replay. In-process embedders may call it at any time; the
+    /// one-shot guard makes repeated calls (e.g. the in-process fallback scheduled by
+    /// [`Self::new`]) harmless.
+    pub fn start_boot_auto_resume(&self) {
+        if self.boot_auto_resume_started.swap(true, Ordering::SeqCst) {
+            return;
+        }
+        self.spawn_boot_auto_resume();
     }
 
     /// Configures container log rotation limits (`max_size_bytes == 0` disables rotation).
@@ -233,10 +292,29 @@ impl CoralDaemonService {
         self
     }
 
-    /// Enables periodic background Auto-GC (`interval_secs == 0` disables).
+    /// Requests periodic background Auto-GC (`interval_secs == 0` disables).
+    ///
+    /// Only records the interval; the loop itself does not start until
+    /// [`Self::start_auto_gc`] is called, so the first sweep cannot land before the CRI
+    /// listeners are bound.
     pub fn with_auto_gc(self, interval_secs: u64) -> Self {
-        self.spawn_auto_gc_loop(interval_secs);
+        self.auto_gc_interval_secs
+            .store(interval_secs, Ordering::Relaxed);
         self
+    }
+
+    /// Starts the background Auto-GC loop if [`Self::with_auto_gc`] requested one.
+    ///
+    /// Called by `main` after the listeners are bound. Kept out of the synchronous part of
+    /// [`Self::new`] for the same reason as [`Self::start_boot_auto_resume`]: the first pass
+    /// walks `images_dir`, `exec-bundles/`, and every sandbox, which must not compete with
+    /// kubelet's initial `ListPodSandbox`/`Status` calls. The one-shot guard keeps repeated
+    /// calls (e.g. the in-process fallback scheduled by [`Self::new`]) harmless.
+    pub fn start_auto_gc(&self) {
+        let interval_secs = self.auto_gc_interval_secs.load(Ordering::Relaxed);
+        if interval_secs > 0 && !self.auto_gc_started.swap(true, Ordering::SeqCst) {
+            self.spawn_auto_gc_loop(interval_secs);
+        }
     }
 
     pub(crate) fn current_log_policy(&self) -> supervisor::LogRotationPolicy {
@@ -256,6 +334,34 @@ impl CoralDaemonService {
 
     pub(crate) fn runtime_root(&self) -> PathBuf {
         self.cfg.state_dir.join("runtime-state")
+    }
+
+    /// Returns the total size of `images_dir` (hardlink-deduplicated), caching the O(inodes)
+    /// walk for [`IMAGES_SIZE_CACHE_TTL`].
+    ///
+    /// `ImageFsInfo` is on kubelet's polling path and `system df` is interactive; both previously
+    /// rescanned every image rootfs per call, which on a host with several images dominated
+    /// request latency. The cache is invalidated explicitly after pull/remove via
+    /// [`Self::invalidate_images_size_cache`].
+    pub(crate) fn cached_images_dir_size(&self) -> u64 {
+        if let Ok(guard) = self.images_size_cache.lock()
+            && let Some((at, bytes)) = *guard
+            && at.elapsed() < IMAGES_SIZE_CACHE_TTL
+        {
+            return bytes;
+        }
+        let bytes = images::dir_size(&self.images_dir);
+        if let Ok(mut guard) = self.images_size_cache.lock() {
+            *guard = Some((std::time::Instant::now(), bytes));
+        }
+        bytes
+    }
+
+    /// Drops the cached `images_dir` size after a pull, build, commit, or image removal.
+    pub(crate) fn invalidate_images_size_cache(&self) {
+        if let Ok(mut guard) = self.images_size_cache.lock() {
+            *guard = None;
+        }
     }
 
     pub(crate) fn persist_images(&self, images: &[StoredImage]) {

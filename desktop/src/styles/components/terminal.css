@@ -1,0 +1,109 @@
+/* ==========================================================================
+   Terminal & Console Output Surfaces
+   Locked to `color-scheme: dark` per component-specific-light-dark-theme.
+   ========================================================================== */
+
+.console {
+  color-scheme: dark;
+  accent-color: var(--accent-dark);
+  scrollbar-color: #3b4452 #0a0e12;
+  flex: 1;
+  margin: 0;
+  padding: 14px 18px;
+  overflow: auto;
+  background: var(--console-bg);
+  color: var(--console-text);
+  border: 1px solid var(--raw-console-border);
+  font: var(--fs-mono) / var(--leading-relaxed) var(--mono-font);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.console.compact {
+  max-block-size: 110px;
+  border-radius: var(--radius-md);
+}
+
+.console.preview {
+  max-block-size: 140px;
+  border-radius: var(--radius-md);
+}
+
+.console.medium {
+  max-block-size: 160px;
+  border-radius: var(--radius-md);
+}
+
+.console.tall {
+  max-block-size: 220px;
+  border-radius: var(--radius-md);
+}
+
+.console.diff-box {
+  max-block-size: 120px;
+  margin-block-end: var(--space-2-5);
+  border-radius: var(--radius-md);
+}
+
+.term-bar {
+  gap: 6px;
+  overflow-x: auto;
+}
+
+.term-hint {
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.term-console {
+  flex: 1;
+  min-block-size: 0;
+  font-size: var(--fs-mono);
+  outline: none;
+  border: 0;
+}
+
+.term-console:focus {
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--moss) 55%, transparent);
+}
+
+.exec-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 12px 18px;
+  border-block-end: 1px solid var(--line);
+}
+
+.exec-row .prompt {
+  color: var(--moss);
+  font: 600 var(--fs) var(--mono-font);
+}
+
+.exec-row input {
+  flex: 1;
+  min-inline-size: 0;
+  block-size: 30px;
+  padding-inline: 10px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  font: var(--fs-mono) var(--mono-font);
+  outline: none;
+  user-select: text;
+}
+
+.exec-row input:focus {
+  border-color: var(--accent);
+  box-shadow: var(--input-focus-ring);
+}
+
+.term-input-row {
+  border-block-start: 1px solid var(--line);
+  border-block-end: 0;
+  background: var(--panel);
+}

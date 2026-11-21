@@ -1,0 +1,314 @@
+/* ==========================================================================
+   Buttons, Filter Chips, Bulk Bar & Port Chips
+   ========================================================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  block-size: var(--btn-height);
+  padding-inline: 14px;
+  border-radius: var(--btn-radius);
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  font: 500 var(--fs) var(--ui-font);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--duration-fast), border-color var(--duration-fast), color var(--duration-fast);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--btn-hover-bg);
+  border-color: var(--faint);
+}
+
+.btn:active:not(:disabled) {
+  background: var(--btn-active-bg);
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--input-focus-ring);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--raw-on-accent);
+}
+
+.btn.primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.btn.primary:active:not(:disabled) {
+  background: var(--accent-active);
+  border-color: var(--accent-active);
+}
+
+.btn.primary > svg {
+  stroke: var(--raw-on-accent);
+}
+
+.btn.danger {
+  color: var(--red-text);
+}
+
+.btn.danger:hover:not(:disabled) {
+  background: var(--danger-soft-bg);
+  border-color: var(--danger-soft-border);
+}
+
+.btn.sm {
+  block-size: var(--btn-sm-height);
+  padding-inline: 10px;
+  font-size: var(--fs);
+  border-radius: var(--btn-sm-radius);
+}
+
+.btn.full {
+  inline-size: 100%;
+}
+
+.btn.quiet {
+  border-color: transparent;
+  background: none;
+  color: var(--muted);
+}
+
+.btn.quiet:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--raised);
+  border-color: var(--line);
+}
+
+.btn.quiet.bad {
+  color: var(--red-text);
+}
+
+.btn.ic {
+  inline-size: 30px;
+  block-size: 30px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  color: var(--muted);
+}
+
+.btn.ic > svg {
+  inline-size: 15px;
+  block-size: 15px;
+}
+
+.btn.ic:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.btn.ic.go {
+  color: var(--moss);
+}
+
+.btn.ic.halt {
+  color: var(--sun-text);
+}
+
+.btn.ic.danger {
+  color: var(--red-text);
+}
+
+.btn.ic.go:hover:not(:disabled) {
+  color: var(--moss);
+  border-color: color-mix(in oklab, var(--moss) 32%, var(--line));
+}
+
+.btn.ic.halt:hover:not(:disabled) {
+  color: var(--sun-text);
+  border-color: color-mix(in oklab, var(--sun) 32%, var(--line));
+}
+
+.btn.ic.danger:hover:not(:disabled) {
+  color: var(--red-text);
+  border-color: color-mix(in oklab, var(--red) 32%, var(--line));
+}
+
+.btn > svg {
+  inline-size: 14px;
+  block-size: 14px;
+  flex: none;
+}
+
+/* Filter Chips */
+.ltabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ltab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  block-size: 28px;
+  padding-inline: 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted);
+  font: 500 var(--fs) var(--ui-font);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--duration-fast), color var(--duration-fast), border-color var(--duration-fast);
+}
+
+.ltab:hover {
+  color: var(--text);
+  background: var(--row-hover);
+}
+
+.ltab[aria-pressed="true"] {
+  color: var(--text);
+  background: var(--accent-soft-bg);
+  border-color: var(--accent-soft-border);
+}
+
+.ltab .n {
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.ltab[aria-pressed="true"] .n {
+  color: var(--muted);
+}
+
+.ltab.bad .n {
+  color: var(--red-text);
+}
+
+.ltab i {
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: var(--radius-pill);
+  background: var(--faint);
+  flex: none;
+}
+
+.ltab i.moss {
+  background: var(--moss);
+}
+
+.ltab i.red {
+  background: var(--red);
+}
+
+/* Bulk Action Bar */
+.bulk {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.bulk .bcount {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  block-size: var(--btn-height);
+  padding-inline: 10px 6px;
+  border-radius: var(--radius-md);
+  background: var(--accent-soft-bg);
+  white-space: nowrap;
+}
+
+.bulk .bcount b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.bulk .bcount .x {
+  inline-size: 22px;
+  block-size: 22px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.bulk .bcount .x:hover {
+  color: var(--text);
+  background: color-mix(in oklab, var(--text) 10%, transparent);
+}
+
+.bulk .bcount .x > svg {
+  inline-size: 13px;
+  block-size: 13px;
+}
+
+/* Clickable Port Chips */
+.port-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklab, var(--accent) 12%, var(--panel));
+  border: 1px solid color-mix(in oklab, var(--accent) 38%, var(--line));
+  color: var(--accent-text);
+  font: 500 var(--fs-small) var(--mono-font);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--duration-fast), border-color var(--duration-fast), color var(--duration-fast);
+}
+
+.port-chip:hover {
+  background: color-mix(in oklab, var(--accent) 22%, var(--panel));
+  border-color: var(--accent);
+  color: var(--raw-on-accent);
+}
+
+.port-chip > svg {
+  inline-size: 12px;
+  block-size: 12px;
+  opacity: 0.75;
+}
+
+.port-chip.static {
+  background: var(--raised);
+  border-color: var(--line);
+  color: var(--muted);
+  cursor: default;
+}
+
+/* Quick Chips */
+.quick-chips {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.chip-btn {
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  font: var(--fs-small) var(--mono-font);
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chip-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}

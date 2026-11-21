@@ -1,0 +1,56 @@
+/* ==========================================================================
+   Scoped Element Reset (avoids global `*` selector per modern CSS guidance)
+   ========================================================================== */
+
+html,
+body,
+main,
+aside,
+header,
+footer,
+nav,
+section,
+article,
+div,
+span,
+p,
+h1,
+h2,
+h3,
+h4,
+ul,
+ol,
+li,
+dl,
+dt,
+dd,
+form,
+fieldset,
+label,
+input,
+select,
+textarea,
+button,
+table,
+thead,
+tbody,
+tr,
+th,
+td,
+pre,
+code,
+dialog,
+details,
+summary {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+html,
+body {
+  block-size: 100%;
+}
+
+svg {
+  display: block;
+}

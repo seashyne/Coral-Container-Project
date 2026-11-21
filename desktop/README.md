@@ -69,19 +69,35 @@ CI (`.github/workflows/desktop.yml`) builds both platforms on every push.
 ## Architecture
 
 ```text
-src-tauri/src/
-├── lib.rs            # Tauri builder, command registration, daemon cleanup on exit
-├── settings.rs       # persisted connection settings (local / wsl2 / remote)
-├── daemon.rs         # daemon lifecycle: probe → spawn (local/WSL2) → wait ready
-└── cri/              # CRI v1 gRPC client commands:
-    ├── mod.rs        # connection state & settings
-    ├── containers.rs # container lifecycle, logs, metrics, diff/commit, exec
-    ├── pods.rs       # pod sandboxes
-    ├── images.rs     # pull, build, tag, save/load, push
-    ├── compose.rs    # compose up/down
-    ├── system.rs     # df, prune, volumes, networks, registry login/logout
-    ├── pty.rs        # full-duplex streaming PTY terminal (ExecStream gRPC)
-    └── nextgen.rs    # v2.0 KVM MicroVM probe, WASI Wasm & AI Sandbox
+desktop/
+├── src/
+│   ├── index.html             # Semantic HTML shell (zero inline styles/handlers)
+│   ├── styles/
+│   │   ├── main.css           # @layer tokens, reset, base, layout, components, views
+│   │   ├── tokens/            # 3-tier CSS Design Tokens (primitives, semantic, components)
+│   │   ├── base/              # Scoped element reset & layout utilities
+│   │   ├── layout/            # Shell grid, topbar, sidebar rail, responsive rules
+│   │   ├── components/        # Buttons, forms, tables, cards, badges, dialogs, drawer, terminal
+│   │   └── views/             # View-specific layout styles
+│   └── scripts/
+│       ├── core/              # theme-init.js, state.js, theme.js, i18n.js
+│       ├── locales/           # Bilingual EN/TH dictionaries (en.js, th.js)
+│       ├── data/              # icons.js, catalog.js
+│       ├── features/          # connection, containers, terminal, images, volumes, pods, nextgen, settings
+│       └── app.js             # Event bindings & startup bootstrap
+└── src-tauri/src/
+    ├── lib.rs                 # Tauri builder, command registration, daemon cleanup on exit
+    ├── settings.rs            # persisted connection settings (local / wsl2 / remote)
+    ├── daemon.rs              # daemon lifecycle: probe → spawn (local/WSL2) → wait ready
+    └── cri/                   # CRI v1 gRPC client commands:
+        ├── mod.rs             # connection state & settings
+        ├── containers.rs      # container lifecycle, logs, metrics, diff/commit, exec
+        ├── pods.rs            # pod sandboxes
+        ├── images.rs          # pull, build, tag, save/load, push
+        ├── compose.rs         # compose up/down
+        ├── system.rs          # df, prune, volumes, networks, registry login/logout
+        ├── pty.rs             # full-duplex streaming PTY terminal (ExecStream gRPC)
+        └── nextgen.rs         # v2.0 KVM MicroVM probe, WASI Wasm & AI Sandbox
 ```
 
 The backend depends only on `coral-api` (pure prost/tonic bindings), so it compiles on Windows even though the runtime crates are Linux-only.

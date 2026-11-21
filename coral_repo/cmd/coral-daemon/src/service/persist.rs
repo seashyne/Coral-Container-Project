@@ -113,6 +113,17 @@ pub(crate) fn load_persisted_store(state_dir: &Path, runtime_root: &Path, store:
     }
 
     let rt_store = StateStore::new(runtime_root);
+    // Two cheap syscalls per container used to sit on the daemon's start-up critical path.
+    // Hoist the runtime-state directory listing: a container whose state dir is absent cannot
+    // have a live PID, so the `kill(pid, 0)` + `/proc/<pid>/stat` probe is skipped entirely.
+    let known_state_dirs: std::collections::HashSet<String> = fs::read_dir(runtime_root)
+        .map(|rd| {
+            rd.flatten()
+                .filter_map(|e| e.file_name().to_str().map(ToOwned::to_owned))
+                .collect()
+        })
+        .unwrap_or_default();
+
     for ctr in persisted.containers {
         if !ctr.bundle_dir.is_dir() {
             continue;
@@ -121,11 +132,12 @@ pub(crate) fn load_persisted_store(state_dir: &Path, runtime_root: &Path, store:
             CriContainerState::try_from(ctr.state).unwrap_or(CriContainerState::ContainerExited);
         let mut reason = ctr.reason;
         if state == CriContainerState::ContainerRunning {
-            let alive = rt_store
-                .load(&ctr.id)
-                .ok()
-                .and_then(|st| st.pid)
-                .is_some_and(is_process_alive);
+            let alive = known_state_dirs.contains(&ctr.id)
+                && rt_store
+                    .load(&ctr.id)
+                    .ok()
+                    .and_then(|st| st.pid)
+                    .is_some_and(is_process_alive);
             if !alive {
                 state = CriContainerState::ContainerExited;
                 if reason.is_empty() {

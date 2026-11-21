@@ -1,0 +1,252 @@
+/* ==========================================================================
+   Panels, Monogram Tiles, Metric Cards, Sparklines & Base Catalog Cards
+   ========================================================================== */
+
+.panel {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  padding: var(--card-padding);
+  max-inline-size: 760px;
+}
+
+.panel h3 {
+  font-size: var(--fs-head);
+  font-weight: 650;
+  margin-block-end: 14px;
+}
+
+.tile {
+  inline-size: 30px;
+  block-size: 30px;
+  border-radius: var(--radius-md);
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: var(--raised);
+  color: var(--faint);
+  box-shadow: inset 0 0 0 1px var(--line);
+  font-weight: 700;
+  font-size: var(--fs-head);
+}
+
+.tile > svg {
+  inline-size: 18px;
+  block-size: 18px;
+}
+
+.tile.cmp {
+  color: var(--accent-text);
+  background: color-mix(in oklab, var(--accent) 12%, var(--raised));
+}
+
+.tile.distro-alpine {
+  color: var(--distro-alpine-fg);
+  background: color-mix(in oklab, var(--distro-alpine-fg) 14%, transparent);
+}
+
+.tile.distro-debian {
+  color: var(--distro-debian-fg);
+  background: color-mix(in oklab, var(--distro-debian-fg) 14%, transparent);
+}
+
+.tile.distro-ubuntu {
+  color: var(--distro-ubuntu-fg);
+  background: color-mix(in oklab, var(--distro-ubuntu-fg) 14%, transparent);
+}
+
+.tile.distro-busybox {
+  color: var(--distro-busybox-fg);
+  background: color-mix(in oklab, var(--distro-busybox-fg) 14%, transparent);
+}
+
+.tile.distro-rocky {
+  color: var(--distro-rocky-fg);
+  background: color-mix(in oklab, var(--distro-rocky-fg) 14%, transparent);
+}
+
+.tile.distro-ubi {
+  color: var(--distro-ubi-fg);
+  background: color-mix(in oklab, var(--distro-ubi-fg) 14%, transparent);
+}
+
+.tile.distro-scratch {
+  color: var(--muted);
+  background: var(--raised);
+}
+
+/* Metrics & Sparkline Cards */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2-5);
+}
+
+.metric-card {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.metric-card .mk {
+  font-size: var(--fs-small);
+  color: var(--faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.metric-card .mv {
+  font: 600 var(--text-lg) var(--mono-font);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-card .ms {
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.spark-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2-5);
+}
+
+.spark-card {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.spark-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.spark-wrap {
+  block-size: 54px;
+  inline-size: 100%;
+}
+
+.spark-wrap svg {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+/* Base Catalog Card (Subgrid alignment) */
+.base-card {
+  container-type: inline-size;
+  grid-row: span 3;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  grid-template-rows: subgrid;
+  row-gap: var(--space-2-5);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  padding: 14px;
+  min-inline-size: 0;
+  transition: border-color var(--duration-fast), background-color var(--duration-fast);
+}
+
+.base-card:hover {
+  border-color: color-mix(in oklab, var(--text) 20%, var(--line));
+}
+
+.base-card.installed {
+  border-color: var(--success-soft-border);
+}
+
+.base-card > header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2-5);
+  min-inline-size: 0;
+}
+
+.base-card .tile {
+  flex: none;
+  font-size: var(--text-xs);
+  letter-spacing: -0.02em;
+}
+
+.base-head-text {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.base-head-top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.base-card h3,
+.base-card h4 {
+  font-size: var(--text-base);
+  font-weight: 650;
+  color: var(--text);
+}
+
+.base-ref {
+  display: block;
+  color: var(--faint);
+  font: var(--fs-small) var(--mono-font);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-block-start: 2px;
+}
+
+.base-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2-5);
+  min-inline-size: 0;
+}
+
+.base-desc {
+  color: var(--muted);
+  font-size: var(--fs);
+  line-height: 1.45;
+}
+
+.base-specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.base-card > footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-block-start: var(--space-2-5);
+  border-block-start: 1px solid var(--line);
+}
+
+.base-size-meta {
+  margin-inline-end: auto;
+  font-size: var(--fs-small);
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+@container (inline-size < 250px) {
+  .base-card > footer {
+    flex-wrap: wrap;
+  }
+}

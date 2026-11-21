@@ -1,0 +1,35 @@
+/* ---------- Mobile / Tablet Responsiveness ---------- */
+@media (max-width: 960px) {
+  .page-shell {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .sidebar {
+    position: static;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+
+  .toc-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-inline-start: 0;
+    gap: 6px;
+  }
+
+  .toc-nav a {
+    margin-inline-start: 0;
+    border-inline-start: 0;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 0.82rem;
+  }
+
+  .toc-nav a:is(:target-current, .target-current) {
+    border-color: var(--brand);
+  }
+}

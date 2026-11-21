@@ -133,7 +133,7 @@ impl StateStore {
     pub fn remove(&self, id: &str) -> Result<(), RuntimeError> {
         validate_container_id(id)?;
         let dir = self.container_dir(id);
-        match fs::remove_dir_all(&dir) {
+        match crate::multi_uid::remove_dir_all_rootless_safe(&dir) {
             Ok(()) => Ok(()),
             Err(e) if e.kind() == io::ErrorKind::NotFound => Err(RuntimeError::NotFound(id.into())),
             Err(e) => Err(RuntimeError::sys("remove container state dir", e)),

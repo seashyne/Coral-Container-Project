@@ -11,24 +11,28 @@ path = "src/lib.rs"
 
 [[test]]
 name = "oci_e2e"
-path = "oci_e2e.rs"
+path = "oci_e2e/main.rs"
 
 [[test]]
 name = "oci_features_e2e"
-path = "oci_features_e2e.rs"
+path = "oci_features_e2e/main.rs"
 
 [[test]]
 name = "cri_e2e"
-path = "cri_e2e.rs"
+path = "cri_e2e/main.rs"
 
 [[test]]
 name = "security_fuzz_e2e"
 path = "security_fuzz_e2e.rs"
 
+[[test]]
+name = "real_image_e2e"
+path = "real_image_e2e/main.rs"
+
 [dev-dependencies]
 coral-api.workspace = true
 coral-cgroups.workspace = true
-coral-daemon = { path = "../cmd/coral-daemon" }
+coral-daemon = { path = "../cmd/coral-daemon", features = ["test-helpers"] }
 coral-net.workspace = true
 coral-oci.workspace = true
 coral-runtime.workspace = true

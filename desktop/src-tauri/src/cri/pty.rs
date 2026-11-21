@@ -5,7 +5,7 @@ use super::{AppState, err};
 use coral_api::ExecStreamRequest;
 use serde::Serialize;
 use std::sync::atomic::{AtomicU64, Ordering};
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 
@@ -80,6 +80,12 @@ pub async fn pty_open(
                 break;
             }
         }
+        app_clone
+            .state::<AppState>()
+            .pty_sessions
+            .lock()
+            .await
+            .remove(&sid);
         let _ = app_clone.emit(
             "pty-exit",
             PtyExitEvent {

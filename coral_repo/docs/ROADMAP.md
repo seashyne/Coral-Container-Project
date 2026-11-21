@@ -58,3 +58,13 @@
 | **5.2 Kubernetes CRI v1 CNI Plugin Chain & Streaming** | `coral-net` / `coral-daemon` | รัน CNI plugin chain (`/etc/cni/net.d/*.conflist`, `/opt/cni/bin/*`) พร้อม reverse-DEL rollback, Streaming HTTP/SPDY (`Exec`, `Attach`, `PortForward`), `ContainerStats` และ `ImageFsInfo` | Done |
 | **5.3 Real-World Image Config, Log Rotation, Auto-GC & Shell Completion** | `coral-daemon` / `coral-runtime` / `coral-cli` | สืบทอด `ENTRYPOINT`/`CMD`/`ENV`/`WORKDIR`/`USER`, single-UID non-root UserNS remap (`nginx`/`redis`/`postgres`), `SIGTERM` guard, Log Rotation (`--log-max-size-mb`), Background Auto-GC, และ `coral completion` | Done |
 | **5.4 Prometheus `/metrics`, Fuzzing & Coral Desktop macOS `.dmg`** | `coral-daemon` / `fuzz/` / `desktop` | HTTP `/metrics` & `/healthz`, `cargo-fuzz` targets (`oci_spec`, `tar_extract`, `wasm_http_cgi`, `virtio_ring`), UI ใหม่สำหรับ Sign/Verify/SBOM + KVM Boot, และ macOS `.dmg` CI | Done |
+
+---
+
+## Phase 6: Docker-Parity Ergonomics, Desktop UX/UI Overhaul & Verified Comparison (`v2.3.0`) — Completed
+| Milestone | Component | Details | Status |
+| :--- | :--- | :--- | :--- |
+| **6.1 Docker-Compatible `coral run` CLI** | `coral-cli` (`units.rs`, `run_resolve.rs`) | รองรับ positional `<IMAGE> [CMD...]`, human-readable memory (`-m 4G`/`512m`), `--pids-limit`, `--pull missing\|always\|never` และ `-d` route เข้า daemon อัตโนมัติ | Done |
+| **6.2 Modular Token CSS & Bilingual EN/TH UI** | `desktop/src` | จัดโครงสร้าง Design Token CSS 3 ชั้น (`primitives`, `semantic`, `components`), แยก JS เป็นโมดูล พร้อมพจนานุกรม EN/TH ครบ 468 คีย์ | Done |
+| **6.3 Topbar Theme Popover & Easier Workflow** | `desktop` | ปุ่ม Theme Popover บน Topbar (Auto/Light/Dark + 5 ชุดสี Coral/Ocean/Emerald/Indigo/Amber + Density + EN/TH), Quick Fill presets (รวม Minecraft PaperMC), optional Container Name, Inline Discover Quick Pull, และแก้ GUI `$PATH` / View Stacking / PTY cleanup bugs | Done |
+| **6.4 Verified Same-Machine Docker Benchmark & Report** | `docs/`, `coral_repo/docs/` | วัดผลจริงบนเครื่องเดียวกันระหว่าง `Coral v2.3.0` กับ `Docker 29.10.0 / 29.9.3` (Coral เร็วกว่า 7.3×–11.2× P50), สร้างรูปคู่มือ + กราฟเปรียบเทียบ และเขียนรายงาน `REPORT_v2.3.md` | Done |

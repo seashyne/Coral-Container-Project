@@ -94,7 +94,7 @@ pub fn remove_named_volume(volumes_dir: &Path, name: &str) -> Result<(), Runtime
     if !dir.exists() {
         return Err(RuntimeError::NotFound(format!("volume '{name}'")));
     }
-    fs::remove_dir_all(&dir)
+    crate::multi_uid::remove_dir_all_rootless_safe(&dir)
         .map_err(|e| RuntimeError::sys(format!("remove volume '{name}'"), e))
 }
 

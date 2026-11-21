@@ -4,9 +4,7 @@
 use crate::catalog;
 use crate::port_proxy::ForkedPortProxies;
 use anyhow::{Context, Result};
-use coral_daemon::images::{
-    self, OciImageConfig, merge_env_vars, resolve_entrypoint_and_cmd,
-};
+use coral_daemon::images::{self, OciImageConfig, merge_env_vars, resolve_entrypoint_and_cmd};
 use coral_oci::{
     LinuxCpu, LinuxMemory, LinuxNamespace, LinuxNamespaceType, LinuxPids, LinuxResources, OciSpec,
 };
@@ -99,9 +97,7 @@ pub fn run_from_image_local(
     if let Some(r) = spec.root.as_mut() {
         r.path = rootfs_path.to_string_lossy().into_owned();
     }
-    let hostname = args
-        .hostname
-        .unwrap_or_else(|| args.container_id.clone());
+    let hostname = args.hostname.unwrap_or_else(|| args.container_id.clone());
     spec.hostname = Some(hostname.clone());
 
     if !args.no_overlay {
@@ -167,9 +163,7 @@ pub fn run_from_image_local(
         .map(str::trim)
         .filter(|s| !s.is_empty())
         .map(ToOwned::to_owned)
-        .or_else(|| {
-            (!img_cfg.user.trim().is_empty()).then(|| img_cfg.user.clone())
-        });
+        .or_else(|| (!img_cfg.user.trim().is_empty()).then(|| img_cfg.user.clone()));
     if let Some(u) = effective_user {
         spec.annotations.insert("coral.user".into(), u);
     }
@@ -222,12 +216,8 @@ pub fn run_from_image_local(
         linux.resources = Some(res);
     }
 
-    let _proxies = ForkedPortProxies::start(
-        &args.ports,
-        is_bridge_net,
-        state_root,
-        &args.container_id,
-    )?;
+    let _proxies =
+        ForkedPortProxies::start(&args.ports, is_bridge_net, state_root, &args.container_id)?;
 
     spec.to_file(bundle_dir.join("config.json"))
         .context("write temporary OCI config.json")?;

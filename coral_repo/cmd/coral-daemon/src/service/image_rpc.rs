@@ -75,6 +75,17 @@ impl ImageService for CoralDaemonService {
                 .annotations
                 .get("coral.no_cache")
                 .is_some_and(|v| v == "true" || v == "1");
+            let target = spec
+                .annotations
+                .get("coral.build.target")
+                .map(String::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty());
+            let build_args: Vec<String> = spec
+                .annotations
+                .get("coral.build.args")
+                .map(|raw| raw.lines().map(ToOwned::to_owned).collect())
+                .unwrap_or_default();
             let stored = crate::builder::build_image(crate::builder::BuildOptions {
                 tag: &image_name,
                 dockerfile_content: dockerfile,
@@ -83,6 +94,8 @@ impl ImageService for CoralDaemonService {
                 state_dir: &self.cfg.state_dir,
                 coral_bin: &self.cfg.coral_bin,
                 no_cache,
+                target,
+                build_args: &build_args,
             })
             .await
             .map_err(|e| Status::internal(format!("build image '{image_name}': {e:#}")))?;
@@ -95,6 +108,7 @@ impl ImageService for CoralDaemonService {
                 self.cleanup_unused_managed_dir(&store.images, &old_path);
             }
             self.persist_images(&store.images);
+            self.invalidate_images_size_cache();
             return Ok(Response::new(PullImageResponse { image_ref }));
         }
 
@@ -139,6 +153,7 @@ impl ImageService for CoralDaemonService {
                 self.cleanup_unused_managed_dir(&store.images, &old_path);
             }
             self.persist_images(&store.images);
+            self.invalidate_images_size_cache();
             return Ok(Response::new(PullImageResponse { image_ref }));
         }
 
@@ -193,6 +208,7 @@ impl ImageService for CoralDaemonService {
                 self.cleanup_unused_managed_dir(&store.images, &old_path);
             }
             self.persist_images(&store.images);
+            self.invalidate_images_size_cache();
             return Ok(Response::new(PullImageResponse { image_ref: id }));
         }
 
@@ -210,7 +226,17 @@ impl ImageService for CoralDaemonService {
                 .map_err(|e| Status::not_found(format!("{e:#}")))?
         } else {
             // 2. Online OCI Registry v2 pull (or empty `scratch` base image).
-            images::pull_image(&image_name, &self.images_dir)
+            //    `coral.progress_id` opts into live progress reporting for `coral pull`.
+            let reporter = spec
+                .annotations
+                .get("coral.progress_id")
+                .map(String::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(|id| {
+                    images::PullProgressReporter::new(&self.cfg.state_dir, id, &image_name)
+                });
+            images::pull_image(&image_name, &self.images_dir, reporter)
                 .await
                 .map_err(|e| Status::internal(format!("pull image '{image_name}': {e:#}")))?
         };
@@ -222,6 +248,7 @@ impl ImageService for CoralDaemonService {
             self.cleanup_unused_managed_dir(&store.images, &old_path);
         }
         self.persist_images(&store.images);
+        self.invalidate_images_size_cache();
 
         Ok(Response::new(PullImageResponse { image_ref }))
     }
@@ -242,6 +269,7 @@ impl ImageService for CoralDaemonService {
             self.cleanup_unused_managed_dir(&store.images, &path);
         }
         self.persist_images(&store.images);
+        self.invalidate_images_size_cache();
 
         Ok(Response::new(RemoveImageResponse {}))
     }
@@ -251,7 +279,8 @@ impl ImageService for CoralDaemonService {
         _request: Request<coral_api::ImageFsInfoRequest>,
     ) -> Result<Response<coral_api::ImageFsInfoResponse>, Status> {
         let now = chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0);
-        let used = images::dir_size(&self.images_dir);
+        // Cached: kubelet polls this on a fixed cadence and the walk is O(inodes).
+        let used = self.cached_images_dir_size();
         Ok(Response::new(coral_api::ImageFsInfoResponse {
             image_filesystems: vec![coral_api::FilesystemUsage {
                 timestamp: now,

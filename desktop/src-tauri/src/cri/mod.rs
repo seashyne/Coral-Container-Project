@@ -43,8 +43,14 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub(crate) async fn settings(&self) -> Settings {
-        self.settings.lock().await.clone().unwrap_or_default()
+    pub(crate) async fn ensure_settings(&self, app: &AppHandle) -> Settings {
+        let mut guard = self.settings.lock().await;
+        if let Some(s) = guard.as_ref() {
+            return s.clone();
+        }
+        let loaded = settings::load(app);
+        *guard = Some(loaded.clone());
+        loaded
     }
 
     pub(crate) async fn runtime(&self) -> Result<RuntimeServiceClient<Channel>, String> {
@@ -91,11 +97,7 @@ pub struct ConnectionInfo {
 
 #[tauri::command]
 pub async fn get_settings(app: AppHandle, state: State<'_, AppState>) -> Result<Settings, String> {
-    let mut guard = state.settings.lock().await;
-    if guard.is_none() {
-        *guard = Some(settings::load(&app));
-    }
-    Ok(guard.clone().unwrap())
+    Ok(state.ensure_settings(&app).await)
 }
 
 #[tauri::command]
@@ -124,8 +126,8 @@ async fn disconnect_inner(state: &AppState) {
 }
 
 #[tauri::command]
-pub async fn connect(state: State<'_, AppState>) -> Result<ConnectionInfo, String> {
-    let settings = state.settings().await;
+pub async fn connect(app: AppHandle, state: State<'_, AppState>) -> Result<ConnectionInfo, String> {
+    let settings = state.ensure_settings(&app).await;
     disconnect_inner(&state).await;
 
     let spawned = daemon::ensure(&settings).await?;
@@ -170,9 +172,12 @@ pub async fn disconnect(state: State<'_, AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn connection_status(state: State<'_, AppState>) -> Result<ConnectionInfo, String> {
+pub async fn connection_status(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<ConnectionInfo, String> {
+    let settings = state.ensure_settings(&app).await;
     let guard = state.conn.lock().await;
-    let settings = state.settings().await;
     Ok(match guard.as_ref() {
         Some(conn) => ConnectionInfo {
             connected: true,

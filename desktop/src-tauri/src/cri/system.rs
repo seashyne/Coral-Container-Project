@@ -262,3 +262,34 @@ pub async fn remove_network(state: State<'_, AppState>, name: String) -> Result<
     .await?;
     Ok(())
 }
+
+#[tauri::command]
+pub async fn open_external_url(url: String) -> Result<(), String> {
+    let trimmed = url.trim();
+    if !(trimmed.starts_with("http://") || trimmed.starts_with("https://")) {
+        return Err("only http:// and https:// URLs can be opened".into());
+    }
+    if trimmed.chars().any(|c| c.is_control() || c.is_whitespace()) {
+        return Err("invalid whitespace or control characters in URL".into());
+    }
+    #[cfg(target_os = "linux")]
+    let mut cmd = {
+        let mut c = std::process::Command::new("xdg-open");
+        c.arg(trimmed);
+        c
+    };
+    #[cfg(target_os = "macos")]
+    let mut cmd = {
+        let mut c = std::process::Command::new("open");
+        c.arg(trimmed);
+        c
+    };
+    #[cfg(target_os = "windows")]
+    let mut cmd = {
+        let mut c = std::process::Command::new("rundll32");
+        c.args(["url.dll,FileProtocolHandler", trimmed]);
+        c
+    };
+    cmd.spawn().map_err(|e| format!("open browser: {e}"))?;
+    Ok(())
+}
