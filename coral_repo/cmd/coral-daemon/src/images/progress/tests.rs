@@ -46,6 +46,17 @@ fn reporter_writes_atomic_snapshots_and_cleans_up() {
     assert_eq!(done.layers_done, 1);
 
     rep.finish();
+    // The terminal snapshot is published before it is cleaned up, so a reader can observe it.
+    assert!(
+        rep.path().exists(),
+        "the terminal snapshot must stay readable for a short grace period"
+    );
+    let terminal: PullProgress =
+        serde_json::from_str(&fs::read_to_string(rep.path()).unwrap()).unwrap();
+    assert_eq!(terminal.phase, PullPhase::Done);
+    assert_eq!(terminal.percent, 100);
+    // `clear_stale` is what a reader (the CLI) uses to remove it right after rendering.
+    PullProgressReporter::clear_stale(dir.path(), "pull-1");
     assert!(!rep.path().exists());
 }
 

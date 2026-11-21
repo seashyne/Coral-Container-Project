@@ -6,6 +6,12 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+/// How long a terminal snapshot stays on disk before the daemon removes it.
+///
+/// The window exists so a reader can observe the final state of a pull; it is far longer
+/// than the CLI's 100 ms poll interval.
+pub const TERMINAL_SNAPSHOT_GRACE: std::time::Duration = std::time::Duration::from_secs(2);
+
 /// Atomically publishes [`PullProgress`] snapshots to `<state_dir>/progress/<pull_id>.json`.
 ///
 /// Every counter is an atomic so the shared `Arc` can be ticked from the streaming loop without
@@ -163,10 +169,19 @@ impl PullProgressReporter {
         }
     }
 
-    /// Flushes a terminal snapshot and removes the file so `<state_dir>/progress/` stays clean.
+    /// Flushes a terminal snapshot and removes it after a short grace period.
+    ///
+    /// The snapshot is published *before* it is deleted so a reader can observe the final
+    /// state: the CLI follower (100 ms poll), the Desktop GUI in JSON mode, or an external
+    /// watcher. The CLI removes the file itself as soon as it has rendered the terminal
+    /// line, and the daemon's Auto-GC sweep reclaims anything a crashed reader left behind.
     pub fn finish(self: &Arc<Self>) {
         self.flush();
-        let _ = fs::remove_file(self.path());
+        let path = self.path();
+        std::thread::spawn(move || {
+            std::thread::sleep(TERMINAL_SNAPSHOT_GRACE);
+            let _ = fs::remove_file(path);
+        });
     }
 
     /// Removes any leftover terminal snapshot for `pull_id` (e.g. a crash from a previous run).

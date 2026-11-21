@@ -47,13 +47,14 @@ async fn real_pull_reports_download_progress_and_runs_container() {
         pulled.image_ref
     );
 
-    // A successful pull removes its snapshot and reports 100% in the final state it published.
-    // Re-read the reporter's in-memory snapshot to assert the counters reached completion.
-    let final_snapshot = reporter.snapshot();
+    // A successful pull publishes a terminal snapshot with the final counters.
+    // The daemon owns the reporter that writes it; the instance created above only points at
+    // the same file, so the published snapshot is the authoritative final state.
+    let final_snapshot = terminal.expect("pull progress never reached a terminal phase");
     assert_eq!(
         final_snapshot.phase,
         PullPhase::Done,
-        "reporter must end in the `done` phase ({terminal:?})"
+        "reporter must end in the `done` phase"
     );
     assert_eq!(final_snapshot.percent, 100);
     assert!(
