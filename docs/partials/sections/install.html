@@ -1,0 +1,90 @@
+      <!-- 2. Download & Install -->
+      <section id="install" class="doc-section" tabindex="-1">
+        <h2 data-i18n="install.title">ดาวน์โหลด &amp; วิธีติดตั้ง</h2>
+        <p class="section-lead" data-i18n="install.lead">
+          เลือกวิธีติดตั้งที่เหมาะกับระบบของคุณ — รองรับ Linux x86_64 (Rootless-first) และ Windows ผ่าน WSL2 + Coral Desktop
+        </p>
+
+        <div class="tabs" data-tabs="install">
+          <div class="tablist" role="tablist" focusgroup="tablist nomemory" aria-label="Installation methods">
+            <button type="button" role="tab" id="tab-oneliner" aria-selected="true" focusgroupstart tabindex="0" data-i18n="install.tabOneliner">One-Liner (Linux)</button>
+            <button type="button" role="tab" id="tab-deb" aria-selected="false" tabindex="-1" data-i18n="install.tabDeb">Debian / Ubuntu (.deb)</button>
+            <button type="button" role="tab" id="tab-desktop" aria-selected="false" tabindex="-1" data-i18n="install.tabDesktop">Coral Desktop (GUI)</button>
+            <button type="button" role="tab" id="tab-source" aria-selected="false" tabindex="-1" data-i18n="install.tabSource">Build จากซอร์ส</button>
+          </div>
+
+          <div class="tab-panels">
+            <div role="tabpanel" aria-labelledby="tab-oneliner" tabindex="0">
+              <div class="tab-panel-body">
+                <p data-i18n="install.onelinerDesc"></p>
+                <div class="code-block">
+                  <button type="button" class="copy-btn" data-copy-target="code-oneliner" data-i18n="copy.btn">คัดลอก</button>
+                  <pre id="code-oneliner"><code>curl -fsSL https://seashyne.github.io/Coral-Container-Project/install.sh | bash</code></pre>
+                </div>
+                <p data-i18n="install.onelinerVerify"></p>
+                <div class="code-block">
+                  <button type="button" class="copy-btn" data-copy-target="code-verify" data-i18n="copy.btn">คัดลอก</button>
+                  <pre id="code-verify"><code>coral version
+coral vm probe
+coral run alpine:3.20 /bin/sh -c 'echo "Hello from Coral PID=$$"'</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div role="tabpanel" aria-labelledby="tab-deb" hidden="until-found">
+              <div class="tab-panel-body">
+                <p data-i18n="install.debDesc"></p>
+                <div class="download-bar">
+                  <a class="btn btn-primary" id="dl-deb-link" href="https://github.com/seashyne/Coral-Container-Project/releases/download/v2.3.0/coral-runtime_2.3.0_amd64.deb" target="_blank" rel="noopener" data-i18n="install.downloadDeb">ดาวน์โหลด coral-runtime_2.3.0_amd64.deb</a>
+                  <a class="btn btn-secondary" id="dl-tar-link" href="https://github.com/seashyne/Coral-Container-Project/releases/download/v2.3.0/coral-v2.3.0-linux-x86_64.tar.gz" target="_blank" rel="noopener" data-i18n="install.downloadTar">ดาวน์โหลด coral-v2.3.0-linux-x86_64.tar.gz</a>
+                </div>
+                <div class="code-block">
+                  <button type="button" class="copy-btn" data-copy-target="code-deb" data-i18n="copy.btn">คัดลอก</button>
+                  <pre id="code-deb"><code>curl -fsSLO https://github.com/seashyne/Coral-Container-Project/releases/download/v2.3.0/coral-runtime_2.3.0_amd64.deb
+sudo dpkg -i coral-runtime_2.3.0_amd64.deb
+systemctl --user enable --now coral-daemon.service
+coral version</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div role="tabpanel" aria-labelledby="tab-desktop" hidden="until-found">
+              <div class="tab-panel-body">
+                <p data-i18n="install.desktopDesc"></p>
+                <div class="cards-grid">
+                  <div class="card">
+                    <h3 data-i18n="install.desktopLinuxTitle">Linux (Ubuntu / Fedora / AppImage)</h3>
+                    <p data-i18n="install.desktopLinuxStep"></p>
+                  </div>
+                  <div class="card">
+                    <h3 data-i18n="install.desktopWinTitle">Windows 10 / 11 (WSL2)</h3>
+                    <p data-i18n="install.desktopWinStep"></p>
+                  </div>
+                </div>
+                <div class="download-bar" style="margin-top: 16px;">
+                  <a class="btn btn-primary" href="https://github.com/seashyne/Coral-Container-Project/releases/latest" target="_blank" rel="noopener" data-i18n="install.allReleases">ดูไฟล์ทั้งหมดบน GitHub Releases</a>
+                </div>
+              </div>
+            </div>
+
+            <div role="tabpanel" aria-labelledby="tab-source" hidden="until-found">
+              <div class="tab-panel-body">
+                <p data-i18n="install.sourceDesc"></p>
+                <div class="code-block">
+                  <button type="button" class="copy-btn" data-copy-target="code-source" data-i18n="copy.btn">คัดลอก</button>
+                  <pre id="code-source"><code>git clone https://github.com/seashyne/Coral-Container-Project.git
+cd Coral-Container-Project/coral_repo
+./install.sh          # compiles --release &amp; installs ~/.local/bin/coral
+./verify.sh           # runs 60 unit/E2E tests + strict Clippy -D warnings</code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="callout">
+          <strong data-i18n="install.prereqTitle">ข้อกำหนดระบบ (Prerequisites)</strong>
+          <span data-i18n="install.prereqList"></span>
+        </div>
+      </section>
+

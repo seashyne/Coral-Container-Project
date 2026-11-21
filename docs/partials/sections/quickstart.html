@@ -1,0 +1,119 @@
+      <!-- 3. CLI Cookbook -->
+      <section id="quickstart" class="doc-section" tabindex="-1">
+        <h2 data-i18n="cli.title">คู่มือและตัวอย่างคำสั่ง CLI</h2>
+        <p class="section-lead" data-i18n="cli.lead"></p>
+
+        <div class="tabs" data-tabs="cli">
+          <div class="tablist" role="tablist" focusgroup="tablist nomemory" aria-label="CLI examples">
+            <button type="button" role="tab" id="tab-cli-containers" aria-selected="true" focusgroupstart tabindex="0" data-i18n="cli.tabContainers">Containers &amp; Exec</button>
+            <button type="button" role="tab" id="tab-cli-build" aria-selected="false" tabindex="-1" data-i18n="cli.tabBuild">Build, Compose &amp; Push</button>
+            <button type="button" role="tab" id="tab-cli-wasm" aria-selected="false" tabindex="-1" data-i18n="cli.tabWasm">WebAssembly (Wasm)</button>
+            <button type="button" role="tab" id="tab-cli-vmm" aria-selected="false" tabindex="-1" data-i18n="cli.tabVmm">KVM MicroVM &amp; Sandbox</button>
+          </div>
+
+          <div class="tab-panels">
+            <div role="tabpanel" aria-labelledby="tab-cli-containers" tabindex="0">
+              <div class="tab-panel-body">
+                <div class="code-block">
+                  <button type="button" class="copy-btn" data-copy-target="code-cli-1" data-i18n="copy.btn">คัดลอก</button>
+                  <pre id="code-cli-1"><code># Docker-style syntax (no --image or -- required, auto-pulls missing images!)
+coral run -d --name web -p 8080:80 -m 256m --pids-limit 64 nginx:alpine
+
+# Minecraft PaperMC Server in one command (persistent volume + 4 GB RAM cap)
+coral run -d --name mc-server -p 25565:25565 -m 4G \
+  -e EULA=TRUE -e TYPE=PAPER -e VERSION=LATEST \
+  -v mc-data:/data --restart unless-stopped itzg/minecraft-server
+
+# Detached worker with live healthcheck, logs, interactive shell &amp; stats
+coral run -d --name worker --restart always \
+  --health-cmd "test -f /tmp/ready" --health-interval 5 \
+  alpine:3.20 /bin/sh -c 'touch /tmp/ready; sleep 3600'
+
+coral ps
+coral logs -f --tail 50 mc-server
+coral exec -it worker /bin/sh
+coral stats --watch worker
+coral cp ./config.yaml worker:/data/config.yaml</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div role="tabpanel" aria-labelledby="tab-cli-build" hidden="until-found">
+              <div class="tab-panel-body">
+                <div class="code-block">
+                  <button type="button" class="copy-btn" data-copy-target="code-cli-2" data-i18n="copy.btn">คัดลอก</button>
+                  <pre id="code-cli-2"><code># Build OCI image from Dockerfile with Content-Addressable Step Cache
+coral build -t myapp:2.1 .
+
+# Cryptographic Ed25519 image signing, tamper verification &amp; SPDX 2.3 SBOM
+coral keygen
+coral sign myapp:2.1
+coral verify myapp:2.1
+coral sbom myapp:2.1 -o myapp.spdx.json
+
+# Multi-container stack &amp; Kubernetes CRI v1 Unix Socket readiness probe
+coral compose up -d
+coral --endpoint unix://$HOME/.local/state/coral/daemon/coral.sock cri-status --verbose
+
+# Private Registry push &amp; offline archive export/import (.tar.zst)
+coral login ghcr.io -u seashyne
+coral push ghcr.io/seashyne/myapp:2.1
+coral save myapp:2.1 -o myapp.tar.zst</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div role="tabpanel" aria-labelledby="tab-cli-wasm" hidden="until-found">
+              <div class="tab-panel-body">
+                <div class="code-block">
+                  <button type="button" class="copy-btn" data-copy-target="code-cli-3" data-i18n="copy.btn">คัดลอก</button>
+                  <pre id="code-cli-3"><code># Run any WASI Preview 1 .wasm or .wat module directly in microseconds
+coral wasm run hello.wasm --fuel 5000000 --memory-mb 32 --json
+
+# Pack a .wasm binary into an OCI image (zero Linux rootfs overhead)
+coral wasm pack hello.wasm -t hello-wasm:v1
+coral run --runtime wasm hello-wasm:v1
+
+# Serve as a Serverless WASI HTTP/1.1 microservice (fresh sandbox per request!)
+coral wasm serve hello-wasm:v1 --listen 127.0.0.1:8080 --fuel 10000000 --memory 32</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div role="tabpanel" aria-labelledby="tab-cli-vmm" hidden="until-found">
+              <div class="tab-panel-body">
+                <div class="code-block">
+                  <button type="button" class="copy-btn" data-copy-target="code-cli-4" data-i18n="copy.btn">คัดลอก</button>
+                  <pre id="code-cli-4"><code># Verify host VT-x/AMD-V hardware &amp; boot a 64-bit Long Mode /dev/kvm MicroVM
+coral vm probe
+
+# Download official Alpine Linux 6.6 guest kernel (+ VirtIO/ext4 modules) &amp; boot persistent MicroVM
+coral vm setup-kernel
+coral vm disk create ./vmdata.img --size-mb 64 --ext4
+coral vm boot --image alpine:3.20 --disk ./vmdata.img --disk-mount /mnt/data --net -p 8080:8080 --timeout 15 -- \
+  /bin/sh -c 'echo "Kernel=$(uname -r) IP=$(ip -4 addr show eth0 | awk "/inet/{print \$2}")"'
+
+# Enable shell tab-autocomplete &amp; Prometheus metrics endpoint (http://127.0.0.1:9108/metrics)
+coral completion bash | sudo tee /etc/bash_completion.d/coral &gt;/dev/null
+
+# Run untrusted / AI-generated code in a zero-network, read-only, hard-timeout sandbox
+coral sandbox run --image alpine:3.20 --timeout 5 --memory 64 --json -- \
+  /bin/sh -c 'echo "Isolated PID=$$ UID=$(id -u)"'</code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <figure class="guide-figure">
+          <img
+            src="assets/coral-usage-guide.png"
+            alt="Coral v2.3.0 Visual Quick Guide displaying the Coral logo, install command, Docker-compatible CLI examples, Coral Desktop theme popover, and Wasm/KVM workflows"
+            width="1440"
+            height="980"
+            loading="lazy"
+          />
+          <figcaption data-i18n="cli.guideCaption">รูปคู่มือสรุปขั้นตอนการติดตั้งและใช้งาน Coral CLI + Coral Desktop v2.3.0 ในภาพเดียว</figcaption>
+        </figure>
+      </section>
+

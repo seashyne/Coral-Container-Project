@@ -1,0 +1,110 @@
+  <!-- ==================== DIALOGS (Native <dialog closedby="any">) ==================== -->
+
+  <!-- 1. Run Container Dialog -->
+  <dialog id="run-dialog" class="modal-dialog" closedby="any" aria-labelledby="run-dialog-title">
+    <div class="dialog-box dialog-wide">
+      <div class="modal-head">
+        <h3 id="run-dialog-title" data-i18n="modal.runTitle">Run a Container</h3>
+        <button type="button" class="sb" data-close-dialog="run-dialog" aria-label="Close dialog" data-i18n-aria="common.close" data-close-icon></button>
+      </div>
+
+      <div class="preset-strip" role="group" aria-label="Quick app templates">
+        <span class="preset-strip-label" data-i18n="modal.runQuickTemplates">Quick Fill:</span>
+        <button type="button" class="preset-chip" data-run-preset="nginx">Nginx</button>
+        <button type="button" class="preset-chip" data-run-preset="redis">Redis</button>
+        <button type="button" class="preset-chip" data-run-preset="postgres">PostgreSQL</button>
+        <button type="button" class="preset-chip" data-run-preset="alpine">Alpine Shell</button>
+        <button type="button" class="preset-chip" data-run-preset="minecraft">Minecraft PaperMC</button>
+      </div>
+
+      <div class="form-grid">
+        <label>
+          <span data-i18n="modal.runName">Container Name</span>
+          <input id="run-name" class="field mono" type="text" placeholder="Auto-generated if empty" data-i18n-placeholder="modal.runNamePh" />
+        </label>
+        <label>
+          <span data-i18n="modal.runImage">Image Reference</span>
+          <input id="run-image" class="field mono" type="text" list="image-list" placeholder="e.g. nginx:alpine, redis:alpine" required />
+          <datalist id="image-list"></datalist>
+        </label>
+        <label class="col-span-full">
+          <span data-i18n="modal.runPorts">Ports (HOST:CONTAINER)</span>
+          <input id="run-ports" class="field mono" type="text" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="8080:80, 5432:5432" />
+        </label>
+        <label>
+          <span data-i18n="modal.runVolumes">Storage / Volumes</span>
+          <textarea id="run-volumes" class="field area mono" rows="3" placeholder="my-data:/data&#10;/host/dir:/mnt:ro"></textarea>
+        </label>
+        <label>
+          <span data-i18n="modal.runEnv">Environment Variables</span>
+          <textarea id="run-env" class="field area mono" rows="3" placeholder="ENV=production&#10;PORT=8080"></textarea>
+        </label>
+      </div>
+
+      <label class="inline-check mt-md">
+        <input id="run-keep-alive" type="checkbox" />
+        <span data-i18n="modal.runKeepAlive">Keep running in background</span>
+      </label>
+
+      <details class="disclosure mt-md">
+        <summary data-i18n="modal.runAdvSummary">More options</summary>
+        <div class="disclosure-body">
+          <div class="form-grid">
+            <label>
+              <span data-i18n="modal.runCommand">Command (optional override)</span>
+              <input id="run-command" class="field mono" type="text" placeholder="Leave empty for image default" data-i18n-placeholder="modal.runCommandPh" />
+            </label>
+            <label>
+              <span data-i18n="modal.runArgs">Arguments (optional)</span>
+              <input id="run-args" class="field mono" type="text" placeholder="Leave empty for image default" data-i18n-placeholder="modal.runArgsPh" />
+            </label>
+            <div>
+              <label for="run-memory" class="field-label" data-i18n="modal.runMemory">Memory Limit (MB, 0 = unlimited)</label>
+              <input id="run-memory" class="field mono" type="number" min="0" value="0" />
+              <div class="ram-pills" role="group" aria-label="Memory presets">
+                <button type="button" class="ram-pill" data-run-mem="0" data-i18n="modal.ramUnlimited">Unlimited</button>
+                <button type="button" class="ram-pill" data-run-mem="512">512 MB</button>
+                <button type="button" class="ram-pill" data-run-mem="2048">2 GB</button>
+                <button type="button" class="ram-pill" data-run-mem="4096">4 GB</button>
+              </div>
+            </div>
+            <label>
+              <span data-i18n="modal.runCpu">CPU Limit (% of 1 core, 0 = unlimited)</span>
+              <input id="run-cpu" class="field mono" type="number" min="0" value="0" />
+            </label>
+            <label>
+              <span data-i18n="modal.runPids">PID Limit (0 = unlimited)</span>
+              <input id="run-pids" class="field mono" type="number" min="0" value="0" />
+            </label>
+            <label>
+              <span data-i18n="modal.runNetwork">Network Mode</span>
+              <select id="run-network" class="field">
+                <option value="host" data-i18n="modal.netHost">Host + DNS (Recommended rootless)</option>
+                <option value="bridge" data-i18n="modal.netBridge">Isolated Bridge NetNS (CLONE_NEWNET)</option>
+                <option value="none" data-i18n="modal.netNone">Air-gapped (Loopback only)</option>
+              </select>
+            </label>
+            <label>
+              <span data-i18n="modal.runRestart">Restart Policy</span>
+              <select id="run-restart" class="field">
+                <option value="no" data-i18n="modal.restartNo">No</option>
+                <option value="always" data-i18n="modal.restartAlways">Always</option>
+                <option value="unless-stopped" data-i18n="modal.restartUnlessStopped">Unless stopped</option>
+                <option value="on-failure:3" data-i18n="modal.restartOnFailure">On failure (3 retries)</option>
+              </select>
+            </label>
+            <label>
+              <span data-i18n="modal.runHealthCmd">Healthcheck Command (optional)</span>
+              <input id="run-health-cmd" class="field mono" type="text" placeholder="e.g. test -f /tmp/ready" />
+            </label>
+          </div>
+        </div>
+      </details>
+
+      <div class="form-row right mt-lg">
+        <button type="button" class="btn" data-close-dialog="run-dialog" data-i18n="common.cancel">Cancel</button>
+        <button id="run-submit" type="button" class="btn primary" data-i18n="modal.runSubmit">Start Container</button>
+      </div>
+    </div>
+  </dialog>
+

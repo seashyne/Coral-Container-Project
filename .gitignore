@@ -11,6 +11,10 @@
 # Node dependencies
 /desktop/node_modules/
 
+# Generated frontend shells (assembled from index.template.html + partials/)
+/desktop/src/index.html
+/docs/index.html
+
 # Local reference checkouts & scratch folders (not part of Coral repo)
 /external/
 /open source/

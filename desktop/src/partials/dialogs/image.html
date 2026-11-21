@@ -1,0 +1,141 @@
+  <!-- 3. Pull / Build Image Dialog (Tabbed) -->
+  <dialog id="image-dialog" class="modal-dialog" closedby="any" aria-labelledby="image-dialog-title">
+    <div class="dialog-box dialog-medium">
+      <div class="modal-head">
+        <h3 id="image-dialog-title" data-i18n="modal.imageTitle">Add or Build Image</h3>
+        <button type="button" class="sb" data-close-dialog="image-dialog" aria-label="Close dialog" data-i18n-aria="common.close" data-close-icon></button>
+      </div>
+
+      <div id="image-modal-tablist" class="subtablist mb-md" role="tablist" aria-label="Add image options">
+        <button type="button" role="tab" id="imgmod-tab-pull" data-tab="pull" data-panel="pane-imgmod-pull" aria-selected="true" tabindex="0" data-i18n="modal.imgTabPull">Pull from Registry</button>
+        <button type="button" role="tab" id="imgmod-tab-build" data-tab="build" data-panel="pane-imgmod-build" aria-selected="false" tabindex="-1" data-i18n="modal.imgTabBuild">Build Dockerfile</button>
+        <button type="button" role="tab" id="imgmod-tab-archive" data-tab="archive" data-panel="pane-imgmod-archive" aria-selected="false" tabindex="-1" data-i18n="modal.imgTabArchive">Import / Tag</button>
+        <button type="button" role="tab" id="imgmod-tab-reg" data-tab="reg" data-panel="pane-imgmod-reg" aria-selected="false" tabindex="-1" data-i18n="modal.imgTabReg">Push to Registry</button>
+      </div>
+
+      <!-- Tab 1: Pull OCI -->
+      <div id="pane-imgmod-pull" role="tabpanel" aria-labelledby="imgmod-tab-pull">
+        <form id="oci-pull-form">
+          <div class="field-group">
+            <label for="oci-image-ref" data-i18n="modal.ociImageRef">OCI Image Reference</label>
+            <div class="input-btn">
+              <input id="oci-image-ref" class="field mono" type="text" placeholder="e.g. nginx:alpine, redis:alpine, itzg/minecraft-server" required />
+              <button id="oci-pull-submit" type="submit" class="btn primary" data-i18n="modal.btnPull">Pull Image</button>
+            </div>
+            <p class="hint" data-i18n="modal.pullHint">Downloads and caches layers directly on the Coral daemon host without requiring Docker daemon.</p>
+          </div>
+        </form>
+      </div>
+
+      <!-- Tab 2: Dockerfile Build -->
+      <div id="pane-imgmod-build" role="tabpanel" aria-labelledby="imgmod-tab-build" hidden="until-found">
+        <form id="dockerfile-build-form">
+          <div class="form-grid">
+            <div class="field-group">
+              <label for="build-tag" data-i18n="modal.buildTag">Target Image Tag</label>
+              <input id="build-tag" class="field mono" type="text" placeholder="my-service:v1" required />
+            </div>
+            <div class="field-group">
+              <label for="build-context" data-i18n="modal.buildContext">Build Context Directory (optional)</label>
+              <input id="build-context" class="field mono" type="text" placeholder="/path/to/context" />
+            </div>
+          </div>
+          <div class="field-group mt-sm">
+            <label for="build-dockerfile" data-i18n="modal.buildDockerfile">Dockerfile Content (FROM, RUN, COPY, ENV, WORKDIR)</label>
+            <textarea id="build-dockerfile" class="field area mono" rows="5" required>FROM alpine:3.20
+ENV APP_ENV=production
+RUN echo 'Built with Coral' > /etc/coral-info</textarea>
+          </div>
+          <div class="form-row right mt-md">
+            <label class="inline-check mr-auto">
+              <input id="build-no-cache" type="checkbox" />
+              <span data-i18n="modal.buildNoCache">Rebuild without cache</span>
+            </label>
+            <button id="build-submit" type="submit" class="btn primary" data-i18n="modal.btnBuild">Build Image</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Tab 3: Import / Export / Tag -->
+      <div id="pane-imgmod-archive" role="tabpanel" aria-labelledby="imgmod-tab-archive" hidden="until-found">
+        <form id="archive-load-form" class="form-grid">
+          <div class="field-group">
+            <label for="load-archive-path" data-i18n="modal.loadArchive">Import Archive (.tar, .tar.gz, .tar.zst)</label>
+            <input id="load-archive-path" class="field mono" type="text" placeholder="/path/to/archive.tar.zst" required />
+          </div>
+          <div class="field-group">
+            <label for="load-archive-tag" data-i18n="modal.tagOverride">Tag Override (optional)</label>
+            <div class="input-btn">
+              <input id="load-archive-tag" class="field mono" type="text" placeholder="my-app:v1" />
+              <button id="load-archive-submit" type="submit" class="btn primary sm" data-i18n="modal.btnImport">Import</button>
+            </div>
+          </div>
+        </form>
+
+        <hr class="divider-line" />
+
+        <form id="local-rootfs-form" class="form-grid">
+          <div class="field-group">
+            <label for="img-name" data-i18n="modal.regLocalRootfs">Register Local Rootfs Directory</label>
+            <input id="img-name" class="field mono" type="text" placeholder="my-local-image:latest" />
+          </div>
+          <div class="field-group">
+            <label for="img-rootfs" data-i18n="modal.rootfsPath">Rootfs Directory Path</label>
+            <div class="input-btn">
+              <input id="img-rootfs" class="field mono" type="text" placeholder="/path/to/rootfs" />
+              <button id="img-pick" type="button" class="btn ic" title="Browse Directory" aria-label="Browse Directory" data-i18n-title="settings.browseDir" data-i18n-aria="settings.browseDir" data-icon="folder"></button>
+              <button id="img-register" type="submit" class="btn primary sm" data-i18n="modal.btnRegister">Register</button>
+            </div>
+          </div>
+        </form>
+
+        <hr class="divider-line" />
+
+        <form id="img-tag-form" class="form-grid">
+          <div class="field-group">
+            <label for="tag-source-img" data-i18n="modal.sourceImage">Source Image</label>
+            <input id="tag-source-img" class="field mono" type="text" list="image-list" placeholder="alpine:3.20" required />
+          </div>
+          <div class="field-group">
+            <label for="tag-target-img" data-i18n="modal.newTagAlias">New Tag Alias</label>
+            <div class="input-btn">
+              <input id="tag-target-img" class="field mono" type="text" placeholder="my-base:stable" required />
+              <button id="tag-submit" type="submit" class="btn sm" data-i18n="modal.btnCreateTag">Create Tag</button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Tab 4: Push to Registry -->
+      <div id="pane-imgmod-reg" role="tabpanel" aria-labelledby="imgmod-tab-reg" hidden="until-found">
+        <form id="reg-login-form" class="form-grid mb-md">
+          <div class="field-group">
+            <label for="reg-host" data-i18n="modal.regUrl">Registry URL</label>
+            <input id="reg-host" class="field mono" type="text" value="docker.io" placeholder="docker.io / ghcr.io" required />
+          </div>
+          <div class="field-group">
+            <label for="reg-user" data-i18n="modal.regUser">Username</label>
+            <input id="reg-user" class="field mono" type="text" placeholder="username" required />
+          </div>
+          <div class="field-group col-span-full">
+            <label for="reg-pass" data-i18n="modal.regPass">Password / Personal Access Token</label>
+            <div class="input-btn">
+              <input id="reg-pass" class="field mono" type="password" placeholder="ghp_... or registry password" required />
+              <button id="reg-login-submit" type="submit" class="btn primary sm" data-i18n="modal.btnLogin">Login</button>
+            </div>
+          </div>
+        </form>
+
+        <form id="reg-push-form">
+          <div class="field-group">
+            <label for="push-image-ref" data-i18n="modal.pushImage">Push Image to Registry</label>
+            <div class="input-btn">
+              <input id="push-image-ref" class="field mono" type="text" list="image-list" placeholder="ghcr.io/username/my-app:v1" required />
+              <button id="push-submit" type="submit" class="btn primary sm" data-i18n="modal.btnPush">Push</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </dialog>
+

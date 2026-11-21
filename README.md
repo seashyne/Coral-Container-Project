@@ -87,9 +87,15 @@ coral sandbox run --image alpine:3.20 --timeout 5 -- /bin/sh -c 'echo "Safe sand
 │   └── docs/            # ARCHITECTURE.md, ROADMAP.md, MANUAL.md, BENCHMARK.md
 ├── desktop/             # Tauri v2 Coral Desktop GUI (Theme/Token CSS, EN/TH i18n, Linux/Win/macOS)
 ├── docs/                # GitHub Pages Docs website (TH/EN, install guides, sponsor cards)
+├── tools/               # Shared build tooling (HTML partial assembler)
 ├── infra/               # Containerized build Dockerfile & compose
 └── .github/workflows/   # CI/CD: release.yml, desktop.yml, pages.yml
 ```
+
+Both frontends (Desktop shell and Docs page) are assembled from small partials by a
+dependency-free Node script (`tools/html-assembler.mjs`); the generated `index.html`
+files are build artifacts and are not committed. `./check-line-limit.sh` keeps every
+source file under 400 lines.
 
 ---
 

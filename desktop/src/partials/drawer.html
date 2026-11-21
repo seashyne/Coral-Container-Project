@@ -1,0 +1,102 @@
+  <!-- Container detail drawer -->
+  <div id="drawer-backdrop" class="drawer-backdrop hidden"></div>
+  <aside id="detail-drawer" class="drawer hidden" aria-labelledby="detail-title">
+    <div class="drawer-head">
+      <div class="dh-title">
+        <span class="tile" id="detail-tile" aria-hidden="true"></span>
+        <h3 id="detail-title">Container</h3>
+      </div>
+      <button id="detail-close" type="button" class="sb" aria-label="Close container details" data-i18n-aria="drawer.closeAria" data-icon="x"></button>
+    </div>
+    <div id="detail-meta" class="detail-meta"></div>
+
+    <div id="detail-tablist" class="drawer-tablist" role="tablist" aria-label="Container details">
+      <button type="button" role="tab" id="dtab-logs" data-dtab="logs" aria-selected="true" tabindex="0" data-i18n="drawer.tabLogs">Logs</button>
+      <button type="button" role="tab" id="dtab-term" data-dtab="term" aria-selected="false" tabindex="-1" data-i18n="drawer.tabTerm">Terminal</button>
+      <button type="button" role="tab" id="dtab-metrics" data-dtab="metrics" aria-selected="false" tabindex="-1" data-i18n="drawer.tabMetrics">Metrics &amp; CoW</button>
+    </div>
+
+    <div class="drawer-panels">
+      <div id="dpane-logs" class="drawer-panel" role="tabpanel" aria-labelledby="dtab-logs">
+        <div class="dpane-inner dpane-logs-inner">
+          <div class="pane-bar">
+            <span id="log-live-badge" class="live-badge" data-i18n="drawer.idle">Idle</span>
+            <span class="spacer"></span>
+            <label class="inline-check">
+              <input id="log-autoscroll" type="checkbox" checked />
+              <span data-i18n="drawer.autoScroll">Auto-scroll</span>
+            </label>
+            <button id="log-refresh" type="button" class="btn sm" data-i18n="drawer.btnRefresh">Refresh</button>
+          </div>
+          <pre id="detail-log" class="console"></pre>
+        </div>
+      </div>
+
+      <div id="dpane-term" class="drawer-panel" role="tabpanel" aria-labelledby="dtab-term" hidden="until-found">
+        <div class="dpane-inner dpane-term-inner">
+          <div class="pane-bar term-bar">
+            <span id="pty-status-badge" class="live-badge" data-i18n="drawer.execMode">Exec Mode</span>
+            <button id="pty-connect-btn" type="button" class="btn sm primary" data-i18n="drawer.connectPty">Connect PTY</button>
+            <button id="pty-ctrl-c" type="button" class="btn sm" title="Send Ctrl+C (SIGINT)" data-i18n-title="drawer.ctrlCTitle">^C</button>
+            <div class="quick-chips">
+              <button type="button" class="chip-btn" data-term-quick="ls -la">ls -la</button>
+              <button type="button" class="chip-btn" data-term-quick="ps">ps</button>
+              <button type="button" class="chip-btn" data-term-quick="env">env</button>
+            </div>
+            <span class="spacer"></span>
+            <button id="term-clear" type="button" class="btn sm" title="Clear terminal (Ctrl+L)" data-i18n-title="drawer.clearTermTitle" data-i18n="drawer.clearTerm">Clear</button>
+          </div>
+          <pre id="term-output" class="console term-console" tabindex="0" aria-live="polite"></pre>
+          <div class="exec-row term-input-row">
+            <span id="term-prompt" class="prompt">root:/#</span>
+            <input
+              id="term-input"
+              type="text"
+              placeholder="Type command (or click terminal screen above for direct raw PTY keys)…"
+              data-i18n-placeholder="drawer.termPlaceholder"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="none"
+              spellcheck="false"
+            />
+            <button id="term-run" type="button" class="btn sm primary" data-i18n="drawer.btnRun">Run</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="dpane-metrics" class="drawer-panel" role="tabpanel" aria-labelledby="dtab-metrics" hidden="until-found">
+        <div class="dpane-inner dpane-metrics-inner">
+          <div id="metrics-cards" class="metrics-grid"></div>
+          <div class="spark-grid">
+            <div class="spark-card">
+              <div class="spark-head"><span data-i18n="drawer.memUsage">Memory Usage</span><span id="spark-mem-val" class="mono">—</span></div>
+              <div id="spark-mem-svg" class="spark-wrap"></div>
+            </div>
+            <div class="spark-card">
+              <div class="spark-head"><span data-i18n="drawer.cpuTime">CPU Time</span><span id="spark-cpu-val" class="mono">—</span></div>
+              <div id="spark-cpu-svg" class="spark-wrap"></div>
+            </div>
+          </div>
+          <details class="disclosure" open>
+            <summary data-i18n="drawer.cowSummary">OverlayFS CoW Changes &amp; Commit to Image</summary>
+            <div class="disclosure-body">
+              <pre id="detail-overlay-diff" class="console diff-box" data-i18n="drawer.noCowChanges">(no OverlayFS changes recorded)</pre>
+              <div class="input-btn">
+                <input
+                  id="commit-image-name"
+                  class="field mono"
+                  type="text"
+                  autocorrect="off"
+                  autocapitalize="none"
+                  spellcheck="false"
+                  placeholder="committed-app:v1"
+                />
+                <button id="commit-btn" type="button" class="btn primary sm" data-i18n="drawer.btnCommit">Commit Layer</button>
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+  </aside>
+

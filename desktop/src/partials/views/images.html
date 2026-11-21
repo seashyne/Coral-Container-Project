@@ -1,0 +1,62 @@
+    <!-- View 2: Images (Local installed + Discover Catalog) -->
+    <section id="view-images" class="view" hidden>
+      <div class="toolbar">
+        <h2 data-i18n="images.title">Images</h2>
+        <div id="images-tablist" class="subtablist" role="tablist" aria-label="Images sections">
+          <button type="button" role="tab" id="imgtab-local" data-tab="local" data-panel="view-images-local" aria-selected="true" tabindex="0" data-i18n="images.tabLocal">Installed Images</button>
+          <button type="button" role="tab" id="imgtab-discover" data-tab="discover" data-panel="view-images-discover" aria-selected="false" tabindex="-1" data-i18n="images.tabDiscover">Discover &amp; Quick Pull</button>
+        </div>
+        <div class="spacer"></div>
+        <div class="hright">
+          <button id="add-image-btn" type="button" class="btn primary">
+            <span class="i" data-icon="plus"></span>
+            <span class="hlbl" data-i18n="images.btnPullBuild">Pull / Build image</span>
+          </button>
+          <button
+            id="refresh-images"
+            type="button"
+            class="btn ic"
+            title="Refresh images"
+            aria-label="Refresh images"
+            data-i18n-title="images.refreshTitle"
+            data-i18n-aria="images.refreshTitle"
+            data-icon="refresh"
+          ></button>
+        </div>
+      </div>
+
+      <div class="content images-page">
+        <div id="pull-status" class="status-banner hidden" role="status" aria-live="polite"></div>
+
+        <div id="view-images-local" role="tabpanel" aria-labelledby="imgtab-local">
+          <div class="section-head">
+            <h3 data-i18n="images.localHeading">Locally Installed Images</h3>
+            <span id="installed-images-count" class="section-sub"></span>
+          </div>
+          <div id="images-table"></div>
+        </div>
+
+        <div id="view-images-discover" role="tabpanel" aria-labelledby="imgtab-discover" hidden="until-found">
+          <form id="discover-pull-form" class="discover-pull-card">
+            <label for="discover-pull-input" data-i18n="images.quickPullLabel">Pull Image</label>
+            <div class="input-btn">
+              <input
+                id="discover-pull-input"
+                class="field mono"
+                type="text"
+                placeholder="nginx:alpine, itzg/minecraft-server"
+                data-i18n-placeholder="images.quickPullPh"
+                required
+              />
+              <button id="discover-pull-submit" type="submit" class="btn primary" data-i18n="modal.btnPull">Pull Image</button>
+            </div>
+          </form>
+          <div class="section-head">
+            <h3 data-i18n="images.discoverHeading">Featured Images</h3>
+            <p class="section-sub" data-i18n="images.discoverSub">Download popular images in one click.</p>
+          </div>
+          <div id="base-catalog" class="base-grid"></div>
+        </div>
+      </div>
+    </section>
+

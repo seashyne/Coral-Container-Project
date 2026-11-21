@@ -1,0 +1,56 @@
+  <!-- 2. Compose Stack Dialog -->
+  <dialog id="compose-dialog" class="modal-dialog" closedby="any" aria-labelledby="compose-dialog-title">
+    <div class="dialog-box dialog-wide">
+      <div class="modal-head">
+        <h3 id="compose-dialog-title" data-i18n="modal.composeTitle">Coral Compose Stack</h3>
+        <button type="button" class="sb" data-close-dialog="compose-dialog" aria-label="Close dialog" data-i18n-aria="common.close" data-close-icon></button>
+      </div>
+
+      <div class="row-inline mb-md">
+        <button id="compose-browse-btn" type="button" class="btn primary sm">
+          <span class="i" data-icon="folder"></span>
+          <span data-i18n="modal.composeBrowse">Browse compose.yml…</span>
+        </button>
+        <span class="muted small" data-i18n="modal.composeOrTpl">or choose a quick template:</span>
+        <select id="compose-template-select" class="field sm flex-1 w-auto">
+          <option value="" data-i18n="modal.composeSelectTpl">(Select a stack template)</option>
+          <option value="nginx-redis" data-i18n="modal.composeTplNginxRedis">Nginx + Redis Stack</option>
+          <option value="alpine-demo" data-i18n="modal.composeTplAlpine">Two-Service Alpine Stack</option>
+          <option value="minecraft-paper" data-i18n="modal.composeTplMinecraft">Minecraft Server (PaperMC)</option>
+        </select>
+      </div>
+
+      <div class="form-grid">
+        <label>
+          <span data-i18n="modal.composeProject">Stack Project Name</span>
+          <input id="compose-project" class="field mono" type="text" value="demo-stack" placeholder="my-stack" required />
+        </label>
+        <label>
+          <span data-i18n="modal.composeBaseDir">Base Directory (for relative volumes &amp; build)</span>
+          <input id="compose-basedir" class="field mono" type="text" placeholder="/path/to/project" />
+        </label>
+      </div>
+
+      <div class="field-group mt-md">
+        <label for="compose-yaml" data-i18n="modal.composeYaml">compose.yaml / docker-compose.yml</label>
+        <textarea id="compose-yaml" class="field area mono" rows="9" spellcheck="false">services:
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+  web:
+    image: nginx:alpine
+    depends_on:
+      - redis
+    ports:
+      - "8080:80"</textarea>
+      </div>
+
+      <div class="form-row right mt-lg">
+        <button id="compose-down-btn" type="button" class="btn danger" data-i18n="modal.composeDown">Tear Down Stack</button>
+        <button type="button" class="btn" data-close-dialog="compose-dialog" data-i18n="common.cancel">Cancel</button>
+        <button id="compose-up-btn" type="button" class="btn primary" data-i18n="modal.composeUp">Deploy Stack</button>
+      </div>
+    </div>
+  </dialog>
+

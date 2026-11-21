@@ -1,0 +1,71 @@
+      <!-- 7. Architecture Table -->
+      <section id="architecture" class="doc-section" tabindex="-1">
+        <h2 data-i18n="arch.title">สถาปัตยกรรม 10 Rust Crates</h2>
+        <p class="section-lead" data-i18n="arch.lead"></p>
+
+        <div tabindex="0" role="region" aria-labelledby="arch-caption" class="table-wrapper">
+          <table class="data-table" id="arch-table">
+            <caption id="arch-caption" data-i18n="arch.caption"></caption>
+            <thead>
+              <tr>
+                <th scope="col" data-i18n="arch.colCrate">Crate</th>
+                <th scope="col" data-i18n="arch.colPath">Path</th>
+                <th scope="col" data-i18n="arch.colRole">Responsibility</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code class="inline">coral-api</code></th>
+                <td><code class="inline">coral_repo/api</code></td>
+                <td>Kubernetes CRI v1 Protobuf &amp; Tonic gRPC bindings (including bidirectional <code class="inline">ExecStream</code> PTY)</td>
+              </tr>
+              <tr>
+                <th scope="row"><code class="inline">coral-oci</code></th>
+                <td><code class="inline">coral_repo/pkg/oci</code></td>
+                <td>OCI Runtime Specification v1.0.2 parser, validator &amp; <code class="inline">state.json</code> model</td>
+              </tr>
+              <tr>
+                <th scope="row"><code class="inline">coral-cgroups</code></th>
+                <td><code class="inline">coral_repo/pkg/cgroups</code></td>
+                <td>Cgroups v2 memory/CPU/PIDs enforcement &amp; live kernel telemetry</td>
+              </tr>
+              <tr>
+                <th scope="row"><code class="inline">coral-net</code></th>
+                <td><code class="inline">coral_repo/pkg/networking</code></td>
+                <td>CNI v1.0.0 bridge, custom networks, sibling <code class="inline">/etc/hosts</code> &amp; <code class="inline">pasta</code>/<code class="inline">slirp4netns</code> egress</td>
+              </tr>
+              <tr>
+                <th scope="row"><code class="inline">coral-runtime</code></th>
+                <td><code class="inline">coral_repo/pkg/runtime</code></td>
+                <td>Root/rootless lifecycle, OverlayFS CoW, Seccomp-BPF, Cap drop, PTY &amp; <code class="inline">setns</code> exec</td>
+              </tr>
+              <tr>
+                <th scope="row"><code class="inline">coral-wasm</code></th>
+                <td><code class="inline">coral_repo/pkg/wasm</code></td>
+                <td>WASI Preview 1 WebAssembly runtime (<code class="inline">wasmi 2.0</code>) with fuel &amp; linear memory ceilings</td>
+              </tr>
+              <tr>
+                <th scope="row"><code class="inline">coral-vmm</code></th>
+                <td><code class="inline">coral_repo/pkg/vmm</code></td>
+                <td>Pure-Rust Linux <code class="inline">/dev/kvm</code> 64-bit Long Mode hypervisor, <code class="inline">newc</code> initramfs &amp; AI Sandbox</td>
+              </tr>
+              <tr>
+                <th scope="row"><code class="inline">coral-daemon</code></th>
+                <td><code class="inline">coral_repo/cmd/coral-daemon</code></td>
+                <td>Tokio + Tonic CRI v1 server, step-cached builds, OCI push/pull, persistence &amp; auto-resume</td>
+              </tr>
+              <tr>
+                <th scope="row"><code class="inline">coral-cli</code></th>
+                <td><code class="inline">coral_repo/cmd/coral-cli</code></td>
+                <td>Single-threaded pre-fork <code class="inline">coral</code> CLI covering OCI, Compose, Wasm, KVM &amp; Sandbox</td>
+              </tr>
+              <tr>
+                <th scope="row"><code class="inline">coral-e2e-tests</code></th>
+                <td><code class="inline">coral_repo/tests</code></td>
+                <td>60 automated unit, OCI, parity, CRI gRPC, Wasm &amp; hardware KVM integration tests</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+

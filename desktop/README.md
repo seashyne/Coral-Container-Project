@@ -32,6 +32,12 @@ npm install
 npm run dev
 ```
 
+`npm run dev` first assembles the frontend shell: `src/index.html` is generated from
+`src/index.template.html` + `src/partials/*.html` by `node build-html.mjs` (shared
+assembler: `../tools/html-assembler.mjs`). Edit the partials, never the generated file —
+it is git-ignored and rebuilt on every `dev` / `build` / `tauri` run. `cargo build` inside
+`src-tauri` regenerates it too, so direct `cargo tauri build` still works.
+
 In the app: **Settings** → mode `Local`, set:
 - `coral-daemon binary`: `../coral_repo/target/debug/coral-daemon` (absolute path recommended)
 - `coral CLI binary`: `../coral_repo/target/debug/coral`
@@ -70,8 +76,11 @@ CI (`.github/workflows/desktop.yml`) builds both platforms on every push.
 
 ```text
 desktop/
+├── build-html.mjs          # Assembles src/index.html from the template + partials
 ├── src/
-│   ├── index.html             # Semantic HTML shell (zero inline styles/handlers)
+│   ├── index.template.html  # HTML shell template (include directives)
+│   ├── index.html           # GENERATED — rebuilt by `npm run build:html` (git-ignored)
+│   ├── partials/            # HTML shell sections (head, topbar, sidebar, views, dialogs, …)
 │   ├── styles/
 │   │   ├── main.css           # @layer tokens, reset, base, layout, components, views
 │   │   ├── tokens/            # 3-tier CSS Design Tokens (primitives, semantic, components)
@@ -81,10 +90,10 @@ desktop/
 │   │   └── views/             # View-specific layout styles
 │   └── scripts/
 │       ├── core/              # theme-init.js, state.js, theme.js, i18n.js
-│       ├── locales/           # Bilingual EN/TH dictionaries (en.js, th.js)
-│       ├── data/              # icons.js, catalog.js
-│       ├── features/          # connection, containers, terminal, images, volumes, pods, nextgen, settings
-│       └── app.js             # Event bindings & startup bootstrap
+│       ├── locales/           # Bilingual EN/TH dictionaries (en/, th/)
+│       ├── data/              # icons.js, catalog/
+│       ├── features/          # connection, containers/, terminal/, images, volumes, pods, nextgen, settings
+│       └── app/               # Event bindings & startup bootstrap (app/)
 └── src-tauri/src/
     ├── lib.rs                 # Tauri builder, command registration, daemon cleanup on exit
     ├── settings.rs            # persisted connection settings (local / wsl2 / remote)

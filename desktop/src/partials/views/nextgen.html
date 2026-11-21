@@ -1,0 +1,224 @@
+    <!-- View 4: Next-Gen Runtimes (Sandboxes, KVM, Wasm, Security) -->
+    <section id="view-nextgen" class="view" hidden>
+      <div class="toolbar">
+        <h2 data-i18n="nextgen.title">Sandboxes &amp; KVM MicroVM</h2>
+        <div id="nextgen-tablist" class="subtablist" role="tablist" aria-label="Next-gen runtime tools">
+          <button type="button" role="tab" id="ngtab-sandbox" data-tab="sandbox" data-panel="pane-ng-sandbox" aria-selected="true" tabindex="0" data-i18n="nextgen.tabSandbox">AI Code Sandbox</button>
+          <button type="button" role="tab" id="ngtab-kvm" data-tab="kvm" data-panel="pane-ng-kvm" aria-selected="false" tabindex="-1" data-i18n="nextgen.tabKvm">Linux 6.6 KVM MicroVM</button>
+          <button type="button" role="tab" id="ngtab-wasm" data-tab="wasm" data-panel="pane-ng-wasm" aria-selected="false" tabindex="-1" data-i18n="nextgen.tabWasm">WebAssembly (WASI)</button>
+          <button type="button" role="tab" id="ngtab-sec" data-tab="sec" data-panel="pane-ng-sec" aria-selected="false" tabindex="-1" data-i18n="nextgen.tabSec">Supply Chain (Sign &amp; SBOM)</button>
+        </div>
+        <div class="spacer"></div>
+      </div>
+
+      <div class="content nextgen-page">
+        <!-- Subpane 1: AI Untrusted Code Sandbox -->
+        <div id="pane-ng-sandbox" role="tabpanel" aria-labelledby="ngtab-sandbox">
+          <form id="sandbox-form" class="panel nextgen-card" aria-label="AI Untrusted Code Sandbox">
+            <div class="section-head">
+              <div>
+                <h3 data-i18n="nextgen.sbxTitle">AI Agent Untrusted Code Sandbox</h3>
+                <p class="section-sub" data-i18n="nextgen.sbxSub">Isolated UserNS + Timeout + Read-only rootfs + optional bridge network</p>
+              </div>
+              <span id="sbx-stats" class="section-sub mono" data-i18n="nextgen.sbxBadge">Air-gapped</span>
+            </div>
+
+            <div class="quick-chips mb-md">
+              <span class="muted small" data-i18n="nextgen.quickPresets">Quick Presets:</span>
+              <button type="button" class="chip-btn" data-sbx-preset="isolation" data-i18n="nextgen.presetIsolation">Shell Isolation</button>
+              <button type="button" class="chip-btn" data-sbx-preset="python" data-i18n="nextgen.presetPython">Python Sandbox</button>
+              <button type="button" class="chip-btn" data-sbx-preset="offline" data-i18n="nextgen.presetOffline">Air-Gap Network Test</button>
+            </div>
+
+            <div class="form-grid mb-md">
+              <label>
+                <span data-i18n="nextgen.baseImage">Base Image</span>
+                <input id="sbx-image" class="field mono" type="text" list="image-list" value="alpine:3.20" />
+              </label>
+              <label>
+                <span data-i18n="nextgen.timeoutSec">Timeout (seconds)</span>
+                <input id="sbx-timeout" class="field mono" type="number" min="1" max="120" value="5" />
+              </label>
+              <label>
+                <span data-i18n="nextgen.ramLimitMb">RAM Limit (MB)</span>
+                <input id="sbx-mem" class="field mono" type="number" min="16" value="64" />
+              </label>
+              <label class="inline-check end-align">
+                <input id="sbx-net" type="checkbox" />
+                <span data-i18n="nextgen.allowBridge">Allow bridge network</span>
+              </label>
+            </div>
+
+            <label class="field-label">
+              <span data-i18n="nextgen.untrustedCmd">Untrusted Shell / Command</span>
+              <textarea id="sbx-cmd" class="field area mono" rows="4" autocorrect="off" autocapitalize="none" spellcheck="false">echo "Isolated UID=$(id -u) PID=$$" &amp;&amp; uname -a</textarea>
+            </label>
+
+            <div class="form-row right">
+              <button id="sbx-run-btn" type="submit" class="btn primary" data-i18n="nextgen.btnRunSandbox">Run in Sandbox</button>
+            </div>
+            <pre id="sbx-output" class="console medium mt-md" data-i18n="nextgen.sbxPlaceholder">(sandbox report will appear here)</pre>
+          </form>
+        </div>
+
+        <!-- Subpane 2: Linux 6.6 KVM MicroVM -->
+        <div id="pane-ng-kvm" role="tabpanel" aria-labelledby="ngtab-kvm" hidden="until-found">
+          <div class="panel nextgen-card mb-md">
+            <div class="section-head">
+              <div>
+                <h3 data-i18n="nextgen.kvmTitle">Native Linux /dev/kvm Hardware Hypervisor (coral-vmm)</h3>
+                <p id="kvm-probe-meta" class="section-sub" data-i18n="nextgen.kvmSub">Check hardware virtualization (VT-x / AMD-V) and run a real 64-bit microsecond boot.</p>
+              </div>
+              <div class="row-inline">
+                <span id="kvm-status-pill" class="health-badge" data-i18n="nextgen.kvmNotProbed">Not probed</span>
+                <button id="kvm-probe-btn" type="button" class="btn primary sm" data-i18n="nextgen.kvmProbeBtn">Run KVM Probe</button>
+              </div>
+            </div>
+            <pre id="kvm-selftest-out" class="console compact" data-i18n="nextgen.kvmOutPlaceholder">(ready to probe /dev/kvm)</pre>
+          </div>
+
+          <form id="vm-boot-form" class="panel nextgen-card" aria-label="Pure-Rust KVM Linux Boot">
+            <div class="section-head">
+              <div>
+                <h3 data-i18n="nextgen.vmBootTitle">Boot Standalone Linux 6.6 Kernel + VirtIO</h3>
+                <p class="section-sub" data-i18n="nextgen.vmBootSub">Pure-Rust VMM • Zero QEMU • Persistent VirtIO-Blk &amp; Userspace VirtIO-Net</p>
+              </div>
+              <span id="vm-boot-stats" class="section-sub mono" data-i18n="common.ready">Ready</span>
+            </div>
+
+            <div class="form-grid mb-md">
+              <label>
+                <span data-i18n="nextgen.rootfsImage">Rootfs Image</span>
+                <input id="vm-boot-image" class="field mono" type="text" list="image-list" value="alpine:3.20" />
+              </label>
+              <label>
+                <span data-i18n="nextgen.ramMb">RAM (MB)</span>
+                <input id="vm-boot-mem" class="field mono" type="number" min="128" max="1024" value="256" />
+              </label>
+              <label>
+                <span data-i18n="nextgen.timeoutSec">Timeout (seconds)</span>
+                <input id="vm-boot-timeout" class="field mono" type="number" min="1" max="120" value="15" />
+              </label>
+              <label>
+                <span data-i18n="nextgen.virtioDisk">VirtIO-Blk Disk (optional path[:ro])</span>
+                <input id="vm-boot-disk" class="field mono" type="text" placeholder="/tmp/data.img" />
+              </label>
+            </div>
+
+            <label class="inline-check mb-sm">
+              <input id="vm-boot-net" type="checkbox" />
+              <span data-i18n="nextgen.attachNet">Attach Userspace VirtIO-Net (eth0 10.0.2.15/24)</span>
+            </label>
+
+            <label class="field-label">
+              <span data-i18n="nextgen.guestCmd">Guest PID 1 Command</span>
+              <input id="vm-boot-cmd" class="field mono" type="text" value="uname -a &amp;&amp; ls -la /dev/vda /sys/class/net 2&gt;&amp;1 || true" />
+            </label>
+
+            <div class="form-row right">
+              <button id="vm-setup-kernel-btn" type="button" class="btn" data-i18n="nextgen.btnDownloadKernel">Download / Update 6.6 Kernel</button>
+              <button id="vm-boot-btn" type="submit" class="btn primary" data-i18n="nextgen.btnBootVm">Boot MicroVM</button>
+            </div>
+            <pre id="vm-boot-output" class="console medium mt-md" data-i18n="nextgen.vmOutPlaceholder">(serial console output will appear here)</pre>
+          </form>
+        </div>
+
+        <!-- Subpane 3: WebAssembly -->
+        <div id="pane-ng-wasm" role="tabpanel" aria-labelledby="ngtab-wasm" hidden="until-found">
+          <form id="wasm-run-form" class="panel nextgen-card" aria-label="WebAssembly WASI Runner">
+            <div class="section-head">
+              <div>
+                <h3 data-i18n="nextgen.wasmTitle">WebAssembly WASI Runner (coral-wasm)</h3>
+                <p class="section-sub" data-i18n="nextgen.wasmSub">Sub-millisecond cold start with deterministic CPU fuel meters.</p>
+              </div>
+              <span id="wasm-stats" class="section-sub mono" data-i18n="nextgen.wasmReady">µs startup</span>
+            </div>
+
+            <div class="quick-chips mb-md">
+              <span class="muted small" data-i18n="nextgen.templates">Templates:</span>
+              <button type="button" class="chip-btn" data-wasm-tpl="hello" data-i18n="nextgen.tplHello">Hello WASI</button>
+              <button type="button" class="chip-btn" data-wasm-tpl="fuel" data-i18n="nextgen.tplFuel">CPU Fuel Loop</button>
+            </div>
+
+            <div class="form-grid mb-md">
+              <label>
+                <span data-i18n="nextgen.fuelBudget">CPU Fuel Budget</span>
+                <input id="wasm-fuel" class="field mono" type="number" min="1000" value="5000000" />
+              </label>
+              <label>
+                <span data-i18n="nextgen.memLimitMb">Memory Limit (MB)</span>
+                <input id="wasm-mem" class="field mono" type="number" min="1" value="16" />
+              </label>
+            </div>
+
+            <label class="field-label">
+              <span data-i18n="nextgen.watSource">WebAssembly Text (.wat) source</span>
+              <textarea id="wasm-source" class="field area mono" rows="7" autocorrect="off" autocapitalize="none" spellcheck="false">(module
+  (import "wasi_snapshot_preview1" "fd_write"
+    (func $fd_write (param i32 i32 i32 i32) (result i32)))
+  (memory (export "memory") 1)
+  (data (i32.const 0) "\10\00\00\00\17\00\00\00")
+  (data (i32.const 16) "Hello from Coral Wasm!\n")
+  (func (export "_start")
+    (drop (call $fd_write (i32.const 1) (i32.const 0) (i32.const 1) (i32.const 64)))))</textarea>
+            </label>
+
+            <div class="form-row right">
+              <button id="wasm-run-btn" type="submit" class="btn primary" data-i18n="nextgen.btnExecWasm">Execute Wasm</button>
+            </div>
+            <pre id="wasm-output" class="console preview mt-md" data-i18n="nextgen.wasmOutPlaceholder">(output will appear here)</pre>
+          </form>
+
+          <div class="panel nextgen-card mt-lg">
+            <div class="section-head">
+              <div>
+                <h3 data-i18n="nextgen.wasmServeTitle">Serverless HTTP Gateway (coral wasm serve)</h3>
+                <p class="section-sub" data-i18n="nextgen.wasmServeSub">Scale-to-zero per-request HTTP dispatcher for Wasm modules.</p>
+              </div>
+            </div>
+            <div class="form-grid mb-sm">
+              <label>
+                <span data-i18n="nextgen.wasmTarget">Wasm Module / Image</span>
+                <input id="wasm-serve-target" class="field mono" type="text" value="hello-wasm:latest" />
+              </label>
+              <label>
+                <span data-i18n="nextgen.listenAddr">Listen Address</span>
+                <input id="wasm-serve-addr" class="field mono" type="text" value="127.0.0.1:8080" />
+              </label>
+            </div>
+            <div class="row-inline">
+              <code id="wasm-serve-preview" class="field mono nowrap-scroll">coral wasm serve hello-wasm:latest --listen 127.0.0.1:8080</code>
+              <button id="wasm-serve-copy-btn" type="button" class="btn" data-i18n="nextgen.btnCopyCmd">Copy Command</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Subpane 4: Supply Chain Security & SBOM -->
+        <div id="pane-ng-sec" role="tabpanel" aria-labelledby="ngtab-sec" hidden="until-found">
+          <div class="panel nextgen-card">
+            <div class="section-head">
+              <div>
+                <h3 data-i18n="nextgen.secTitle">Supply-Chain Security (Ed25519 &amp; SPDX SBOM)</h3>
+                <p class="section-sub" data-i18n="nextgen.secSub">Cryptographic signing and software bill of materials generation.</p>
+              </div>
+              <span id="sec-stats" class="section-sub mono" data-i18n="common.ready">Ready</span>
+            </div>
+
+            <div class="form-grid mb-md">
+              <label class="col-span-full">
+                <span data-i18n="nextgen.targetTag">Target Image Tag</span>
+                <input id="sec-image" class="field mono" type="text" list="image-list" value="alpine:3.20" />
+              </label>
+            </div>
+
+            <div class="row-wrap">
+              <button id="sec-sign-btn" type="button" class="btn primary" data-i18n="nextgen.btnSign">Sign Image (Ed25519)</button>
+              <button id="sec-verify-btn" type="button" class="btn" data-i18n="nextgen.btnVerify">Verify Signature</button>
+              <button id="sec-sbom-btn" type="button" class="btn" data-i18n="nextgen.btnSbom">Generate SPDX 2.3 SBOM</button>
+            </div>
+            <pre id="sec-output" class="console tall mt-lg" data-i18n="nextgen.secOutPlaceholder">(Ed25519 signature / SPDX JSON output)</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+

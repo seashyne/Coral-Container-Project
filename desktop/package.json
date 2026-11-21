@@ -4,6 +4,10 @@
   "version": "2.3.0",
   "description": "Coral Desktop — cross-platform GUI for the Coral Container Runtime",
   "scripts": {
+    "build:html": "node build-html.mjs",
+    "predev": "npm run build:html",
+    "prebuild": "npm run build:html",
+    "pretauri": "npm run build:html",
     "tauri": "tauri",
     "dev": "tauri dev",
     "build": "tauri build",

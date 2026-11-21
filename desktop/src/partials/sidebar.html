@@ -1,0 +1,50 @@
+  <!-- Navigation sidebar -->
+  <aside>
+    <nav aria-label="Primary navigation">
+      <div class="navlabel" data-i18n="nav.workloads">Workloads</div>
+      <button type="button" class="nav-item active" data-view="containers" aria-current="page">
+        <span class="i" data-icon="cube"></span>
+        <span class="lbl" data-i18n="nav.containers">Containers</span>
+        <span class="count" id="n-containers">0</span>
+      </button>
+      <button type="button" class="nav-item" data-view="images">
+        <span class="i" data-icon="image"></span>
+        <span class="lbl" data-i18n="nav.images">Images</span>
+        <span class="count" id="n-images">0</span>
+      </button>
+      <button type="button" class="nav-item" data-view="volumes">
+        <span class="i" data-icon="database"></span>
+        <span class="lbl" data-i18n="nav.volumes">Volumes</span>
+        <span class="count" id="n-volumes">0</span>
+      </button>
+
+      <div class="navlabel" data-i18n="nav.advanced">Advanced</div>
+      <button type="button" class="nav-item" data-view="nextgen">
+        <span class="i" data-icon="cpu"></span>
+        <span class="lbl" data-i18n="nav.nextgen">Sandboxes &amp; VMs</span>
+      </button>
+      <button type="button" class="nav-item" data-view="pods">
+        <span class="i" data-icon="hexagon"></span>
+        <span class="lbl" data-i18n="nav.pods">Pods</span>
+        <span class="count" id="n-pods">0</span>
+      </button>
+
+      <div class="navlabel" data-i18n="nav.application">Application</div>
+      <button type="button" class="nav-item" data-view="settings">
+        <span class="i" data-icon="sliders"></span>
+        <span class="lbl" data-i18n="nav.settings">Settings</span>
+      </button>
+    </nav>
+
+    <!-- Engine status card -->
+    <div class="vm" id="vm-card">
+      <div class="vm-head">
+        <div class="vm-id">
+          <span class="dot" id="vm-dot" aria-hidden="true"></span>
+          <span id="vm-state" data-i18n="engine.stopped">Engine stopped</span>
+        </div>
+      </div>
+      <div class="vm-sub" id="vm-sub" data-i18n="engine.clickConnect">Click Connect to start</div>
+      <button id="vm-btn" type="button" class="btn primary full" data-i18n="engine.connect">Connect</button>
+    </div>
+  </aside>

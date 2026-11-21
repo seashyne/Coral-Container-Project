@@ -1,0 +1,25 @@
+  <!-- 4. System Prune Dialog -->
+  <dialog id="prune-dialog" class="modal-dialog" closedby="any" aria-labelledby="prune-dialog-title">
+    <div class="dialog-box dialog-narrow">
+      <div class="modal-head">
+        <h3 id="prune-dialog-title" data-i18n="modal.pruneTitle">Reclaim Disk Space</h3>
+        <button type="button" class="sb" data-close-dialog="prune-dialog" aria-label="Close dialog" data-i18n-aria="common.close" data-close-icon></button>
+      </div>
+      <p class="hint mt-0" data-i18n="modal.pruneHint">Cleans exited containers, unused pod sandboxes, and build cache layers to free disk space.</p>
+      <div class="prune-checks">
+        <label class="inline-check">
+          <input id="prune-all" type="checkbox" />
+          <span data-i18n="modal.pruneAll">Also remove unreferenced downloaded images</span>
+        </label>
+        <label class="inline-check">
+          <input id="prune-volumes" type="checkbox" />
+          <span data-i18n="modal.pruneVolumes">Also remove unused named volumes</span>
+        </label>
+      </div>
+      <div class="form-row right">
+        <button type="button" class="btn" data-close-dialog="prune-dialog" data-i18n="common.cancel">Cancel</button>
+        <button id="prune-submit" type="button" class="btn danger" data-i18n="modal.btnPruneNow">Prune Now</button>
+      </div>
+    </div>
+  </dialog>
+

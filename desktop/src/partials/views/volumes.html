@@ -1,0 +1,42 @@
+    <!-- View 3: Volumes & Storage -->
+    <section id="view-volumes" class="view" hidden>
+      <div class="toolbar">
+        <h2 data-i18n="volumes.title">Volumes &amp; Storage</h2>
+        <div class="spacer"></div>
+        <div class="hright">
+          <button id="prune-btn" type="button" class="btn danger">
+            <span class="i" data-icon="trash"></span>
+            <span class="hlbl" data-i18n="volumes.btnPrune">Reclaim Disk Space</span>
+          </button>
+          <button
+            id="refresh-volumes"
+            type="button"
+            class="btn ic"
+            title="Refresh volumes"
+            aria-label="Refresh volumes"
+            data-i18n-title="volumes.refreshTitle"
+            data-i18n-aria="volumes.refreshTitle"
+            data-icon="refresh"
+          ></button>
+        </div>
+      </div>
+      <div class="content volumes-page">
+        <div id="sys-df-cards" class="df-grid"></div>
+        <form id="vol-create-form" class="vol-create-bar" aria-label="Create persistent named volume">
+          <input
+            id="vol-name-input"
+            class="field mono"
+            type="text"
+            required
+            autocorrect="off"
+            autocapitalize="none"
+            spellcheck="false"
+            placeholder="New volume name (e.g. pg-data, redis-cache)"
+            data-i18n-placeholder="volumes.createPlaceholder"
+          />
+          <button id="vol-create-btn" type="submit" class="btn primary" data-i18n="volumes.btnCreate">Create volume</button>
+        </form>
+        <div id="volumes-table"></div>
+      </div>
+    </section>
+

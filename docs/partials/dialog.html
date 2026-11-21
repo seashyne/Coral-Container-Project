@@ -1,0 +1,30 @@
+  <dialog id="promptpay-dialog" class="qr-dialog" closedby="any" aria-labelledby="promptpay-title">
+    <div class="qr-dialog-inner">
+      <div class="qr-dialog-head">
+        <h3 id="promptpay-title" data-i18n="dialog.ppTitle">สนับสนุนผ่าน PromptPay QR</h3>
+        <form method="dialog">
+          <button type="submit" class="icon-btn" aria-label="Close">✕</button>
+        </form>
+      </div>
+
+      <div class="qr-frame" id="promptpay-qr-frame">
+        <div>
+          <strong data-i18n="dialog.ppPlaceholderTitle">ยังไม่ได้อัปโหลดรูป PromptPay QR</strong>
+          <p style="margin: 8px 0 0; font-size: 0.85rem; color: var(--muted);" data-i18n="dialog.ppPlaceholderDesc"></p>
+        </div>
+      </div>
+
+      <div class="qr-info">
+        <div><strong data-i18n="dialog.ppAccount">ชื่อบัญชี:</strong> <span id="pp-account-name"></span></div>
+        <div><strong data-i18n="dialog.ppId">หมายเลขพร้อมเพย์:</strong> <code class="inline" id="pp-id-text"></code></div>
+      </div>
+
+      <div class="qr-dialog-foot">
+        <small data-i18n="dialog.ppHint">กดปุ่ม Esc หรือคลิกพื้นที่ด้านนอกเพื่อปิดหน้าต่าง</small>
+        <form method="dialog">
+          <button type="submit" class="btn btn-secondary" data-i18n="dialog.close">ปิดหน้าต่าง</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
+

@@ -1,0 +1,137 @@
+  <!-- Top application header strip -->
+  <header class="strip">
+    <button
+      id="rail-btn"
+      type="button"
+      class="sb"
+      title="Toggle sidebar (Ctrl+B)"
+      aria-label="Toggle sidebar"
+      data-i18n-title="topbar.toggleSidebar"
+      data-i18n-aria="topbar.toggleSidebarAria"
+      data-icon="panel"
+    ></button>
+    <div class="brand">
+      <span class="mark" aria-hidden="true"></span>
+      <span class="brand-name" data-i18n="app.name">Coral</span>
+    </div>
+    <div class="drag" aria-hidden="true"></div>
+    <label class="gfind" id="gfind">
+      <span class="s-ic" data-icon="search" aria-hidden="true"></span>
+      <input
+        id="search"
+        type="search"
+        placeholder="Search containers, stacks, images…"
+        autocomplete="off"
+        spellcheck="false"
+        aria-label="Global search"
+        data-i18n-aria="topbar.globalSearchAria"
+      />
+      <button
+        id="search-clear"
+        type="button"
+        class="search-clear hidden"
+        title="Clear search"
+        aria-label="Clear search"
+        data-i18n-title="topbar.clearSearch"
+        data-i18n-aria="topbar.clearSearch"
+        data-icon="x"
+      ></button>
+      <kbd aria-hidden="true" data-i18n="topbar.searchShortcut">Ctrl K</kbd>
+    </label>
+    <button
+      id="lang-btn"
+      type="button"
+      class="lang-pill"
+      title="Switch language (EN / ไทย)"
+      aria-label="Switch language"
+      data-i18n-title="topbar.langTitle"
+      data-i18n-aria="topbar.langAria"
+    >
+      <span data-icon="globe"></span>
+      <span id="lang-label">EN</span>
+    </button>
+    <button
+      id="theme-btn"
+      type="button"
+      class="theme-trigger"
+      popovertarget="theme-popover"
+      title="Theme &amp; Appearance"
+      aria-label="Theme &amp; Appearance"
+      data-i18n-title="topbar.themeMenu"
+      data-i18n-aria="topbar.themeMenu"
+    >
+      <span class="theme-dot" aria-hidden="true"></span>
+      <span id="theme-btn-icon" data-icon="sun"></span>
+      <span class="hlbl" data-i18n="topbar.themeShort">Theme</span>
+    </button>
+    <button
+      id="gear-btn"
+      type="button"
+      class="sb"
+      title="Settings"
+      aria-label="Settings"
+      data-i18n-title="topbar.settings"
+      data-i18n-aria="topbar.settings"
+      data-icon="gear"
+    ></button>
+  </header>
+
+  <!-- Quick Theme, Palette, Density & Language Popover -->
+  <div id="theme-popover" popover="auto" class="theme-popover" aria-labelledby="theme-pop-title">
+    <div class="pop-head">
+      <strong id="theme-pop-title" data-i18n="themePop.title">Appearance &amp; Theme</strong>
+      <button id="theme-pop-settings" type="button" class="pop-link" data-i18n="themePop.allSettings">All settings</button>
+    </div>
+
+    <div class="pop-group">
+      <span class="pop-label" data-i18n="settings.colorMode">Color Mode</span>
+      <div class="pop-segmented" role="group" aria-label="Color Mode">
+        <button type="button" class="pop-opt" data-theme-pick="auto" aria-pressed="true" data-i18n="themePop.modeAuto">System</button>
+        <button type="button" class="pop-opt" data-theme-pick="light" aria-pressed="false" data-i18n="settings.themeLight">Light</button>
+        <button type="button" class="pop-opt" data-theme-pick="dark" aria-pressed="false" data-i18n="settings.themeDark">Dark</button>
+      </div>
+    </div>
+
+    <div class="pop-group">
+      <span class="pop-label" data-i18n="settings.palette">Accent Palette</span>
+      <div class="palette-swatches" role="group" aria-label="Accent palette">
+        <button type="button" class="palette-swatch" data-palette-pick="coral" aria-pressed="true">
+          <span class="swatch-dot coral" aria-hidden="true"></span>
+          <span data-i18n="settings.paletteCoral">Coral</span>
+        </button>
+        <button type="button" class="palette-swatch" data-palette-pick="ocean" aria-pressed="false">
+          <span class="swatch-dot ocean" aria-hidden="true"></span>
+          <span data-i18n="settings.paletteOcean">Ocean</span>
+        </button>
+        <button type="button" class="palette-swatch" data-palette-pick="emerald" aria-pressed="false">
+          <span class="swatch-dot emerald" aria-hidden="true"></span>
+          <span data-i18n="settings.paletteEmerald">Emerald</span>
+        </button>
+        <button type="button" class="palette-swatch" data-palette-pick="indigo" aria-pressed="false">
+          <span class="swatch-dot indigo" aria-hidden="true"></span>
+          <span data-i18n="settings.paletteIndigo">Indigo</span>
+        </button>
+        <button type="button" class="palette-swatch" data-palette-pick="amber" aria-pressed="false">
+          <span class="swatch-dot amber" aria-hidden="true"></span>
+          <span data-i18n="settings.paletteAmber">Amber</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="pop-group">
+      <span class="pop-label" data-i18n="settings.density">Interface Density</span>
+      <div class="pop-segmented" role="group" aria-label="Interface Density">
+        <button type="button" class="pop-opt" data-density-pick="comfortable" aria-pressed="true" data-i18n="settings.densityComfortable">Comfortable</button>
+        <button type="button" class="pop-opt" data-density-pick="compact" aria-pressed="false" data-i18n="settings.densityCompact">Compact</button>
+      </div>
+    </div>
+
+    <div class="pop-group">
+      <span class="pop-label" data-i18n="settings.language">Language</span>
+      <div class="pop-segmented" role="group" aria-label="Language">
+        <button type="button" class="pop-opt" data-lang-pick="en" aria-pressed="true">English</button>
+        <button type="button" class="pop-opt" data-lang-pick="th" aria-pressed="false">ไทย</button>
+      </div>
+    </div>
+  </div>
+

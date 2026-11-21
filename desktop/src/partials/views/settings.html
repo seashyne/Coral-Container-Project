@@ -1,0 +1,177 @@
+    <!-- View 6: Settings -->
+    <section id="view-settings" class="view" hidden>
+      <div class="toolbar">
+        <h2 data-i18n="settings.title">Settings</h2>
+        <div id="settings-tablist" class="subtablist" role="tablist" aria-label="Settings categories">
+          <button type="button" role="tab" id="settab-general" data-tab="general" data-panel="pane-set-general" aria-selected="true" tabindex="0" data-i18n="settings.tabGeneral">General</button>
+          <button type="button" role="tab" id="settab-advanced" data-tab="advanced" data-panel="pane-set-advanced" aria-selected="false" tabindex="-1" data-i18n="settings.tabAdvanced">Advanced (Paths &amp; Binaries)</button>
+          <button type="button" role="tab" id="settab-about" data-tab="about" data-panel="pane-set-about" aria-selected="false" tabindex="-1" data-i18n="settings.tabAbout">About Coral</button>
+        </div>
+        <div class="spacer"></div>
+      </div>
+
+      <div class="content settings">
+        <!-- Settings Pane 1: General -->
+        <div id="pane-set-general" role="tabpanel" aria-labelledby="settab-general" class="settings-stack">
+          <div class="panel">
+            <div class="section-head">
+              <h3 data-i18n="settings.connTitle">Coral Engine Connection</h3>
+              <span id="settings-conn-status" class="health-badge" data-i18n="engine.disconnectedBadge">Disconnected</span>
+            </div>
+            <div class="form-grid">
+              <label>
+                <span data-i18n="settings.connMode">Connection Mode</span>
+                <select id="set-mode" class="field">
+                  <option value="local" data-i18n="settings.modeLocal">Local — Spawn or attach on this Linux machine</option>
+                  <option value="wsl2" data-i18n="settings.modeWsl2">WSL2 — Connect to WSL2 distro (Windows)</option>
+                  <option value="remote" data-i18n="settings.modeRemote">Remote — Attach to a remote host daemon</option>
+                </select>
+              </label>
+              <label>
+                <span data-i18n="settings.endpoint">Daemon Endpoint (host:port)</span>
+                <input id="set-endpoint" class="field mono" type="text" placeholder="127.0.0.1:50051" />
+              </label>
+            </div>
+            <p class="hint" id="mode-hint"></p>
+            <div class="form-row">
+              <button id="settings-conn-btn" type="button" class="btn" data-i18n="settings.btnConnect">Connect / Reconnect</button>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h3 data-i18n="settings.appearanceTitle">Appearance, Theme &amp; Language</h3>
+            <div class="form-grid">
+              <label>
+                <span data-i18n="settings.colorMode">Color Mode</span>
+                <select id="set-theme" class="field">
+                  <option value="auto">System</option>
+                  <option value="dark" data-i18n="settings.themeDark">Dark</option>
+                  <option value="light" data-i18n="settings.themeLight">Light</option>
+                </select>
+              </label>
+              <label>
+                <span data-i18n="settings.language">Language</span>
+                <select id="set-lang" class="field">
+                  <option value="en" data-i18n="settings.langEn">English (EN)</option>
+                  <option value="th" data-i18n="settings.langTh">ไทย (Thai)</option>
+                </select>
+              </label>
+              <label>
+                <span data-i18n="settings.density">Interface Density</span>
+                <select id="set-density" class="field">
+                  <option value="comfortable" data-i18n="settings.densityComfortable">Comfortable</option>
+                  <option value="compact" data-i18n="settings.densityCompact">Compact</option>
+                </select>
+              </label>
+              <div class="field-group">
+                <label data-i18n="settings.palette">Accent Palette</label>
+                <div class="palette-swatches" role="group" aria-label="Accent palette">
+                  <button type="button" class="palette-swatch" data-palette-pick="coral" aria-pressed="true">
+                    <span class="swatch-dot coral" aria-hidden="true"></span>
+                    <span data-i18n="settings.paletteCoral">Coral</span>
+                  </button>
+                  <button type="button" class="palette-swatch" data-palette-pick="ocean" aria-pressed="false">
+                    <span class="swatch-dot ocean" aria-hidden="true"></span>
+                    <span data-i18n="settings.paletteOcean">Ocean</span>
+                  </button>
+                  <button type="button" class="palette-swatch" data-palette-pick="emerald" aria-pressed="false">
+                    <span class="swatch-dot emerald" aria-hidden="true"></span>
+                    <span data-i18n="settings.paletteEmerald">Emerald</span>
+                  </button>
+                  <button type="button" class="palette-swatch" data-palette-pick="indigo" aria-pressed="false">
+                    <span class="swatch-dot indigo" aria-hidden="true"></span>
+                    <span data-i18n="settings.paletteIndigo">Indigo</span>
+                  </button>
+                  <button type="button" class="palette-swatch" data-palette-pick="amber" aria-pressed="false">
+                    <span class="swatch-dot amber" aria-hidden="true"></span>
+                    <span data-i18n="settings.paletteAmber">Amber</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="stack-sm mt-lg">
+              <label class="inline-check">
+                <input id="set-auto-connect" type="checkbox" checked />
+                <span data-i18n="settings.autoConnect">Automatically connect to local Coral Engine on launch</span>
+              </label>
+              <label class="inline-check">
+                <input id="set-compact-rail" type="checkbox" />
+                <span data-i18n="settings.compactRail">Compact sidebar navigation (Rail mode)</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <button id="save-settings" type="button" class="btn primary" data-i18n="settings.btnSave">Save Changes</button>
+            <button id="save-connect" type="button" class="btn" data-i18n="settings.btnSaveConnect">Save &amp; Connect</button>
+          </div>
+        </div>
+
+        <!-- Settings Pane 2: Advanced -->
+        <div id="pane-set-advanced" role="tabpanel" aria-labelledby="settab-advanced" class="settings-stack" hidden="until-found">
+          <div class="panel">
+            <h3 data-i18n="settings.advTitle">Binary &amp; Directory Overrides</h3>
+            <p class="hint mt-0 mb-md" data-i18n="settings.advHint">Leave blank or use defaults to inherit standard user paths (~/.local/bin/coral, ~/.local/state/coral/).</p>
+            <div class="form-grid">
+              <label>
+                <span data-i18n="settings.daemonBin">coral-daemon binary</span>
+                <div class="input-btn">
+                  <input id="set-daemon-bin" class="field mono" type="text" placeholder="coral-daemon" />
+                  <button type="button" class="btn ic pick" data-target="set-daemon-bin" title="Browse binary" aria-label="Browse binary" data-i18n-title="settings.browseBin" data-i18n-aria="settings.browseBin" data-icon="folder"></button>
+                </div>
+              </label>
+              <label>
+                <span data-i18n="settings.cliBin">coral CLI binary</span>
+                <div class="input-btn">
+                  <input id="set-coral-bin" class="field mono" type="text" placeholder="coral" />
+                  <button type="button" class="btn ic pick" data-target="set-coral-bin" title="Browse binary" aria-label="Browse binary" data-i18n-title="settings.browseBin" data-i18n-aria="settings.browseBin" data-icon="folder"></button>
+                </div>
+              </label>
+              <label>
+                <span data-i18n="settings.defaultRootfs">Default rootfs (optional)</span>
+                <div class="input-btn">
+                  <input id="set-rootfs" class="field mono" type="text" placeholder="/path/to/rootfs" />
+                  <button type="button" class="btn ic pick-dir" data-target="set-rootfs" title="Browse directory" aria-label="Browse directory" data-i18n-title="settings.browseDir" data-i18n-aria="settings.browseDir" data-icon="folder"></button>
+                </div>
+              </label>
+              <label>
+                <span data-i18n="settings.imagesDir">Images directory (optional)</span>
+                <div class="input-btn">
+                  <input id="set-images-dir" class="field mono" type="text" placeholder="~/.local/state/coral/images" />
+                  <button type="button" class="btn ic pick-dir" data-target="set-images-dir" title="Browse directory" aria-label="Browse directory" data-i18n-title="settings.browseDir" data-i18n-aria="settings.browseDir" data-icon="folder"></button>
+                </div>
+              </label>
+              <label>
+                <span data-i18n="settings.stateDir">Daemon state directory (optional)</span>
+                <div class="input-btn">
+                  <input id="set-state-dir" class="field mono" type="text" placeholder="$XDG_RUNTIME_DIR/coral/daemon" />
+                  <button type="button" class="btn ic pick-dir" data-target="set-state-dir" title="Browse directory" aria-label="Browse directory" data-i18n-title="settings.browseDir" data-i18n-aria="settings.browseDir" data-icon="folder"></button>
+                </div>
+              </label>
+              <label>
+                <span data-i18n="settings.wslDistro">WSL2 distro name (Windows)</span>
+                <input id="set-wsl-distro" class="field mono" type="text" placeholder="default distro" />
+              </label>
+            </div>
+            <div class="form-row">
+              <button id="save-adv-settings" type="button" class="btn primary" data-i18n="settings.btnSaveAdv">Save Advanced Settings</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings Pane 3: About -->
+        <div id="pane-set-about" role="tabpanel" aria-labelledby="settab-about" class="settings-stack" hidden="until-found">
+          <div class="panel">
+            <div class="about-brand">
+              <span class="mark lg"></span>
+              <span class="brand-name lg" data-i18n="settings.aboutBrand">Coral Desktop</span>
+            </div>
+            <p class="about-desc" data-i18n="settings.aboutDesc">Fast, lightweight container and VM manager built with Rust.</p>
+            <div class="spec-chips-row">
+              <span class="spec-chip">Version <b>v2.3.0</b></span>
+              <span class="spec-chip">License <b>Apache-2.0</b></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
