@@ -71,8 +71,11 @@ jobs:
         working-directory: coral_repo
         run: |
           set -euo pipefail
-          if [[ -f benchmark-results.json ]]; then
-            python3 - <<'PY'
+          if [[ ! -f benchmark-results.json ]]; then
+            echo "No benchmark JSON was produced." >&2
+            exit 1
+          fi
+          python3 - <<'PY'
           import json
           data = json.load(open("benchmark-results.json"))
           print("## Startup latency", data["host"]["kernel"], data["host"]["cpus"], "CPUs")
@@ -83,10 +86,6 @@ jobs:
               print(f"| {row['label']} | {row['mode']} | {row['p50_median']:.2f} "
                     f"| {row['mean_median']:.2f} | {row['p95_median']:.2f} |")
           PY
-          else
-            echo "No benchmark JSON was produced." >&2
-            exit 1
-          fi
 
       - name: Upload the benchmark results
         uses: actions/upload-artifact@v4

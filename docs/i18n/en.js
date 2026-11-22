@@ -256,6 +256,11 @@ window.CORAL_I18N_EN = {
     "The system-wide round measured alpine:3.20 only, while the first round also covered debian:bookworm-slim and busybox:musl.",
   "report.bl7Action":
     "Extend benchmark.sh with a distro matrix and run the system-wide round with PULL_EXTRA=1.",
+  "report.bl8Area": "ARM64 never ran the E2E suite",
+  "report.bl8Finding":
+    "CI built ARM64 artifacts but never ran the test suite, and coral-vmm did not compile on ARM at all because its imports and cfg gates disagreed.",
+  "report.bl8Action":
+    "Add ARM64 to the verify matrix and fix every break until build, clippy and the unit tests pass on aarch64 (done in this round).",
   "report.stOpen": "Open",
   "report.stDone": "Fixed in this round",
   "report.reportBtn": "Read Full Engineering Report (REPORT_v2.3.md)",

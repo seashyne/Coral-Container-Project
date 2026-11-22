@@ -4,7 +4,7 @@
 
 <h1 align="center">รายงานสรุปผลทางวิศวกรรมและการเปรียบเทียบประสิทธิภาพ<br>Coral Container Project v2.3.0 เทียบกับ Docker Engine</h1>
 
-**วันที่จัดทำ:** 20 พฤศจิกายน 2026 (อัปเดต 21 พฤศจิกายน 2026 — เพิ่มผล benchmark รอบติดตั้งแบบ system-wide, ข้อ 3.2)  
+**วันที่จัดทำ:** 20 พฤศจิกายน 2026 (อัปเดต 22 พฤศจิกายน 2026 — เพิ่มการรองรับ ARM64 ใน CI และหัวข้อ 5.1)  
 **เวอร์ชันที่ประเมิน:** `Coral CLI v2.3.0` · `coral-daemon v2.3.0` · `Coral Desktop v2.3.0` เทียบกับ `Docker CLI 29.10.0` (`Docker Desktop Server 29.9.3`)  
 **เครื่องทดสอบ:** Ubuntu Linux (`7.3.0-10-generic` `x86_64`) · Intel Core `i5-13400F` (16 CPUs) · Hardware `/dev/kvm` API v12
 
@@ -143,13 +143,14 @@ CORAL_BIN=/usr/bin/coral CORAL_DAEMON_BIN=/usr/bin/coral-daemon RUNS=30 ./script
 
 | # | หัวข้อ | สิ่งที่พบ / หลักฐาน | สิ่งที่ควรทำ | สถานะ |
 | ---: | :--- | :--- | :--- | :--- |
-| 1 | **ระเบียบวิธีวัด Benchmark** | CRI daemon วัด P50 ต่างกัน `2.3×` ระหว่างสองรอบบนโฮสต์เดียวกัน (`21.49` → `9.49 ms`) เพราะยังไม่ได้ควบคุม page cache และภาระเครื่อง | วัดหลายรอบแล้วรายงาน median-of-medians แยก cold/warm cache และ pin CPU ให้เหมือนกันทุกรอบ | **ยังค้าง** |
+| 1 | **ระเบียบวิธีวัด Benchmark** | CRI daemon วัด P50 ต่างกัน `2.3×` ระหว่างสองรอบบนโฮสต์เดียวกัน (`21.49` → `9.49 ms`) เพราะยังไม่ได้ควบคุม page cache และภาระเครื่อง | วัดหลายรอบแล้วรายงาน median-of-medians แยก cold/warm cache และ pin CPU ให้เหมือนกันทุกรอบ | **แก้แล้ว** (แยก `scripts/benchmark.py` เป็น package `scripts/bench/` พร้อมโหมด cold/warm, CPU pinning, หลายรอบ และผลลัพธ์ JSON — commit `ec75a74`) |
 | 2 | **เอกสารเว็บไม่ตรงกับผลวัดล่าสุด** | ตารางผลทดสอบบนเว็บยังแสดงเฉพาะรอบแรก (Docker Desktop บนอีกเครื่อง) | เพิ่มตารางรอบ system-wide พร้อมระบุโฮสต์/โหมดของแต่ละรอบ | **แก้แล้วในรอบนี้** |
-| 3 | **systemd unit ของแพ็กเกจไม่ระบุ state dir** | unit ที่แพ็กเกจติดตั้งมาไม่มี `--state-dir`/`--images-dir`/`--default-rootfs` → daemon ใช้ `XDG_RUNTIME_DIR` มองไม่เห็น state เดิม และต้องเขียน drop-in เอง | ship ค่า default ที่ถูกต้อง หรือคำสั่ง `coral-daemon --init` ที่สร้าง unit พร้อม state path ของเครื่อง | **ยังค้าง** |
+| 3 | **systemd unit ของแพ็กเกจไม่ระบุ state dir** | unit ที่แพ็กเกจติดตั้งมาไม่มี `--state-dir`/`--images-dir`/`--default-rootfs` → daemon ใช้ `XDG_RUNTIME_DIR` มองไม่เห็น state เดิม และต้องเขียน drop-in เอง | ship ค่า default ที่ถูกต้อง หรือคำสั่ง `coral-daemon --init` ที่สร้าง unit พร้อม state path ของเครื่อง | **แก้แล้ว** (unit ในแพ็กเกจระบุ `--state-dir %h/.local/state/coral/daemon` และ `--images-dir %h/.local/state/coral/images` ซึ่งตรงกับ default ของโค้ด — commit `ec75a74`) |
 | 4 | **AppImage ของ Coral Desktop bundle ไม่ผ่าน** | `linuxdeploy` เรียก plugin `gtk` แล้วล้ม 2 จุด: (1) ไม่มี `dpkg-architecture` (แพ็กเกจ `dpkg-dev`) (2) `/usr/bin/cp` ของ Ubuntu 26.10 เป็น **uutils coreutils** ซึ่ง `cp -r --parents` ผิดพลาดเมื่อ source path เป็น absolute path (พิสูจน์ได้ด้วยการรัน `cp` เดียวกัน: GNU cp คัดลอกได้ 134 ไฟล์, uutils cp ล้มด้วย `same file`) | ติดตั้ง `dpkg-dev` และให้ `PATH` มองเห็น GNU cp ก่อนขั้นตอน bundle | **แก้แล้วในรอบนี้** |
-| 5 | **ไม่มีการตรวจสอบหลังติดตั้งแพ็กเกจ** | หลัง `dpkg -i` ไม่มีการยืนยันว่า `coral`/`coral-daemon` ใช้งานได้และ service เริ่มทำงาน | เพิ่ม postinst smoke check: `coral --version`, `coral daemon-version`, `systemctl --user is-active coral-daemon` | **ยังค้าง** |
-| 6 | **ไม่มี CI ที่วัด latency อัตโนมัติ** | workflow ปัจจุบันมีเฉพาะ Desktop และ Pages — regression ของ startup latency จะไม่ถูกจับจนกว่าจะมีคนวัดเอง | เพิ่ม nightly job ที่รัน `scripts/benchmark.sh` แล้วอัปโหลดผลเป็น artifact | **ยังค้าง** |
+| 5 | **ไม่มีการตรวจสอบหลังติดตั้งแพ็กเกจ** | หลัง `dpkg -i` ไม่มีการยืนยันว่า `coral`/`coral-daemon` ใช้งานได้และ service เริ่มทำงาน | เพิ่ม postinst smoke check: `coral --version`, `coral daemon-version`, `systemctl --user is-active coral-daemon` | **แก้แล้ว** (`DEBIAN/postinst` ตรวจ `coral --version` และ `coral-daemon --help` ตอนติดตั้ง และล้มเหลวด้วย exit code ถ้าไม่ผ่าน — commit `ec75a74`) |
+| 6 | **ไม่มี CI ที่วัด latency อัตโนมัติ** | workflow ปัจจุบันมีเฉพาะ Desktop และ Pages — regression ของ startup latency จะไม่ถูกจับจนกว่าจะมีคนวัดเอง | เพิ่ม nightly job ที่รัน `scripts/benchmark.sh` แล้วอัปโหลดผลเป็น artifact | **แก้แล้ว** (workflow `benchmark.yml` รันทุกคืน 02:00 UTC บนทั้ง x86_64 และ ARM64 พร้อมสรุปผลเป็นตารางและอัปโหลด JSON เป็น artifact — commit `ec75a74`) |
 | 7 | **ชุดวัดยังครอบคลุมแค่ `alpine:3.20`** | รอบ system-wide วัดเฉพาะ alpine ขณะที่รอบแรกครอบคลุม `debian:bookworm-slim` และ `busybox:musl` | เพิ่ม distro matrix ใน `benchmark.sh` และรันรอบ system-wide ด้วย `PULL_EXTRA=1` | **ยังค้าง** |
+| 8 | **ARM64 ไม่เคยผ่าน E2E จริง** | CI สร้าง ARM64 artifact แต่ไม่รันชุดทดสอบ และ `coral-vmm` compile ไม่ผ่านบน ARM เลย (import/gate ไม่สอดคล้องกัน) | เพิ่ม ARM64 เข้า verify matrix และแก้บั๊กทั้งหมด | **แก้แล้ว** (`verify.sh` รันบน `ubuntu-24.04-arm`, แพ็กเกจ `arm64` ถูกสร้างและตรวจสอบ, `coral-vmm` compile + clippy + unit test ผ่านบน aarch64 — commit `ec75a74`) |
 
 > หน้า **Report & Backlog** บนเว็บไซต์เอกสาร (`docs/`) แสดงตารางเดียวกันนี้ในสองภาษา (ไทย/อังกฤษ) พร้อมผลวัดรอบล่าสุด
 
@@ -167,3 +168,23 @@ CORAL_BIN=/usr/bin/coral CORAL_DAEMON_BIN=/usr/bin/coral-daemon RUNS=30 ./script
 | **User-space & Package Build** | `./install.sh`, `./scripts/package-deb.sh 2.3.0`, `npx tauri build --bundles deb` | **PASS** (`~/.local/bin/{coral,coral-daemon,coral-desktop}` + `.deb` 2.3.0 พร้อมใช้งาน) |
 | **Desktop Installer Matrix** | `npx tauri build --bundles deb,rpm,appimage` | **PASS** (`.deb` 3.27 MiB · `.rpm` 3.28 MiB · `.AppImage` 85.24 MiB — ต้องมี `dpkg-dev` และ GNU `cp` บน PATH ตามที่ระบุใน `desktop/README.md`) |
 | **System-wide Install (dpkg)** | `pkexec dpkg -i coral-runtime_2.3.0_amd64.deb` | **PASS** (`ii coral-runtime 2.3.0` → `/usr/bin/{coral,coral-daemon}` + `coral-daemon.service` ทำงานจาก systemd user unit) |
+| **ARM64 Cross-Build & Clippy** | `cargo build --workspace --target aarch64-unknown-linux-gnu` · `cargo clippy --workspace --all-targets --target aarch64-unknown-linux-gnu -- -D warnings` | **PASS** (พบและแก้บั๊กที่ทำให้ `coral-vmm` compile ไม่ผ่านบน ARM — ดูข้อ 5.1) |
+| **ARM64 Unit Tests** | `cargo test --workspace --lib --target aarch64-unknown-linux-gnu` | **PASS** (65 unit tests ผ่าน; เทสต์ `netns` 2 ตัวล้มเฉพาะภายใต้ `qemu-user` ซึ่งไม่รองรับ user namespace — ยืนยันแล้วว่าล้มเหมือนกันภายใต้ `qemu-x86_64` ด้วย) |
+
+### 5.1 การรองรับสถาปัตยกรรมและระบบปฏิบัติการ
+
+| องค์ประกอบ | ระบบปฏิบัติการ | สถาปัตยกรรม | หมายเหตุ |
+| :--- | :--- | :--- | :--- |
+| **Coral Engine** (`coral`, `coral-daemon`) | **Linux เท่านั้น** | `x86_64` + `aarch64` | สร้างบน Linux syscall, user namespace และ cgroups โดยตรง — ไม่มี `cfg(target_os)` ในโค้ด Rust เลยสักจุด |
+| **Coral Desktop** (GUI client) | Linux / Windows / macOS | `x86_64` | เป็น client คุยกับ daemon ผ่าน TCP/gRPC — ไม่ได้ทำให้ engine portable ข้าม OS |
+| **`coral-vmm`** (KVM MicroVM, AI Agent Sandbox) | Linux | **`x86_64` เท่านั้น** | `pkg/vmm/src/kvm/*` ใช้ register/memory layout ของ KVM ที่เฉพาะ x86_64 |
+| **`coral-wasm`** (WASI) | — | ไม่ผูก arch | WebAssembly ไม่ขึ้นกับสถาปัตยกรรมเครื่อง |
+
+**สิ่งที่ตรวจสอบจริงบน ARM64:**
+
+- CI รัน `verify.sh` ครบชุด (unit + `cri_e2e` + `oci_e2e` + `oci_features_e2e` + `security_fuzz_e2e` + Clippy 0 warnings + live container) บน runner `ubuntu-24.04-arm` — ไม่ใช่แค่ build
+- `cargo build`, `cargo clippy -- -D warnings` และ `cargo test --lib` ผ่านบน `aarch64-unknown-linux-gnu`
+- แพ็กเกจ `.deb` สำหรับ `arm64` ถูกสร้างโดย CI (`dpkg --print-architecture` คืน `arm64` บน ARM runner)
+- Seccomp-BPF ใช้ syscall table ของ ARM โดยเฉพาะ (`pkg/runtime/src/security.rs`) พร้อม `EXPECTED_AUDIT_ARCH` ที่ถูกต้องต่อ arch
+
+**บั๊กที่พบและแก้ระหว่างตรวจสอบ ARM64:** `coral-vmm` ไม่สามารถ compile บน ARM เลย เพราะ `kvm/runner.rs` import register struct ที่ถูก gate ไว้เฉพาะ x86_64 โดยไม่ได้ gate ตัว import, `kvm/mod.rs` re-export โมดูลและประกาศ ioctl constant ที่ไม่ได้ใช้บน ARM, `linux_boot/mod.rs` export ฟังก์ชันที่มีแต่โมดูล x86_64 เรียก และ `sandbox.rs` ทิ้ง parameter ที่อ่านเฉพาะใน x86_64 branch — แก้ครบแล้วใน commit `ec75a74`

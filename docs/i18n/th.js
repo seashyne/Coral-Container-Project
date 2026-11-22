@@ -256,6 +256,11 @@ window.CORAL_I18N_TH = {
     "รอบ system-wide วัดเฉพาะ alpine:3.20 ขณะที่รอบแรกยังครอบคลุม debian:bookworm-slim และ busybox:musl",
   "report.bl7Action":
     "เพิ่ม distro matrix ใน benchmark.sh และรันรอบ system-wide ด้วย PULL_EXTRA=1",
+  "report.bl8Area": "ARM64 ไม่เคยผ่าน E2E จริง",
+  "report.bl8Finding":
+    "CI สร้าง ARM64 artifact แต่ไม่รันชุดทดสอบ และ coral-vmm ไม่ผ่านการ compile บน ARM เลย เพราะ import และ cfg gate ไม่สอดคล้องกัน",
+  "report.bl8Action":
+    "เพิ่ม ARM64 เข้า verify matrix แล้วแก้บั๊กทั้งหมดจน build, clippy และ unit test ผ่านบน aarch64 (ทำในรอบนี้)",
   "report.stOpen": "ยังค้าง",
   "report.stDone": "แก้แล้วในรอบนี้",
   "report.reportBtn": "อ่านรายงานสรุปฉบับเต็ม (REPORT_v2.3.md)",
