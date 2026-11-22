@@ -19,26 +19,14 @@ impl ComposeSpec {
         let content = fs::read_to_string(path)
             .map_err(|e| anyhow!("read compose file '{}': {e}", path.display()))?;
         let base_dir = path.parent();
-        let mut interpolation_vars: HashMap<String, String> = HashMap::new();
-        if let Some(dir) = base_dir {
-            let sibling_env = dir.join(".env");
-            if sibling_env.is_file() {
-                for (k, v) in parse_dotenv_file(&sibling_env)? {
-                    interpolation_vars.insert(k, v);
-                }
-            }
-        }
-        if let Some(ext) = extra_env_file {
-            for (k, v) in parse_dotenv_file(ext)
-                .with_context(|| format!("load --env-file '{}'", ext.display()))?
-            {
-                interpolation_vars.insert(k, v);
-            }
-        }
-        for (k, v) in std::env::vars() {
-            interpolation_vars.insert(k, v);
-        }
+        let interpolation_vars = load_interpolation_vars(base_dir, extra_env_file, true)?;
         Self::from_yaml_with_env(&content, base_dir, &interpolation_vars)
+    }
+
+    /// Parses a Compose YAML string and loads sibling `.env` from `base_dir` if present.
+    pub fn from_yaml_with_dotenv(raw: &str, base_dir: Option<&Path>) -> Result<Self> {
+        let interpolation_vars = load_interpolation_vars(base_dir, None, false)?;
+        Self::from_yaml_with_env(raw, base_dir, &interpolation_vars)
     }
 
     /// Parses a Docker Compose / Coral Compose YAML string without external env overrides.
@@ -93,4 +81,33 @@ impl ComposeSpec {
             .filter(|s| wanted.contains(&s.name))
             .collect())
     }
+}
+
+fn load_interpolation_vars(
+    base_dir: Option<&Path>,
+    extra_env_file: Option<&Path>,
+    include_process_env: bool,
+) -> Result<HashMap<String, String>> {
+    let mut vars = HashMap::new();
+    if let Some(dir) = base_dir {
+        let sibling_env = dir.join(".env");
+        if sibling_env.is_file() {
+            for (k, v) in parse_dotenv_file(&sibling_env)? {
+                vars.insert(k, v);
+            }
+        }
+    }
+    if let Some(ext) = extra_env_file {
+        for (k, v) in parse_dotenv_file(ext)
+            .with_context(|| format!("load --env-file '{}'", ext.display()))?
+        {
+            vars.insert(k, v);
+        }
+    }
+    if include_process_env {
+        for (k, v) in std::env::vars() {
+            vars.insert(k, v);
+        }
+    }
+    Ok(vars)
 }

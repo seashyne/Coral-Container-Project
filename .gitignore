@@ -25,6 +25,7 @@ __pycache__/
 /OS/
 /vibe_images/
 /.agents/
+/.workbuddy-ai/
 
 # OS / editor noise
 .DS_Store

@@ -1,6 +1,7 @@
 //! CRI v1 `CoralDaemonService` state store, configuration, and module exports.
 
 mod compose_rpc;
+pub mod docker_compat;
 pub mod housekeeping;
 mod image_rpc;
 pub mod metrics;
@@ -163,17 +164,11 @@ pub struct CoralDaemonService {
     pub(crate) seq: Arc<AtomicU64>,
     pub(crate) cni: Arc<CniPluginChain>,
     pub(crate) stream_server: Arc<CriStreamServer>,
+    pub(crate) dns_server: Option<Arc<coral_net::EmbeddedDnsServer>>,
     pub(crate) log_policy: Arc<std::sync::RwLock<supervisor::LogRotationPolicy>>,
-    /// Short-lived cache for the recursive `images_dir` size walk behind `ImageFsInfo` and
-    /// `system df`. Kubelet polls `ImageFsInfo` on a fixed cadence, and the walk is O(inodes)
-    /// over every image rootfs, so it must not run per request.
+    /// Short-lived cache for the recursive `images_dir` size walk behind `ImageFsInfo` and `system df`.
     pub(crate) images_size_cache: Arc<std::sync::Mutex<Option<(std::time::Instant, u64)>>>,
     /// Auto-GC interval requested via [`Self::with_auto_gc`] (`0` = disabled).
-    ///
-    /// [`Self::new`] returns before the CRI listeners are bound, so starting the timer there
-    /// would let the very first pass land while kubelet is still doing its initial
-    /// `Version`/`Status` handshake. `main` therefore calls [`Self::start_auto_gc`] once the
-    /// listeners are up; the requested interval is parked here in the meantime.
     pub(crate) auto_gc_interval_secs: Arc<AtomicU64>,
     /// One-shot guard so Boot Auto-Resume runs at most once per daemon instance.
     pub(crate) boot_auto_resume_started: Arc<AtomicBool>,
@@ -181,13 +176,6 @@ pub struct CoralDaemonService {
     pub(crate) auto_gc_started: Arc<AtomicBool>,
 }
 
-/// Delay before the in-process fallback kicks in Boot Auto-Resume / Auto-GC.
-///
-/// The `coral-daemon` binary triggers both explicitly once its CRI listeners are bound
-/// (see `main`), so this fallback never fires there. It exists for embedders that build
-/// [`CoralDaemonService`] in-process and serve it from their own gRPC server: without it
-/// such a daemon would silently never resume `--restart always|unless-stopped` containers
-/// and never reclaim stale state.
 const INPROCESS_STARTUP_GRACE: std::time::Duration = std::time::Duration::from_millis(300);
 
 impl CoralDaemonService {
@@ -229,6 +217,12 @@ impl CoralDaemonService {
             }
         }
 
+        let dns_server = "127.0.0.1:0"
+            .parse()
+            .ok()
+            .and_then(|addr| coral_net::EmbeddedDnsServer::start(addr).ok())
+            .map(Arc::new);
+
         let svc = Self {
             cfg: Arc::new(cfg),
             images_dir,
@@ -236,6 +230,7 @@ impl CoralDaemonService {
             seq: Arc::new(AtomicU64::new(1)),
             cni: Arc::new(CniPluginChain::default()),
             stream_server: Arc::new(CriStreamServer::default()),
+            dns_server,
             log_policy: Arc::new(std::sync::RwLock::new(
                 supervisor::LogRotationPolicy::default(),
             )),
@@ -268,17 +263,21 @@ impl CoralDaemonService {
     }
 
     /// Starts Boot Auto-Resume for `--restart always|unless-stopped` containers.
-    ///
-    /// The `coral-daemon` binary calls this right after its CRI listeners are bound, so
-    /// kubelet's first `Status`/`ListPodSandbox` is answered immediately instead of waiting
-    /// behind the resume replay. In-process embedders may call it at any time; the
-    /// one-shot guard makes repeated calls (e.g. the in-process fallback scheduled by
-    /// [`Self::new`]) harmless.
     pub fn start_boot_auto_resume(&self) {
         if self.boot_auto_resume_started.swap(true, Ordering::SeqCst) {
             return;
         }
         self.spawn_boot_auto_resume();
+    }
+
+    /// Returns the bound UDP socket address of the daemon's embedded service-discovery DNS server.
+    pub fn embedded_dns_addr(&self) -> Option<std::net::SocketAddr> {
+        self.dns_server.as_ref().map(|d| d.local_addr())
+    }
+
+    /// Looks up a container name or network alias in the daemon's embedded DNS server.
+    pub fn lookup_service_dns(&self, host: &str) -> Option<std::net::Ipv4Addr> {
+        self.dns_server.as_ref()?.lookup(host)
     }
 
     /// Configures container log rotation limits (`max_size_bytes == 0` disables rotation).
@@ -293,10 +292,6 @@ impl CoralDaemonService {
     }
 
     /// Requests periodic background Auto-GC (`interval_secs == 0` disables).
-    ///
-    /// Only records the interval; the loop itself does not start until
-    /// [`Self::start_auto_gc`] is called, so the first sweep cannot land before the CRI
-    /// listeners are bound.
     pub fn with_auto_gc(self, interval_secs: u64) -> Self {
         self.auto_gc_interval_secs
             .store(interval_secs, Ordering::Relaxed);
@@ -304,12 +299,6 @@ impl CoralDaemonService {
     }
 
     /// Starts the background Auto-GC loop if [`Self::with_auto_gc`] requested one.
-    ///
-    /// Called by `main` after the listeners are bound. Kept out of the synchronous part of
-    /// [`Self::new`] for the same reason as [`Self::start_boot_auto_resume`]: the first pass
-    /// walks `images_dir`, `exec-bundles/`, and every sandbox, which must not compete with
-    /// kubelet's initial `ListPodSandbox`/`Status` calls. The one-shot guard keeps repeated
-    /// calls (e.g. the in-process fallback scheduled by [`Self::new`]) harmless.
     pub fn start_auto_gc(&self) {
         let interval_secs = self.auto_gc_interval_secs.load(Ordering::Relaxed);
         if interval_secs > 0 && !self.auto_gc_started.swap(true, Ordering::SeqCst) {

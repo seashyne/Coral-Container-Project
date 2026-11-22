@@ -79,6 +79,14 @@ struct Args {
     /// Disable the Prometheus `/metrics` HTTP listener
     #[arg(long, default_value_t = false)]
     no_metrics: bool,
+
+    /// Optional Docker Engine REST API compatibility Unix socket path (defaults to `<state_dir>/docker.sock`)
+    #[arg(long)]
+    docker_socket: Option<PathBuf>,
+
+    /// Disable the Docker Engine REST API compatibility Unix socket
+    #[arg(long, default_value_t = false)]
+    no_docker_socket: bool,
 }
 
 #[tokio::main]
@@ -126,11 +134,49 @@ async fn main() -> Result<()> {
     let (shutdown_tx, mut shutdown_rx_tcp) = watch::channel(false);
     let mut shutdown_rx_uds = shutdown_tx.subscribe();
     let shutdown_rx_metrics = shutdown_tx.subscribe();
+    let shutdown_rx_docker = shutdown_tx.subscribe();
     tokio::spawn(async move {
         let _ = tokio::signal::ctrl_c().await;
         info!("received shutdown signal, stopping coral-daemon");
         let _ = shutdown_tx.send(true);
     });
+
+    if !args.no_docker_socket {
+        let docker_sock = args
+            .docker_socket
+            .unwrap_or_else(|| state_dir.join("docker.sock"));
+        if let Some(parent) = docker_sock.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        if docker_sock.exists() {
+            let _ = fs::remove_file(&docker_sock);
+        }
+        match UnixListener::bind(&docker_sock) {
+            Ok(listener) => {
+                let _ = fs::set_permissions(&docker_sock, fs::Permissions::from_mode(0o660));
+                let docker_svc = service.clone();
+                info!(
+                    docker_socket = %docker_sock.display(),
+                    "starting Docker Engine REST API v1.45 compatibility socket"
+                );
+                tokio::spawn(async move {
+                    let _ = coral_daemon::service::docker_compat::serve_docker_unix(
+                        docker_svc,
+                        listener,
+                        shutdown_rx_docker,
+                    )
+                    .await;
+                });
+            }
+            Err(e) => {
+                tracing::warn!(
+                    path = %docker_sock.display(),
+                    err = %e,
+                    "could not bind Docker compat socket (continuing without docker.sock)"
+                );
+            }
+        }
+    }
 
     if !args.no_metrics {
         let metrics_addr = args.metrics_listen;

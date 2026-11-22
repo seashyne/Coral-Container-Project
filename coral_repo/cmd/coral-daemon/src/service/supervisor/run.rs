@@ -1,6 +1,7 @@
 //! Runs the container binary while streaming stdout/stderr into the rotating log file.
 
-use super::log_writer::{LogRotationPolicy, RotatingLogWriter};
+use super::log_writer::{LogDriver, LogRotationPolicy, RotatingLogWriter};
+use coral_oci::OciSpec;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::{Arc, Mutex as StdMutex};
@@ -30,9 +31,16 @@ pub(super) async fn run_container_streaming_logs(
             .await;
     }
 
-    let log_writer = Arc::new(StdMutex::new(RotatingLogWriter::open(
+    let driver = OciSpec::from_file(bundle_dir.join("config.json"))
+        .ok()
+        .and_then(|s| s.annotations.get("coral.log.driver").cloned())
+        .map(|d| LogDriver::from_name(&d))
+        .unwrap_or(LogDriver::Raw);
+    let log_writer = Arc::new(StdMutex::new(RotatingLogWriter::open_with_driver(
         log_path.to_path_buf(),
         log_policy,
+        driver,
+        cid,
     )?));
 
     let mut child = Command::new(coral_bin)
@@ -75,7 +83,7 @@ pub(super) async fn run_container_streaming_logs(
                     break;
                 }
                 if let Ok(mut w) = w_err.lock() {
-                    let _ = w.write_chunk(&buf[..n]);
+                    let _ = w.write_stream_chunk(&buf[..n], "stderr");
                 }
                 tail.extend_from_slice(&buf[..n]);
                 if tail.len() > 2048 {

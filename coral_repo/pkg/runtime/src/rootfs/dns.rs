@@ -2,7 +2,8 @@
 
 use crate::RuntimeError;
 use coral_oci::Mount;
-use std::fs;
+use std::fs::{self, OpenOptions};
+use std::io::Write;
 use std::path::Path;
 
 /// Returns read-only OCI bind mounts for host DNS (`/etc/resolv.conf`) and `/etc/hosts`
@@ -112,4 +113,26 @@ pub fn prepare_dns_and_hosts_mounts(
     }
 
     Ok(mounts)
+}
+
+/// Appends a `ip\thost` line in-place to an existing container's `bundle_dir/coral-hosts` file
+/// (preserving its inode so a live bind-mounted `/etc/hosts` sees the new peer immediately).
+pub fn append_host_entry_in_place(bundle_dir: &Path, host: &str, ip: &str) -> std::io::Result<()> {
+    let host = host.trim();
+    let ip = ip.trim();
+    if host.is_empty() || ip.is_empty() {
+        return Ok(());
+    }
+    let hosts_file = bundle_dir.join("coral-hosts");
+    if !hosts_file.is_file() {
+        return Ok(());
+    }
+    let existing = fs::read_to_string(&hosts_file).unwrap_or_default();
+    let line = format!("{ip}\t{host}");
+    if existing.lines().any(|l| l.trim() == line) {
+        return Ok(());
+    }
+    let mut f = OpenOptions::new().append(true).open(&hosts_file)?;
+    writeln!(f, "{line}")?;
+    f.flush()
 }

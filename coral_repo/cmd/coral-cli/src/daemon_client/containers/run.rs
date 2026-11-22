@@ -25,6 +25,10 @@ pub struct DaemonRunOptions {
     pub network: String,
     pub dns: Vec<String>,
     pub extra_hosts: Vec<String>,
+    pub network_aliases: Vec<String>,
+    pub devices: Vec<String>,
+    pub gpus: Option<String>,
+    pub log_driver: String,
     pub privileged: bool,
     pub no_overlay: bool,
     pub workdir: Option<String>,
@@ -146,6 +150,23 @@ pub async fn cmd_run_via_daemon(addr: &str, opts: DaemonRunOptions) -> Result<Ex
     }
     if !opts.extra_hosts.is_empty() {
         annotations.insert("coral.extra_hosts".into(), opts.extra_hosts.join("\n"));
+    }
+    if !opts.network_aliases.is_empty() {
+        annotations.insert(
+            "coral.network.aliases".into(),
+            opts.network_aliases.join(","),
+        );
+    }
+    if !opts.devices.is_empty() {
+        annotations.insert("coral.devices".into(), opts.devices.join("\n"));
+    }
+    if let Some(g) = &opts.gpus
+        && !g.trim().is_empty()
+    {
+        annotations.insert("coral.gpus".into(), g.trim().to_string());
+    }
+    if !opts.log_driver.trim().is_empty() && !opts.log_driver.eq_ignore_ascii_case("raw") {
+        annotations.insert("coral.log.driver".into(), opts.log_driver.trim().to_string());
     }
     if opts.privileged {
         annotations.insert("coral.privileged".into(), "true".into());

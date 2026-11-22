@@ -171,3 +171,19 @@ services:
         .collect();
     assert!(dev_sel.contains(&"debug-tool"));
 }
+
+#[test]
+fn yaml_with_dotenv_loads_sibling_env_for_rpc_compose() {
+    let dir = tempdir().unwrap();
+    fs::write(dir.path().join(".env"), "SVC_TAG=3.20\nHOST_PORT=18888\n").unwrap();
+    let yaml = r#"
+services:
+  cache:
+    image: alpine:${SVC_TAG}
+    ports:
+      - "${HOST_PORT}:6379"
+"#;
+    let spec = ComposeSpec::from_yaml_with_dotenv(yaml, Some(dir.path())).unwrap();
+    assert_eq!(spec.services[0].image.as_deref(), Some("alpine:3.20"));
+    assert_eq!(spec.services[0].ports, vec!["18888:6379"]);
+}

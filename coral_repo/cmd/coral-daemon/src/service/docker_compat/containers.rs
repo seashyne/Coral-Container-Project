@@ -1,0 +1,263 @@
+//! Docker Engine REST API container creation and lifecycle mutation handlers
+//! (`POST /containers/create`, `POST /containers/{id}/start`, `stop`, `DELETE /containers/{id}`).
+
+use super::HttpResponse;
+use super::handlers::{handle_container_logs, handle_inspect_container, parse_query_param};
+use crate::service::CoralDaemonService;
+use coral_api::runtime_service_server::RuntimeService;
+use coral_api::{
+    ContainerConfig, ContainerMetadata, CreateContainerRequest, ImageSpec, KeyValue,
+    LinuxContainerConfig, LinuxContainerResources, PodSandboxConfig, PodSandboxMetadata,
+    RemoveContainerRequest, RemovePodSandboxRequest, RunPodSandboxRequest, StartContainerRequest,
+    StopContainerRequest,
+};
+use serde_json::{Value, json};
+use std::collections::HashMap;
+use tonic::Request;
+
+pub(super) async fn handle_create_container(
+    svc: &CoralDaemonService,
+    query: &str,
+    body: &[u8],
+) -> HttpResponse {
+    let Ok(payload) = serde_json::from_slice::<Value>(body) else {
+        return HttpResponse::json("400 Bad Request", &json!({ "message": "invalid JSON body" }));
+    };
+    let image = payload
+        .get("Image")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    if image.is_empty() {
+        return HttpResponse::json("400 Bad Request", &json!({ "message": "Image is required" }));
+    }
+    let name = parse_query_param(query, "name")
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+        .unwrap_or_else(|| svc.next_id("docker"));
+    let hostname = payload
+        .get("Hostname")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty())
+        .unwrap_or(&name)
+        .to_string();
+
+    let cmd_vec: Vec<String> = payload
+        .get("Cmd")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|x| x.as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default();
+    let (command, args) = if cmd_vec.is_empty() {
+        (Vec::new(), Vec::new())
+    } else {
+        (vec![cmd_vec[0].clone()], cmd_vec[1..].to_vec())
+    };
+
+    let envs: Vec<KeyValue> = payload
+        .get("Env")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|x| x.as_str())
+                .filter_map(|e| {
+                    e.split_once('=').map(|(k, v)| KeyValue {
+                        key: k.to_string(),
+                        value: v.to_string(),
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let mut annotations = HashMap::new();
+    if let Some(ep) = payload.get("Entrypoint") {
+        if let Some(arr) = ep.as_array() {
+            let v: Vec<String> = arr
+                .iter()
+                .filter_map(|x| x.as_str().map(str::to_string))
+                .collect();
+            if let Ok(s) = serde_json::to_string(&v) {
+                annotations.insert("coral.entrypoint".into(), s);
+            }
+        } else if let Some(s) = ep.as_str() {
+            annotations.insert("coral.entrypoint".into(), s.to_string());
+        }
+    }
+    if let Some(u) = payload.get("User").and_then(|v| v.as_str())
+        && !u.is_empty()
+    {
+        annotations.insert("coral.user".into(), u.to_string());
+    }
+    let mut mem_bytes = 0i64;
+    if let Some(hc) = payload.get("HostConfig") {
+        if let Some(binds) = hc.get("Binds").and_then(|v| v.as_array()) {
+            let mounts: Vec<&str> = binds.iter().filter_map(|x| x.as_str()).collect();
+            if !mounts.is_empty() {
+                annotations.insert("coral.mounts".into(), mounts.join("\n"));
+            }
+        }
+        if let Some(net) = hc.get("NetworkMode").and_then(|v| v.as_str())
+            && !net.is_empty()
+        {
+            let mapped = if net == "default" { "bridge" } else { net };
+            annotations.insert("coral.network".into(), mapped.to_string());
+        }
+        if let Some(m) = hc.get("Memory").and_then(|v| v.as_i64())
+            && m > 0
+        {
+            mem_bytes = m;
+        }
+    }
+
+    let pod_resp = match svc
+        .run_pod_sandbox(Request::new(RunPodSandboxRequest {
+            config: Some(PodSandboxConfig {
+                metadata: Some(PodSandboxMetadata {
+                    name: format!("{name}-pod"),
+                    uid: name.clone(),
+                    namespace: "docker-compat".into(),
+                    attempt: 0,
+                }),
+                hostname,
+                log_directory: String::new(),
+                labels: HashMap::from([("managed-by".into(), "docker-compat".into())]),
+                annotations: HashMap::new(),
+            }),
+            runtime_handler: "coral".into(),
+        }))
+        .await
+    {
+        Ok(r) => r.into_inner(),
+        Err(e) => {
+            return HttpResponse::json(
+                "500 Internal Server Error",
+                &json!({ "message": e.message() }),
+            );
+        }
+    };
+
+    let linux = (mem_bytes > 0).then_some(LinuxContainerConfig {
+        resources: Some(LinuxContainerResources {
+            cpu_period: 0,
+            cpu_quota: 0,
+            cpu_shares: 0,
+            memory_limit_in_bytes: mem_bytes,
+            pids_limit: 0,
+        }),
+    });
+
+    match svc
+        .create_container(Request::new(CreateContainerRequest {
+            pod_sandbox_id: pod_resp.pod_sandbox_id.clone(),
+            config: Some(ContainerConfig {
+                metadata: Some(ContainerMetadata { name, attempt: 0 }),
+                image: Some(ImageSpec {
+                    image,
+                    annotations: HashMap::new(),
+                }),
+                command,
+                args,
+                working_dir: payload
+                    .get("WorkingDir")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                envs,
+                labels: HashMap::from([("managed-by".into(), "docker-compat".into())]),
+                annotations,
+                log_path: String::new(),
+                linux,
+            }),
+            sandbox_config: None,
+        }))
+        .await
+    {
+        Ok(r) => HttpResponse::json(
+            "201 Created",
+            &json!({
+                "Id": r.into_inner().container_id,
+                "Warnings": []
+            }),
+        ),
+        Err(e) => {
+            let _ = svc
+                .remove_pod_sandbox(Request::new(RemovePodSandboxRequest {
+                    pod_sandbox_id: pod_resp.pod_sandbox_id,
+                }))
+                .await;
+            HttpResponse::json("404 Not Found", &json!({ "message": e.message() }))
+        }
+    }
+}
+
+pub(super) async fn handle_container_action(
+    svc: &CoralDaemonService,
+    method: &str,
+    subpath: &str,
+) -> HttpResponse {
+    let (id_raw, action) = subpath.split_once('/').unwrap_or((subpath, ""));
+    let id = id_raw.trim_matches('/');
+    match (method, action) {
+        ("POST", "start") => match svc
+            .start_container(Request::new(StartContainerRequest {
+                container_id: id.to_string(),
+            }))
+            .await
+        {
+            Ok(_) => HttpResponse::empty("204 No Content"),
+            Err(e) => HttpResponse::json("404 Not Found", &json!({ "message": e.message() })),
+        },
+        ("POST", "stop") | ("POST", "kill") => match svc
+            .stop_container(Request::new(StopContainerRequest {
+                container_id: id.to_string(),
+                timeout: 5,
+            }))
+            .await
+        {
+            Ok(_) => HttpResponse::empty("204 No Content"),
+            Err(e) => HttpResponse::json("404 Not Found", &json!({ "message": e.message() })),
+        },
+        ("DELETE", "") => {
+            let pod_id = {
+                let store = svc.store.read().await;
+                store
+                    .resolve_container_id(id)
+                    .and_then(|cid| store.containers.get(&cid).map(|c| c.pod_sandbox_id.clone()))
+            };
+            let _ = svc
+                .stop_container(Request::new(StopContainerRequest {
+                    container_id: id.to_string(),
+                    timeout: 2,
+                }))
+                .await;
+            match svc
+                .remove_container(Request::new(RemoveContainerRequest {
+                    container_id: id.to_string(),
+                }))
+                .await
+            {
+                Ok(_) => {
+                    if let Some(pid) = pod_id {
+                        let _ = svc
+                            .remove_pod_sandbox(Request::new(RemovePodSandboxRequest {
+                                pod_sandbox_id: pid,
+                            }))
+                            .await;
+                    }
+                    HttpResponse::empty("204 No Content")
+                }
+                Err(e) => HttpResponse::json("404 Not Found", &json!({ "message": e.message() })),
+            }
+        }
+        ("GET", "json") => handle_inspect_container(svc, id).await,
+        ("GET", "logs") => handle_container_logs(svc, id).await,
+        _ => HttpResponse::json(
+            "404 Not Found",
+            &json!({ "message": format!("unsupported container endpoint: {method} /containers/{subpath}") }),
+        ),
+    }
+}

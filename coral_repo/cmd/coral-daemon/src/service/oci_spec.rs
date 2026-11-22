@@ -6,7 +6,10 @@ use coral_api::{ContainerConfig, PodSandboxConfig};
 use coral_oci::{
     LinuxCpu, LinuxMemory, LinuxNamespace, LinuxNamespaceType, LinuxPids, LinuxResources, OciSpec,
 };
-use coral_runtime::rootfs::{parse_volume_spec, prepare_dns_and_hosts_mounts};
+use coral_runtime::rootfs::{
+    discover_gpu_mounts_and_envs, parse_device_mount, parse_volume_spec,
+    prepare_dns_and_hosts_mounts,
+};
 use std::fs;
 use std::path::{Path, PathBuf};
 use tonic::Status;
@@ -181,6 +184,31 @@ impl CoralDaemonService {
                 let mount = parse_volume_spec(trimmed)
                     .map_err(|e| Status::invalid_argument(format!("invalid volume mount: {e}")))?;
                 spec.mounts.push(mount);
+            }
+        }
+
+        // Hardware device passthrough (`--device /dev/xyz[:/dev/xyz[:rwm]]`).
+        if let Some(raw_devs) = cfg.annotations.get("coral.devices") {
+            for line in raw_devs.split(['\n', ',']) {
+                let trimmed = line.trim();
+                if trimmed.is_empty() {
+                    continue;
+                }
+                let mount = parse_device_mount(trimmed)
+                    .map_err(|e| Status::invalid_argument(format!("invalid --device: {e}")))?;
+                spec.mounts.push(mount);
+            }
+        }
+
+        // GPU device discovery & passthrough (`--gpus all|index`).
+        if let Some(raw_gpus) = cfg.annotations.get("coral.gpus")
+            && !raw_gpus.trim().is_empty()
+        {
+            let (gpu_mounts, gpu_envs) = discover_gpu_mounts_and_envs(raw_gpus)
+                .map_err(|e| Status::invalid_argument(format!("invalid --gpus: {e}")))?;
+            spec.mounts.extend(gpu_mounts);
+            if let Some(proc_cfg) = spec.process.as_mut() {
+                proc_cfg.env = merge_env_vars(&proc_cfg.env, &gpu_envs, &[]);
             }
         }
 

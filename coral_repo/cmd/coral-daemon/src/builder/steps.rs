@@ -1,12 +1,12 @@
 //! Dockerfile build-step interpreter.
 
 use super::build::{BuiltStage, BuildOptions};
+use super::buildkit::apply_metadata_instruction;
 use super::cache::compute_step_key;
 use super::context::resolve_or_pull_base_image;
 use super::dockerfile::{
-    expand_vars, parse_exec_or_shell_instruction, parse_from_instruction, set_env_var,
-    split_shell_tokens,
-    unquote,
+    apply_env_instruction, expand_vars, parse_exec_or_shell_instruction, parse_from_instruction,
+    split_shell_tokens, sync_stage_vars_from_envs, unquote,
 };
 use super::exec::{StepExec, StepInfo};
 use super::step_copy::copy_or_add_step;
@@ -183,6 +183,7 @@ pub(super) async fn execute_build_steps(
                     let _ = fs::remove_dir_all(&empty_upper);
                 }
 
+                sync_stage_vars_from_envs(&envs, &mut vars);
                 active_stage_name = from_info.stage_name;
                 chain_key = format!("{:x}", h.finalize());
                 cache_active = !opts.no_cache;
@@ -220,17 +221,7 @@ pub(super) async fn execute_build_steps(
             }
             "ENV" => {
                 eprintln!("Step {step_num}/{total_steps} : ENV {arg}");
-                if let Some((k, v)) = arg.split_once('=') {
-                    let key = k.trim().to_string();
-                    let val = unquote(v.trim());
-                    vars.insert(key.clone(), val.clone());
-                    set_env_var(&mut envs, &key, &val);
-                } else if let Some((k, v)) = arg.split_once(char::is_whitespace) {
-                    let key = k.trim().to_string();
-                    let val = unquote(v.trim());
-                    vars.insert(key.clone(), val.clone());
-                    set_env_var(&mut envs, &key, &val);
-                }
+                apply_env_instruction(&arg, &mut vars, &mut envs);
                 chain_key = compute_step_key(&chain_key, verb, &arg, &workdir, &envs, b"");
             }
             "WORKDIR" => {
@@ -347,8 +338,9 @@ pub(super) async fn execute_build_steps(
                 }
                 chain_key = compute_step_key(&chain_key, verb, &arg, &workdir, &envs, b"");
             }
-            "EXPOSE" | "VOLUME" | "SHELL" | "HEALTHCHECK" | "MAINTAINER" => {
+            "EXPOSE" | "VOLUME" | "SHELL" | "HEALTHCHECK" | "ONBUILD" | "MAINTAINER" => {
                 eprintln!("Step {step_num}/{total_steps} : {verb} {arg}");
+                apply_metadata_instruction(verb, &arg, &mut img_cfg);
                 chain_key = compute_step_key(&chain_key, verb, &arg, &workdir, &envs, b"");
             }
             other => {

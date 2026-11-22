@@ -28,7 +28,7 @@ impl CoralDaemonService {
             .map(str::trim)
             .filter(|s| !s.is_empty())
             .map(Path::new);
-        let spec = ComposeSpec::from_yaml_str(yaml, base_path)
+        let spec = ComposeSpec::from_yaml_with_dotenv(yaml, base_path)
             .map_err(|e| Status::invalid_argument(format!("parse compose YAML: {e:#}")))?;
 
         let project = project_override

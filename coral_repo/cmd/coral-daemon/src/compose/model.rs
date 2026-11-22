@@ -63,6 +63,14 @@ pub struct ComposeService {
     pub network: String,
     #[serde(default)]
     pub networks: Vec<String>,
+    #[serde(default)]
+    pub network_aliases: Vec<String>,
+    #[serde(default)]
+    pub devices: Vec<String>,
+    #[serde(default)]
+    pub gpus: Option<String>,
+    #[serde(default)]
+    pub log_driver: Option<String>,
     pub dns: Vec<String>,
     pub extra_hosts: Vec<String>,
     pub working_dir: String,
@@ -104,6 +112,10 @@ impl Default for ComposeService {
             depends_on_conditions: Vec::new(),
             network: "host".into(),
             networks: Vec::new(),
+            network_aliases: Vec::new(),
+            devices: Vec::new(),
+            gpus: None,
+            log_driver: None,
             dns: Vec::new(),
             extra_hosts: Vec::new(),
             working_dir: "/".into(),

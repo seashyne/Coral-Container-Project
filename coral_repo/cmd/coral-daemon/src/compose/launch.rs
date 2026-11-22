@@ -68,6 +68,25 @@ impl ComposeService {
         if !self.extra_hosts.is_empty() {
             annotations.insert("coral.extra_hosts".into(), self.extra_hosts.join("\n"));
         }
+        if !self.network_aliases.is_empty() {
+            annotations.insert(
+                "coral.network.aliases".into(),
+                self.network_aliases.join(","),
+            );
+        }
+        if !self.devices.is_empty() {
+            annotations.insert("coral.devices".into(), self.devices.join("\n"));
+        }
+        if let Some(g) = &self.gpus
+            && !g.trim().is_empty()
+        {
+            annotations.insert("coral.gpus".into(), g.trim().to_string());
+        }
+        if let Some(ld) = &self.log_driver
+            && !ld.trim().is_empty()
+        {
+            annotations.insert("coral.log.driver".into(), ld.trim().to_string());
+        }
         if let Some(u) = &self.user
             && !u.trim().is_empty()
         {

@@ -6,6 +6,7 @@ use super::dockerfile::parse_copy_args;
 use super::exec::{StepExec, StepInfo};
 use anyhow::{Result, anyhow, bail};
 use coral_runtime::rootfs::safe_join_rootfs;
+use tracing::warn;
 
 /// Outcome of a `COPY` / `ADD` step.
 pub(super) struct CopyOutcome {
@@ -97,8 +98,10 @@ pub(super) async fn copy_or_add_step(
         };
         copy_context_item(&src_path, &dest_target, dest_raw.ends_with('/'))?;
     }
-    if !exec.opts.no_cache {
-        let _ = save_cached_rootfs(exec.staging_rootfs, exec.staging_dir, &cache_dir);
+    if !exec.opts.no_cache
+        && let Err(err) = save_cached_rootfs(exec.staging_rootfs, exec.staging_dir, &cache_dir)
+    {
+        warn!(step = step.step_num, error = %err, "failed to save COPY/ADD build cache entry");
     }
     Ok(CopyOutcome {
         chain_key: next_key,

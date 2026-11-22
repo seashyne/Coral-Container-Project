@@ -175,7 +175,7 @@ fn multi_uid_rootless_service_user_exec_kill_and_single_uid_opt_out() {
                 cmd: vec![
                     "/bin/sh".into(),
                     "-c".into(),
-                    "grep -qE '^Uid:[[:space:]]+65534[[:space:]]+65534' /proc/1/status".into(),
+                    "test -r /proc/1/status && grep -qE '^Uid:[[:space:]]+65534[[:space:]]+65534' /proc/1/status".into(),
                 ],
                 env: vec![],
                 cwd: None,

@@ -9,7 +9,10 @@ use coral_oci::{
     LinuxCpu, LinuxMemory, LinuxNamespace, LinuxNamespaceType, LinuxPids, LinuxResources, OciSpec,
 };
 use coral_runtime::overlay::commit_overlay_to_rootfs;
-use coral_runtime::rootfs::{parse_volume_spec, prepare_dns_and_hosts_mounts};
+use coral_runtime::rootfs::{
+    discover_gpu_mounts_and_envs, parse_device_mount, parse_volume_spec,
+    prepare_dns_and_hosts_mounts,
+};
 use coral_runtime::{ContainerManager, RunOptions, StateStore};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -49,6 +52,8 @@ pub struct LocalImageRunArgs {
     pub network: String,
     pub dns: Vec<String>,
     pub extra_hosts: Vec<String>,
+    pub devices: Vec<String>,
+    pub gpus: Option<String>,
     pub no_overlay: bool,
     pub privileged: bool,
     pub tty: bool,
@@ -155,6 +160,17 @@ pub fn run_from_image_local(
     for vol in &args.volumes {
         spec.mounts.push(parse_volume_spec(vol)?);
     }
+    for dev in &args.devices {
+        spec.mounts.push(parse_device_mount(dev)?);
+    }
+    let mut extra_gpu_envs = Vec::new();
+    if let Some(gpus_spec) = &args.gpus
+        && !gpus_spec.trim().is_empty()
+    {
+        let (gpu_mounts, gpu_envs) = discover_gpu_mounts_and_envs(gpus_spec)?;
+        spec.mounts.extend(gpu_mounts);
+        extra_gpu_envs = gpu_envs;
+    }
 
     let img_cfg = OciImageConfig::load_for_rootfs(&rootfs_path);
     let effective_user = args
@@ -187,7 +203,8 @@ pub fn run_from_image_local(
         } else if !img_cfg.working_dir.trim().is_empty() {
             proc_cfg.cwd = img_cfg.working_dir.clone();
         }
-        proc_cfg.env = merge_env_vars(&proc_cfg.env, &img_cfg.env, &args.envs);
+        let base_envs = merge_env_vars(&proc_cfg.env, &img_cfg.env, &extra_gpu_envs);
+        proc_cfg.env = merge_env_vars(&base_envs, &[], &args.envs);
     }
 
     if (args.memory_mb > 0 || args.cpu_percent > 0 || args.pids_limit > 0)

@@ -20,6 +20,39 @@ pub struct OciImageConfig {
     pub user: String,
     pub labels: HashMap<String, String>,
     pub stop_signal: String,
+    #[serde(default, deserialize_with = "deserialize_vec_or_map_keys")]
+    pub exposed_ports: Vec<String>,
+    #[serde(default, deserialize_with = "deserialize_vec_or_map_keys")]
+    pub volumes: Vec<String>,
+    #[serde(default)]
+    pub shell: Vec<String>,
+    #[serde(default)]
+    pub onbuild: Vec<String>,
+    #[serde(default)]
+    pub healthcheck_cmd: Option<String>,
+    #[serde(default)]
+    pub healthcheck_interval_ms: u64,
+    #[serde(default)]
+    pub healthcheck_retries: u32,
+}
+
+fn deserialize_vec_or_map_keys<'de, D>(deserializer: D) -> std::result::Result<Vec<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let val = serde_json::Value::deserialize(deserializer)?;
+    match val {
+        serde_json::Value::Array(arr) => Ok(arr
+            .into_iter()
+            .filter_map(|v| v.as_str().map(str::to_string))
+            .collect()),
+        serde_json::Value::Object(map) => {
+            let mut keys: Vec<String> = map.into_iter().map(|(k, _)| k).collect();
+            keys.sort();
+            Ok(keys)
+        }
+        _ => Ok(Vec::new()),
+    }
 }
 
 impl OciImageConfig {
@@ -31,11 +64,37 @@ impl OciImageConfig {
         let cfg_val = root.get("config").unwrap_or(&root);
         let mut parsed: Self =
             serde_json::from_value(cfg_val.clone()).unwrap_or_default();
-        // Also accept lowercase `"StopSignal"` / `"WorkingDir"` variations safely via `PascalCase` + fallback
         if parsed.stop_signal.is_empty()
             && let Some(sig) = cfg_val.get("StopSignal").and_then(|v| v.as_str())
         {
             parsed.stop_signal = sig.to_string();
+        }
+        if parsed.onbuild.is_empty()
+            && let Some(arr) = cfg_val.get("OnBuild").and_then(|v| v.as_array())
+        {
+            parsed.onbuild = arr
+                .iter()
+                .filter_map(|v| v.as_str().map(str::to_string))
+                .collect();
+        }
+        if parsed.healthcheck_cmd.is_none()
+            && let Some(hc) = cfg_val.get("Healthcheck")
+            && let Some(test_arr) = hc.get("Test").and_then(|v| v.as_array())
+        {
+            let tokens: Vec<&str> = test_arr.iter().filter_map(|v| v.as_str()).collect();
+            if matches!(tokens.first().copied(), Some("CMD-SHELL" | "CMD")) && tokens.len() >= 2 {
+                parsed.healthcheck_cmd = Some(tokens[1..].join(" "));
+            }
+            if let Some(ns) = hc.get("Interval").and_then(|v| v.as_u64())
+                && ns > 0
+            {
+                parsed.healthcheck_interval_ms = (ns / 1_000_000).max(500);
+            }
+            if let Some(r) = hc.get("Retries").and_then(|v| v.as_u64())
+                && r > 0
+            {
+                parsed.healthcheck_retries = r as u32;
+            }
         }
         Ok(parsed)
     }

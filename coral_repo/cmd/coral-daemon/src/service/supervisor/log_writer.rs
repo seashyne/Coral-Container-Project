@@ -1,8 +1,33 @@
-//! Bounded-size append log writer with `.1`..`.N` rotation.
+//! Bounded-size append log writer with `.1`..`.N` rotation and pluggable log drivers
+//! (`raw`, `json-file`, `syslog`, `journald`).
 
+use chrono::Utc;
+use serde_json::json;
 use std::fs::OpenOptions;
 use std::io::Write;
+use std::os::unix::net::UnixDatagram;
 use std::path::{Path, PathBuf};
+
+/// Container log formatting / forwarding driver (`--log-driver` / `coral.log.driver`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum LogDriver {
+    #[default]
+    Raw,
+    JsonFile,
+    Syslog,
+    Journald,
+}
+
+impl LogDriver {
+    pub fn from_name(raw: &str) -> Self {
+        match raw.trim().to_ascii_lowercase().as_str() {
+            "json-file" | "json" => Self::JsonFile,
+            "syslog" => Self::Syslog,
+            "journald" => Self::Journald,
+            _ => Self::Raw,
+        }
+    }
+}
 
 /// Log size-based rotation settings applied to supervised container stdout/stderr logs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -28,11 +53,23 @@ pub struct RotatingLogWriter {
     file: std::fs::File,
     written_bytes: u64,
     policy: LogRotationPolicy,
+    driver: LogDriver,
+    tag: String,
     rotations: u64,
 }
 
 impl RotatingLogWriter {
+    #[cfg(test)]
     pub fn open(path: PathBuf, policy: LogRotationPolicy) -> std::io::Result<Self> {
+        Self::open_with_driver(path, policy, LogDriver::Raw, "coral")
+    }
+
+    pub fn open_with_driver(
+        path: PathBuf,
+        policy: LogRotationPolicy,
+        driver: LogDriver,
+        tag: &str,
+    ) -> std::io::Result<Self> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
@@ -43,20 +80,52 @@ impl RotatingLogWriter {
             file,
             written_bytes,
             policy,
+            driver,
+            tag: tag.to_string(),
             rotations: 0,
         })
     }
 
     pub fn write_chunk(&mut self, bytes: &[u8]) -> std::io::Result<()> {
+        self.write_stream_chunk(bytes, "stdout")
+    }
+
+    pub fn write_stream_chunk(&mut self, bytes: &[u8], stream_name: &str) -> std::io::Result<()> {
+        let formatted: Vec<u8> = match self.driver {
+            LogDriver::Raw => bytes.to_vec(),
+            LogDriver::JsonFile => {
+                let text = String::from_utf8_lossy(bytes);
+                let now = Utc::now().to_rfc3339();
+                let mut buf = Vec::new();
+                for line in text.split_inclusive('\n') {
+                    let obj = json!({
+                        "log": line,
+                        "stream": stream_name,
+                        "time": now,
+                    });
+                    if let Ok(mut s) = serde_json::to_vec(&obj) {
+                        s.push(b'\n');
+                        buf.extend_from_slice(&s);
+                    }
+                }
+                buf
+            }
+            LogDriver::Syslog | LogDriver::Journald => {
+                forward_to_unix_syslog(&self.tag, bytes);
+                bytes.to_vec()
+            }
+        };
+
         if self.policy.max_size_bytes > 0
             && self.written_bytes > 0
-            && self.written_bytes.saturating_add(bytes.len() as u64) > self.policy.max_size_bytes
+            && self.written_bytes.saturating_add(formatted.len() as u64)
+                > self.policy.max_size_bytes
         {
             self.rotate()?;
         }
-        self.file.write_all(bytes)?;
+        self.file.write_all(&formatted)?;
         self.file.flush()?;
-        self.written_bytes = self.written_bytes.saturating_add(bytes.len() as u64);
+        self.written_bytes = self.written_bytes.saturating_add(formatted.len() as u64);
         Ok(())
     }
 
@@ -102,4 +171,20 @@ impl RotatingLogWriter {
 
 pub(crate) fn rotated_log_path(base: &Path, index: usize) -> PathBuf {
     PathBuf::from(format!("{}.{}", base.display(), index))
+}
+
+fn forward_to_unix_syslog(tag: &str, bytes: &[u8]) {
+    let Ok(sock) = UnixDatagram::unbound() else {
+        return;
+    };
+    let text = String::from_utf8_lossy(bytes);
+    for target in ["/dev/log", "/run/systemd/journal/syslog"] {
+        if Path::new(target).exists() {
+            for line in text.lines() {
+                let msg = format!("<30>coral[{tag}]: {line}");
+                let _ = sock.send_to(msg.as_bytes(), target);
+            }
+            break;
+        }
+    }
 }

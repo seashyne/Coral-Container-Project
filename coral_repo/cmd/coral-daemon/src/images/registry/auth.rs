@@ -5,6 +5,7 @@ use crate::images::reference::parse_bearer_challenge;
 use anyhow::{Context, Result, bail};
 use reqwest::header::{ACCEPT, AUTHORIZATION, HeaderValue, WWW_AUTHENTICATE};
 
+#[derive(Debug, Clone)]
 pub(super) enum PullAuth {
     Bearer(String),
     Basic(String, String),

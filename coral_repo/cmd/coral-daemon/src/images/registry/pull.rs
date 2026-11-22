@@ -1,24 +1,23 @@
 //! Image pull entry point: manifest resolution, layer streaming and rootfs install.
 
 use super::auth::{PullAuth, authorized_get};
+use super::layer_cache::{LayerFetchContext, download_layers_parallel};
 use super::manifest::{
     parse_config_digest, parse_layers, select_linux_platform_digest,
 };
-use super::util::{ACCEPT_MANIFESTS, PROGRESS_FLUSH_INTERVAL, safe_slug};
+use super::util::{ACCEPT_MANIFESTS, safe_slug};
 use crate::images::auth::{load_registry_auth, registry_scheme};
 use crate::images::config::OciImageConfig;
 use crate::images::extract::extract_layer;
 use crate::images::progress::{PullPhase, PullProgressReporter};
 use crate::images::reference::ImageRef;
 use crate::images::{StoredImage, dir_size, ensure_scratch_image, remove_dir_force};
-use anyhow::{Context, Result, bail};
-use futures_util::StreamExt;
+use anyhow::{Context, Result};
 use sha2::{Digest, Sha256};
-use std::fs::{self, File};
-use std::io::Write;
+use std::fs;
 use std::path::Path;
 use std::sync::Arc;
-use tracing::{debug, info};
+use tracing::info;
 
 pub async fn pull_image(
     image_ref_str: &str,
@@ -169,95 +168,40 @@ async fn pull_image_inner(
         .with_context(|| format!("create staging dir '{}'", staging_rootfs.display()))?;
 
     let pull_result: Result<()> = async {
-        let total_layers = layers.len();
-        let declared_total: u64 = layers.iter().map(|l| l.size).sum();
-        if let Some(rep) = &reporter {
-            rep.set_layers_total(total_layers);
-            rep.set_bytes_total(declared_total);
-            rep.flush();
-        }
+        let downloaded = download_layers_parallel(
+            &LayerFetchContext {
+                client: &client,
+                scheme,
+                registry: &registry,
+                repository: &repository,
+                display_tag: &display_tag,
+                images_dir,
+                staging_dir: &staging_dir,
+                auth_header: auth_header.clone(),
+                creds: creds.clone(),
+                reporter: reporter.clone(),
+            },
+            &layers,
+        )
+        .await?;
 
-        for (idx, layer) in layers.iter().enumerate() {
-            debug!(
-                image = %display_tag,
-                layer = idx + 1,
-                total = total_layers,
-                digest = %layer.digest,
-                "downloading layer"
-            );
-            let blob_url = format!("{scheme}://{registry}/v2/{repository}/blobs/{}", layer.digest);
-            let blob_resp =
-                authorized_get(&client, &blob_url, None, &mut auth_header, creds.as_ref())
-                    .await
-                    .with_context(|| format!("download layer {}", layer.digest))?;
-
-            // Registries report the compressed blob size; prefer it over the manifest hint and
-            // widen `bytes_total` when the manifest under-declared (multi-arch child manifests).
-            let content_length = blob_resp.content_length().unwrap_or(0);
-            let layer_total = if content_length > 0 {
-                content_length
-            } else {
-                layer.size
-            };
-            if let Some(rep) = &reporter {
-                if layer_total > 0 {
-                    let known = layer.size;
-                    if content_length > 0 && content_length > known {
-                        rep.set_bytes_total(
-                            declared_total.saturating_sub(known).saturating_add(content_length),
-                        );
-                    }
-                }
-                rep.begin_layer(idx + 1, layer_total);
-                rep.flush();
-            }
-
-            let blob_path = staging_dir.join(format!("layer-{idx}.blob"));
-            let mut out = File::create(&blob_path)
-                .with_context(|| format!("create layer temp file '{}'", blob_path.display()))?;
-            let mut hasher = Sha256::new();
-            let mut stream = blob_resp.bytes_stream();
-            let mut last_flush = std::time::Instant::now();
-            while let Some(chunk) = stream.next().await {
-                let bytes = chunk.context("stream layer chunk")?;
-                hasher.update(&bytes);
-                out.write_all(&bytes).context("write layer chunk")?;
-                if let Some(rep) = &reporter {
-                    rep.add_bytes(bytes.len() as u64);
-                    // Time-throttled so a fast local registry does not fsync per 64 KiB chunk.
-                    if last_flush.elapsed() >= PROGRESS_FLUSH_INTERVAL {
-                        rep.flush();
-                        last_flush = std::time::Instant::now();
-                    }
-                }
-            }
-            out.flush()?;
-            drop(out);
-
-            if let Some(expected_hex) = layer.digest.strip_prefix("sha256:") {
-                let actual_hex = format!("{:x}", hasher.finalize());
-                if actual_hex != expected_hex {
-                    bail!(
-                        "layer digest mismatch for {}: expected sha256:{expected_hex}, got sha256:{actual_hex}",
-                        display_tag
-                    );
-                }
-            }
-
+        for item in downloaded {
             if let Some(rep) = &reporter {
                 rep.set_phase(PullPhase::Extracting);
                 rep.flush();
             }
             let rootfs_clone = staging_rootfs.clone();
-            let blob_clone = blob_path.clone();
-            let media_type = layer.media_type.clone();
+            let blob_clone = item.blob_path.clone();
+            let media_type = item.media_type;
             tokio::task::spawn_blocking(move || {
                 extract_layer(&blob_clone, &rootfs_clone, &media_type)
             })
             .await
             .context("join layer extraction task")??;
 
-            let _ = fs::remove_file(&blob_path);
+            if !item.cached_in_store {
+                let _ = fs::remove_file(&item.blob_path);
+            }
             if let Some(rep) = &reporter {
                 rep.finish_layer();
                 rep.flush();

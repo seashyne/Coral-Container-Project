@@ -2,6 +2,7 @@
 
 pub mod cni;
 pub mod cni_runner;
+pub mod dns_server;
 pub mod egress;
 pub mod netns;
 pub mod networks;
@@ -16,6 +17,7 @@ pub use cni_runner::{
     CniAddOutcome, CniExecRequest, CniNetworkList, CniPluginChain, extract_primary_ip,
     has_cni_configs,
 };
+pub use dns_server::{EmbeddedDnsServer, build_dns_query_packet, handle_dns_packet};
 pub use egress::{EgressBackend, RootlessEgressGuard, detect_egress_backend};
 pub use netns::{
     PortMapping, PortProtocol, bring_loopback_up, connect_container_port, connect_container_udp,

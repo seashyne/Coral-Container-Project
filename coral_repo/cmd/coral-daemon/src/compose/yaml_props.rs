@@ -173,8 +173,18 @@ pub(super) fn apply_service_property(
                 svc.restart = val.to_string();
             }
         }
+        "gpus" => {
+            if !val.is_empty() {
+                svc.gpus = Some(val.to_string());
+            }
+        }
+        "log_driver" => {
+            if !val.is_empty() {
+                svc.log_driver = Some(val.to_string());
+            }
+        }
         "ports" | "expose" | "volumes" | "environment" | "depends_on" | "dns" | "extra_hosts"
-        | "labels" | "profiles" | "networks"
+        | "labels" | "profiles" | "networks" | "devices" | "aliases" | "network_aliases"
             if val_raw.starts_with('[') && val_raw.ends_with(']') =>
         {
             for item in parse_inline_list(val_raw) {
@@ -247,6 +257,9 @@ pub(super) fn apply_sub_property(
         },
         "depends_on" if !sub_key.is_empty() => {
             push_dependency(svc, sub_key, DependsCondition::ServiceStarted);
+        }
+        "logging" if sub_key == "driver" && !sub_val.is_empty() => {
+            svc.log_driver = Some(sub_val.to_string());
         }
         _ => {}
     }

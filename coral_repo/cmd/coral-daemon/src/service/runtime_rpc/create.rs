@@ -69,7 +69,24 @@ pub(super) async fn create_container(
         config
             .labels
             .insert("coral.network.name".into(), net_name.clone());
-        // Inject sibling container names on the same user-defined network into `/etc/hosts`.
+        // Collect this container's own service names & `--network-alias` values.
+        let mut own_names: Vec<String> = Vec::new();
+        if let Some(meta) = &config.metadata
+            && !meta.name.trim().is_empty()
+        {
+            own_names.push(meta.name.trim().to_string());
+        }
+        if let Some(raw_aliases) = config.annotations.get("coral.network.aliases") {
+            for alias in raw_aliases.split([',', '\n', ' ']) {
+                let a = alias.trim();
+                if !a.is_empty() && !own_names.iter().any(|n| n == a) {
+                    own_names.push(a.to_string());
+                }
+            }
+        }
+
+        // Inject sibling container names + aliases on the same user-defined network into `/etc/hosts`
+        // AND update existing running siblings' `coral-hosts` in-place so bidirectional resolution works.
         let mut sibling_hosts: Vec<String> = config
             .annotations
             .get("coral.extra_hosts")
@@ -81,15 +98,41 @@ pub(super) async fn create_container(
                     .collect()
             })
             .unwrap_or_default();
+        for name in &own_names {
+            let self_entry = format!("{name}:127.0.0.1");
+            if !sibling_hosts.contains(&self_entry) {
+                sibling_hosts.push(self_entry);
+            }
+        }
         for existing in store.containers.values() {
             if existing.config.labels.get("coral.network.name").map(String::as_str)
                 == Some(net_name.as_str())
-                && let Some(meta) = &existing.config.metadata
-                && !meta.name.is_empty()
             {
-                let entry = format!("{}:127.0.0.1", meta.name);
-                if !sibling_hosts.contains(&entry) {
-                    sibling_hosts.push(entry);
+                if let Some(meta) = &existing.config.metadata
+                    && !meta.name.is_empty()
+                {
+                    let entry = format!("{}:127.0.0.1", meta.name);
+                    if !sibling_hosts.contains(&entry) {
+                        sibling_hosts.push(entry);
+                    }
+                }
+                if let Some(ex_aliases) = existing.config.annotations.get("coral.network.aliases") {
+                    for alias in ex_aliases.split([',', '\n', ' ']) {
+                        let a = alias.trim();
+                        if !a.is_empty() {
+                            let entry = format!("{a}:127.0.0.1");
+                            if !sibling_hosts.contains(&entry) {
+                                sibling_hosts.push(entry);
+                            }
+                        }
+                    }
+                }
+                for name in &own_names {
+                    let _ = coral_runtime::rootfs::append_host_entry_in_place(
+                        &existing.bundle_dir,
+                        name,
+                        "127.0.0.1",
+                    );
                 }
             }
         }
@@ -100,6 +143,50 @@ pub(super) async fn create_container(
         }
     }
 
+    // Register container name, compose service name, and network aliases in the embedded DNS server.
+    if let Some(dns) = &svc.dns_server {
+        let target_ip = sandbox
+            .pod_ip
+            .as_deref()
+            .and_then(|s| s.parse::<std::net::Ipv4Addr>().ok())
+            .unwrap_or(std::net::Ipv4Addr::LOCALHOST);
+        if let Some(meta) = &config.metadata
+            && !meta.name.trim().is_empty()
+        {
+            dns.register_host(meta.name.trim(), target_ip);
+        }
+        if let Some(svc_name) = config.labels.get("coral.compose.service") {
+            dns.register_host(svc_name, target_ip);
+        }
+        if let Some(raw_aliases) = config.annotations.get("coral.network.aliases") {
+            for alias in raw_aliases.split([',', '\n', ' ']) {
+                if !alias.trim().is_empty() {
+                    dns.register_host(alias.trim(), target_ip);
+                }
+            }
+        }
+    }
+
+    if !config.annotations.contains_key("coral.health.cmd") {
+        let img_cfg = crate::images::OciImageConfig::load_for_rootfs(&rootfs_path);
+        if let Some(hc) = img_cfg.healthcheck_cmd
+            && !hc.trim().is_empty()
+        {
+            config.annotations.insert("coral.health.cmd".into(), hc);
+            if img_cfg.healthcheck_interval_ms > 0 {
+                config.annotations.insert(
+                    "coral.health.interval_ms".into(),
+                    img_cfg.healthcheck_interval_ms.to_string(),
+                );
+            }
+            if img_cfg.healthcheck_retries > 0 {
+                config.annotations.insert(
+                    "coral.health.retries".into(),
+                    img_cfg.healthcheck_retries.to_string(),
+                );
+            }
+        }
+    }
     let sandbox_cfg = req.sandbox_config.unwrap_or_else(|| sandbox.config.clone());
     let oci_spec = svc.build_oci_spec(&config, &sandbox_cfg, &rootfs_path, &bundle_dir)?;
     oci_spec

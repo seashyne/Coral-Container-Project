@@ -1,9 +1,13 @@
 //! Container rootfs mount namespace setup, `pivot_root`, Named Volumes, and DNS/hosts mounts.
 
+pub mod devices;
 pub mod dns;
 pub mod volumes;
 
-pub use dns::{host_dns_mounts, prepare_dns_and_hosts_mounts};
+pub use devices::{
+    discover_gpu_mounts_and_envs, discover_gpu_mounts_and_envs_in, parse_device_mount,
+};
+pub use dns::{append_host_entry_in_place, host_dns_mounts, prepare_dns_and_hosts_mounts};
 pub use volumes::{
     default_volumes_dir, ensure_named_volume, is_valid_volume_name, list_named_volumes,
     parse_volume_spec, parse_volume_spec_in, remove_named_volume,

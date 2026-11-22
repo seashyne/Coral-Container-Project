@@ -43,6 +43,12 @@ pub(super) fn apply_list_item(
         "depends_on" => push_dependency(svc, item, DependsCondition::ServiceStarted),
         "dns" => svc.dns.push(item.to_string()),
         "extra_hosts" => svc.extra_hosts.push(item.to_string()),
+        "devices" => svc.devices.push(item.to_string()),
+        "aliases" | "network_aliases" => {
+            if !svc.network_aliases.iter().any(|a| a == item) {
+                svc.network_aliases.push(item.to_string());
+            }
+        }
         "command" => svc.command.push(item.to_string()),
         "entrypoint" => svc.entrypoint.push(item.to_string()),
         "profiles" => {

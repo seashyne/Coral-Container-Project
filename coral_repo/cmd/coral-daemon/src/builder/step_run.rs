@@ -1,5 +1,6 @@
 //! `RUN` Dockerfile instruction execution.
 
+use super::buildkit::{RunMountKind, attach_run_mounts_to_spec, parse_run_mounts};
 use super::cache::{compute_step_key, restore_cached_rootfs, save_cached_rootfs};
 use super::exec::{StepExec, StepInfo};
 use crate::images;
@@ -9,6 +10,7 @@ use coral_runtime::rootfs::host_dns_mounts;
 use std::fs;
 use std::process::Stdio;
 use tokio::process::Command;
+use tracing::warn;
 
 /// Outcome of a `RUN` step.
 pub(super) struct RunOutcome {
@@ -47,13 +49,14 @@ pub(super) async fn run_step(
         "Step {}/{} : RUN {arg}",
         step.step_num, step.total_steps
     );
-    let cmd_args = if arg.trim_start().starts_with('[')
-        && let Ok(parsed) = serde_json::from_str::<Vec<String>>(arg.trim())
+    let (run_mounts, cmd_text) = parse_run_mounts(arg)?;
+    let cmd_args = if cmd_text.trim_start().starts_with('[')
+        && let Ok(parsed) = serde_json::from_str::<Vec<String>>(cmd_text.trim())
         && !parsed.is_empty()
     {
         parsed
     } else {
-        vec!["/bin/sh".into(), "-c".into(), arg.to_string()]
+        vec!["/bin/sh".into(), "-c".into(), cmd_text]
     };
 
     let step_bundle = exec.staging_dir.join(format!("step-{}", step.step_idx));
@@ -73,6 +76,13 @@ pub(super) async fn run_step(
     }
     spec.mounts.retain(|m| m.destination != "/tmp");
     spec.mounts.extend(host_dns_mounts());
+    attach_run_mounts_to_spec(
+        &run_mounts,
+        exec.cache_root,
+        exec.opts.context_dir,
+        exec.staging_rootfs,
+        &mut spec,
+    )?;
     spec.annotations.insert("coral.overlay".into(), "false".into());
     spec.to_file(step_bundle.join("config.json"))?;
 
@@ -92,6 +102,13 @@ pub(super) async fn run_step(
         .await
         .context("spawn coral for Dockerfile RUN step")?;
     let _ = images::remove_dir_force(&step_bundle);
+    for m in &run_mounts {
+        if let RunMountKind::Secret { target, .. } = m
+            && let Ok(p) = coral_runtime::rootfs::safe_join_rootfs(exec.staging_rootfs, target)
+        {
+            let _ = fs::remove_file(&p);
+        }
+    }
 
     if !out.status.success() {
         let stdout = String::from_utf8_lossy(&out.stdout);
@@ -104,8 +121,10 @@ pub(super) async fn run_step(
         );
     }
 
-    if !exec.opts.no_cache {
-        let _ = save_cached_rootfs(exec.staging_rootfs, exec.staging_dir, &cache_dir);
+    if !exec.opts.no_cache
+        && let Err(err) = save_cached_rootfs(exec.staging_rootfs, exec.staging_dir, &cache_dir)
+    {
+        warn!(step = step.step_num, error = %err, "failed to save RUN build cache entry");
     }
     Ok(RunOutcome {
         chain_key: next_key,

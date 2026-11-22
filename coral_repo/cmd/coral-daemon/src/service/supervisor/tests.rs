@@ -1,4 +1,4 @@
-use super::log_writer::{LogRotationPolicy, RotatingLogWriter, rotated_log_path};
+use super::log_writer::{LogDriver, LogRotationPolicy, RotatingLogWriter, rotated_log_path};
 use super::policy::RestartPolicy;
 
 #[test]
@@ -32,4 +32,22 @@ fn rotating_log_writer_rotates_and_caps_archive_count() {
     assert!(rotated_log_path(&log_path, 2).exists());
     assert!(!rotated_log_path(&log_path, 3).exists());
     assert!(std::fs::metadata(&log_path).unwrap().len() <= 20);
+}
+
+#[test]
+fn json_file_log_driver_formats_docker_compatible_json_lines() {
+    let dir = tempfile::tempdir().unwrap();
+    let log_path = dir.path().join("json.log");
+    let mut w = RotatingLogWriter::open_with_driver(
+        log_path.clone(),
+        LogRotationPolicy::default(),
+        LogDriver::JsonFile,
+        "ctr-json",
+    )
+    .unwrap();
+    w.write_stream_chunk(b"hello-json\n", "stdout").unwrap();
+    let content = std::fs::read_to_string(&log_path).unwrap();
+    assert!(content.contains("\"log\":\"hello-json\\n\""));
+    assert!(content.contains("\"stream\":\"stdout\""));
+    assert!(content.contains("\"time\":"));
 }

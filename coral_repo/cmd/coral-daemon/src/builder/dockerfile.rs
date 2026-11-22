@@ -95,10 +95,11 @@ pub(super) fn parse_exec_or_shell_instruction(arg: &str) -> Vec<String> {
 }
 
 pub(super) fn parse_dockerfile(raw: &str) -> Result<Vec<(String, String)>> {
+    let preprocessed = super::buildkit::preprocess_heredocs(raw);
     let mut joined_lines = Vec::new();
     let mut current = String::new();
 
-    for line in raw.lines() {
+    for line in preprocessed.lines() {
         let trimmed_start = line.trim_start();
         if current.is_empty() && (trimmed_start.is_empty() || trimmed_start.starts_with('#')) {
             continue;
@@ -132,13 +133,104 @@ pub(super) fn parse_dockerfile(raw: &str) -> Result<Vec<(String, String)>> {
     Ok(out)
 }
 
+fn is_var_start(b: u8) -> bool {
+    b.is_ascii_alphabetic() || b == b'_'
+}
+
+fn is_var_cont(b: u8) -> bool {
+    b.is_ascii_alphanumeric() || b == b'_'
+}
+
 pub(super) fn expand_vars(input: &str, vars: &HashMap<String, String>) -> String {
-    let mut out = input.to_string();
-    for (k, v) in vars {
-        out = out.replace(&format!("${{{k}}}"), v);
-        out = out.replace(&format!("${k}"), v);
+    if vars.is_empty() || !input.contains('$') {
+        return input.to_string();
+    }
+    let bytes = input.as_bytes();
+    let mut out = String::with_capacity(input.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'$' {
+            let bs_count = bytes[..i].iter().rev().take_while(|&&b| b == b'\\').count();
+            if bs_count % 2 == 1 {
+                out.push('$');
+                i += 1;
+                continue;
+            }
+            if i + 1 < bytes.len() && bytes[i + 1] == b'{' {
+                if let Some(rel_end) = input[i + 2..].find('}') {
+                    let key = &input[i + 2..i + 2 + rel_end];
+                    if !key.is_empty()
+                        && is_var_start(key.as_bytes()[0])
+                        && key.as_bytes()[1..].iter().copied().all(is_var_cont)
+                        && let Some(val) = vars.get(key)
+                    {
+                        out.push_str(val);
+                        i += 3 + rel_end;
+                        continue;
+                    }
+                }
+            } else if i + 1 < bytes.len() && is_var_start(bytes[i + 1]) {
+                let mut end = i + 2;
+                while end < bytes.len() && is_var_cont(bytes[end]) {
+                    end += 1;
+                }
+                let key = &input[i + 1..end];
+                if let Some(val) = vars.get(key) {
+                    out.push_str(val);
+                    i = end;
+                    continue;
+                }
+            }
+            out.push('$');
+            i += 1;
+        } else {
+            let ch = input[i..].chars().next().expect("valid utf8 boundary");
+            out.push(ch);
+            i += ch.len_utf8();
+        }
     }
     out
+}
+
+pub(super) fn sync_stage_vars_from_envs(envs: &[String], vars: &mut HashMap<String, String>) {
+    for entry in envs {
+        if let Some((k, v)) = entry.split_once('=') {
+            vars.entry(k.to_string()).or_insert_with(|| v.to_string());
+        }
+    }
+}
+
+pub(super) fn apply_env_instruction(
+    arg: &str,
+    vars: &mut HashMap<String, String>,
+    envs: &mut Vec<String>,
+) {
+    let tokens = split_shell_tokens(arg);
+    let all_pairs = !tokens.is_empty()
+        && tokens.iter().all(|tok| {
+            tok.split_once('=')
+                .is_some_and(|(k, _)| !k.trim().is_empty() && !k.trim().contains(char::is_whitespace))
+        });
+    if all_pairs {
+        for tok in tokens {
+            if let Some((k, v)) = tok.split_once('=') {
+                let key = k.trim().to_string();
+                let val = unquote(v.trim());
+                vars.insert(key.clone(), val.clone());
+                set_env_var(envs, &key, &val);
+            }
+        }
+        return;
+    }
+    if let Some((k, v)) = arg
+        .split_once('=')
+        .or_else(|| arg.split_once(char::is_whitespace))
+    {
+        let key = k.trim().to_string();
+        let val = unquote(v.trim());
+        vars.insert(key.clone(), val.clone());
+        set_env_var(envs, &key, &val);
+    }
 }
 
 pub(super) fn unquote(s: &str) -> String {

@@ -2,6 +2,7 @@
 //! index resolution (`linux/amd64` / `linux/arm64`), and SHA-256 verified layer streaming.
 
 mod auth;
+pub(crate) mod layer_cache;
 mod manifest;
 mod pull;
 mod util;

@@ -55,6 +55,22 @@ pub struct RunArgs {
     #[arg(long = "add-host")]
     pub extra_hosts: Vec<String>,
 
+    /// Add network-scoped service alias (`--network-alias db`), repeatable
+    #[arg(long = "network-alias", visible_alias = "alias")]
+    pub network_aliases: Vec<String>,
+
+    /// Pass a host device node into the container (`HOST_DEV[:CTR_DEV[:rwm]]`), repeatable
+    #[arg(long = "device")]
+    pub devices: Vec<String>,
+
+    /// Pass host GPUs into the container (`all` or device index e.g. `0`)
+    #[arg(long)]
+    pub gpus: Option<String>,
+
+    /// Container log driver (`raw`, `json-file`, `syslog`, `journald`)
+    #[arg(long = "log-driver", default_value = "raw")]
+    pub log_driver: String,
+
     /// Disable Copy-on-Write OverlayFS isolation and mount rootfs directly
     #[arg(long)]
     pub no_overlay: bool,

@@ -19,7 +19,7 @@
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, isAbsolute, relative, resolve } from "node:path";
 
 const INCLUDE_LINE = /^[ \t]*<!--[ \t]*@include[ \t]+(.+?)[ \t]*-->[ \t]*\r?\n/gm;
 const MAX_DEPTH = 16;
@@ -55,8 +55,8 @@ export function assemble({ template, out, banner = "", root }) {
 
   if (root) {
     const rootPath = resolve(root);
-    const rel = outputPath.startsWith(rootPath) ? outputPath : outputPath;
-    if (!rel.startsWith(rootPath)) {
+    const rel = relative(rootPath, outputPath);
+    if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) {
       throw new Error(`refusing to write outside of ${rootPath}: ${outputPath}`);
     }
   }

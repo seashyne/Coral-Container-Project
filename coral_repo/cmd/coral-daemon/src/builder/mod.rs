@@ -6,6 +6,7 @@
 //! isolated Coral containers.
 
 mod build;
+mod buildkit;
 mod cache;
 mod context;
 mod dockerfile;
