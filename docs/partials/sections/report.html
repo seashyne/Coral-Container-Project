@@ -25,56 +25,74 @@
             <tbody>
               <tr>
                 <th scope="row">Coral OCI direct (<code>--bundle</code>, alpine:3.20)</th>
-                <td>30</td>
-                <td>5.00 ms</td>
-                <td class="col-highlight"><strong>5.53 ms</strong></td>
-                <td>6.01 ms</td>
-                <td>166.4 ctr/s</td>
-                <td>38.3×</td>
+                <td>5 × 30</td>
+                <td>6.29 ms</td>
+                <td class="col-highlight"><strong>7.76 ms</strong></td>
+                <td>9.27 ms</td>
+                <td>107.9 ctr/s</td>
+                <td>30.6×</td>
               </tr>
               <tr>
                 <th scope="row">Coral CLI (<code>--image alpine:3.20</code>)</th>
-                <td>30</td>
-                <td>5.36 ms</td>
-                <td class="col-highlight"><strong>6.18 ms</strong></td>
-                <td>7.75 ms</td>
-                <td>129.0 ctr/s</td>
-                <td>34.3×</td>
+                <td>5 × 30</td>
+                <td>7.14 ms</td>
+                <td class="col-highlight"><strong>8.88 ms</strong></td>
+                <td>10.34 ms</td>
+                <td>96.7 ctr/s</td>
+                <td>26.8×</td>
+              </tr>
+              <tr>
+                <th scope="row">Coral CLI (<code>--image busybox:musl</code>)</th>
+                <td>5 × 30</td>
+                <td>6.66 ms</td>
+                <td class="col-highlight"><strong>8.38 ms</strong></td>
+                <td>11.77 ms</td>
+                <td>85.0 ctr/s</td>
+                <td>28.3×</td>
+              </tr>
+              <tr>
+                <th scope="row">Coral CLI (<code>--image debian:bookworm-slim</code>)</th>
+                <td>5 × 30</td>
+                <td>7.19 ms</td>
+                <td class="col-highlight"><strong>8.38 ms</strong></td>
+                <td>12.67 ms</td>
+                <td>78.9 ctr/s</td>
+                <td>28.3×</td>
               </tr>
               <tr>
                 <th scope="row">Coral CRI Daemon (gRPC + alpine:3.20)</th>
-                <td>20</td>
-                <td>8.62 ms</td>
-                <td class="col-highlight"><strong>9.49 ms</strong></td>
-                <td>12.05 ms</td>
-                <td>83.0 ctr/s</td>
-                <td>22.3×</td>
+                <td>5 × 30</td>
+                <td>25.23 ms</td>
+                <td class="col-highlight"><strong>28.57 ms</strong></td>
+                <td>35.61 ms</td>
+                <td>28.1 ctr/s</td>
+                <td>8.3×</td>
               </tr>
               <tr>
                 <th scope="row">runc (Docker's own OCI runtime, rootless)</th>
-                <td>30</td>
-                <td>16.31 ms</td>
-                <td>21.19 ms</td>
-                <td>21.50 ms</td>
-                <td>46.5 ctr/s</td>
-                <td>10.0×</td>
+                <td>5 × 30</td>
+                <td>19.48 ms</td>
+                <td>24.20 ms</td>
+                <td>24.32 ms</td>
+                <td>41.1 ctr/s</td>
+                <td>9.8×</td>
               </tr>
               <tr>
                 <th scope="row">Docker Engine 29.10.0 (<code>--rm --network=none</code>)</th>
-                <td>20</td>
-                <td>129.33 ms</td>
-                <td><strong>135.27 ms</strong></td>
-                <td>135.52 ms</td>
-                <td>7.4 ctr/s</td>
-                <td>1.57×</td>
+                <td>5 × 30</td>
+                <td>151.44 ms</td>
+                <td><strong>159.32 ms</strong></td>
+                <td>158.76 ms</td>
+                <td>6.3 ctr/s</td>
+                <td>1.5×</td>
               </tr>
               <tr>
                 <th scope="row">Docker Engine 29.10.0 (<code>--rm</code> default bridge)</th>
-                <td>20</td>
-                <td>191.73 ms</td>
-                <td><strong>211.96 ms</strong></td>
-                <td>210.22 ms</td>
-                <td>4.8 ctr/s</td>
+                <td>5 × 30</td>
+                <td>219.12 ms</td>
+                <td><strong>237.56 ms</strong></td>
+                <td>236.45 ms</td>
+                <td>4.2 ctr/s</td>
                 <td>1.00× (base)</td>
               </tr>
             </tbody>
@@ -169,6 +187,13 @@
                 <td data-i18n="report.bl8Finding"></td>
                 <td data-i18n="report.bl8Action"></td>
                 <td><span class="status-badge active" data-i18n="report.stDone">แก้แล้วในรอบนี้</span></td>
+              </tr>
+              <tr>
+                <td>9</td>
+                <th scope="row" data-i18n="report.bl9Area">CRI daemon สูญเสีย state.json เป็นครั้งคราว</th>
+                <td data-i18n="report.bl9Finding"></td>
+                <td data-i18n="report.bl9Action"></td>
+                <td><span class="status-badge" data-i18n="report.stOpen">ยังค้าง</span></td>
               </tr>
             </tbody>
           </table>

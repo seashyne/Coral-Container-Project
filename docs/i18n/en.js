@@ -25,7 +25,7 @@ window.CORAL_I18N_EN = {
   "hero.ctaGithub": "View on GitHub",
   "hero.ctaSupport": "Support the Project",
   "metric.startLabel": "OCI Container P50 Startup",
-  "metric.startSub": "7.3×–11.2× faster than Docker on same host",
+  "metric.startSub": "17.9×–26.8× faster than Docker on same host",
   "metric.wasmLabel": "WASI WebAssembly Execution",
   "metric.wasmSub": "coral-wasm · wasmi 2.0 (Fuel + RAM cap)",
   "metric.kvmLabel": "Native /dev/kvm 64-bit Boot",
@@ -110,21 +110,21 @@ window.CORAL_I18N_EN = {
   "bench.title": "Verified Benchmarks & Docker Comparison",
   "bench.lead":
     "Measured on the same Linux x86_64 host (Intel Core i5-13400F, 16 CPUs) comparing Coral v2.3.0 against Docker 29.10.0 / Server 29.9.3.",
-  "bench.chartCaption": "Same-machine startup latency and resource footprint comparison (Coral v2.3.0 vs Docker Engine 29.9.3)",
+  "bench.chartCaption": "Controlled-environment startup latency and resource footprint comparison (Coral v2.3.0 vs Docker Engine 29.10.0 rootless)",
   "bench.reportBtn": "Read Full Engineering Report (REPORT_v2.3.md)",
   "bench.rawBtn": "View Raw Benchmark Data (BENCHMARK.md)",
-  "bench.caption": "Same-machine startup benchmark and capability comparison (Alpine 3.20 · 20–30 runs)",
+  "bench.caption": "Controlled-environment startup benchmark and capability comparison (5 rounds × 30 runs · median-of-medians · alpine / busybox / debian)",
   "bench.colFeature": "Capability / Measured Metric",
   "bench.colCoral": "Coral CLI v2.3.0",
   "bench.colRunc": "Coral Daemon (CRI v1)",
   "bench.colDocker": "Docker 29.10 / 29.9.3",
   "bench.r1": "Startup P50 Latency (alpine:3.20)",
-  "bench.r1c": "23.22 ms (Min 3.52 ms · 50.8 ctr/s)",
-  "bench.r1r": "53.07 ms (Mean 49.12 ms · 20.4 ctr/s)",
-  "bench.r1d": "168.95 ms (no-net) · 260.58 ms (bridge)",
+  "bench.r1c": "8.88 ms (Min 7.14 ms · 96.7 ctr/s)",
+  "bench.r1r": "28.57 ms (Mean 35.61 ms · 28.1 ctr/s)",
+  "bench.r1d": "159.32 ms (no-net) · 237.56 ms (bridge)",
   "bench.r2": "Binary Footprint & Daemon RAM",
-  "bench.r2c": "18.37 MB CLI (Rust Zero-GC)",
-  "bench.r2r": "9.1 MB idle / 12.0 MB active RSS",
+  "bench.r2c": "18.98 MB CLI (Rust Zero-GC)",
+  "bench.r2r": "8.4 MB idle / 15.0 MB after 5 rounds RSS",
   "bench.r2d": "36.16 MB CLI + dockerd/containerd VM",
   "bench.r3": "WASI WebAssembly Cold Start",
   "bench.r3c": "329 µs internal (5.72 ms CLI P50)",
@@ -188,9 +188,9 @@ window.CORAL_I18N_EN = {
     "The latest measurement round, taken from the coral-runtime 2.3.0 .deb package installed system-wide on a real host, compared against rootless Docker Engine 29.10.0 — plus what still needs to be improved.",
   "report.envTitle": "Measurement environment",
   "report.envDesc":
-    "Ubuntu 26.10 · kernel 7.3.0-11-generic · 16 CPU · Coral 2.3.0 installed system-wide from the .deb package (/usr/bin/coral, /usr/bin/coral-daemon) · Docker Engine 29.10.0 rootless (rootlesskit + slirp4netns, overlayfs storage driver)",
+    "Ubuntu 26.10 · kernel 7.3.0-11-generic · 16 CPU (pinned to 8-15) · Coral 2.3.0 installed system-wide from the .deb package (/usr/bin/coral, /usr/bin/coral-daemon) · Docker Engine 29.10.0 rootless (rootlesskit + slirp4netns, overlayfs storage driver)",
   "report.tableCaption":
-    "System-wide round: Coral v2.3.0 (.deb package) vs rootless Docker Engine 29.10.0 · alpine:3.20 · 30/20 runs",
+    "Controlled-environment round: 5 rounds × 30 runs as median-of-medians, warm cache mode · alpine / busybox / debian",
   "report.colWorkload": "Mode / Workload",
   "report.colRuns": "Runs",
   "report.colMin": "Min",
@@ -199,15 +199,15 @@ window.CORAL_I18N_EN = {
   "report.colThr": "Throughput",
   "report.colVs": "vs Docker bridge",
   "report.findTitle": "Key findings from this round",
-  "report.find1Title": "Packaging adds no overhead",
+  "report.find1Title": "Speed does not depend on the distro",
   "report.find1Desc":
-    "P50 for OCI direct (5.53 ms) and CLI (6.18 ms) matches the in-repo build round (5.50 / 6.33 ms), because the package only copies the same binaries — no wrapper or extra process layer.",
-  "report.find2Title": "CRI Daemon is 2.23× faster than raw runc",
+    "alpine (8.88 ms), busybox (8.38 ms) and debian:bookworm-slim (8.38 ms) land within a few milliseconds of each other, so the engine overhead comes from creating the container rather than from the size of the rootfs.",
+  "report.find2Title": "The CRI daemon still beats Docker, but not raw runc",
   "report.find2Desc":
-    "coral-daemon completes in 9.49 ms against runc at 21.19 ms — the overhead stacked on Coral's CRI daemon is effectively negative next to the very OCI runtime Docker ships.",
+    "With the page cache and CPU load under control, coral-daemon completes in 28.57 ms against runc at 24.20 ms — the gRPC layer adds roughly 4 ms. An earlier single-round measurement had shown the CRI daemon 2.23× faster than runc; that was measurement noise, not a property of Coral. The defensible claim is that the CRI daemon still beats Docker by 8.3×.",
   "report.find3Title": "Docker's stack cost sits in bridge networking",
   "report.find3Desc":
-    "docker run with the default bridge takes 211.96 ms against 21.19 ms for runc directly — roughly +191 ms (+900%) for docker CLI → dockerd → containerd → shim → runc plus network namespace setup.",
+    "docker run with the default bridge takes 237.56 ms against 24.20 ms for runc directly — roughly +213 ms (+881%) for docker CLI → dockerd → containerd → shim → runc plus network namespace setup.",
   "report.find4Title": "Scope of the comparison",
   "report.find4Desc":
     "This round measures rootless Docker on the same host as Coral, so only the overhead ratio is comparable; the numbers are not cross-host comparable with the earlier Docker Desktop table.",
@@ -215,7 +215,7 @@ window.CORAL_I18N_EN = {
   "report.backlogLead":
     "Collected from the measurement results and from installing the package on this machine, ordered by priority.",
   "report.backlogCaption":
-    "Improvement backlog after the system-wide measurement round (November 2026)",
+    "Improvement backlog after the controlled-environment measurement round (November 2026)",
   "report.blColNo": "#",
   "report.blColArea": "Area",
   "report.blColFinding": "Finding / evidence",
@@ -233,7 +233,7 @@ window.CORAL_I18N_EN = {
     "Add the system-wide table and label the host and mode of every round (done in this round).",
   "report.bl3Area": "Packaged systemd unit omits the state dir",
   "report.bl3Finding":
-    "The packaged unit carries no --state-dir/--images-dir/--default-rootfs, so the daemon falls back to XDG_RUNTIME_DIR, cannot see existing state, and needs a hand-written drop-in.",
+    "The packaged unit carries no --state-dir/--images-dir/--default-rootfs, so the daemon falls back to XDG_RUNTIME_DIR (a tmpfs), cannot see existing state, and needs a hand-written drop-in — fixed by pointing the unit at the persistent %h/.local/state/coral.",
   "report.bl3Action":
     "Ship sensible defaults, or add a coral-daemon --init command that writes a unit with the machine's state paths.",
   "report.bl4Area": "Coral Desktop AppImage fails to bundle",
@@ -261,6 +261,11 @@ window.CORAL_I18N_EN = {
     "CI built ARM64 artifacts but never ran the test suite, and coral-vmm did not compile on ARM at all because its imports and cfg gates disagreed.",
   "report.bl8Action":
     "Add ARM64 to the verify matrix and fix every break until build, clippy and the unit tests pass on aarch64 (done in this round).",
+  "report.bl9Area": "CRI daemon intermittently loses state.json",
+  "report.bl9Finding":
+    "The second measurement round saw 2 failures in ~300 CRI daemon runs with `rename state.json: No such file or directory`, triggered while the daemon handles several containers at once.",
+  "report.bl9Action":
+    "Make the state.json write atomic (write a temporary file, then rename) and recover from a failed rename by loading the latest state from the journal instead of failing the whole command.",
   "report.stOpen": "Open",
   "report.stDone": "Fixed in this round",
   "report.reportBtn": "Read Full Engineering Report (REPORT_v2.3.md)",

@@ -25,7 +25,7 @@ window.CORAL_I18N_TH = {
   "hero.ctaGithub": "ดูซอร์สโค้ดบน GitHub",
   "hero.ctaSupport": "สนับสนุนโปรเจกต์",
   "metric.startLabel": "OCI Container P50 Startup",
-  "metric.startSub": "เร็วกว่า Docker 7.3×–11.2× บนเครื่องเดียวกัน",
+  "metric.startSub": "เร็วกว่า Docker 17.9×–26.8× บนเครื่องเดียวกัน",
   "metric.wasmLabel": "WASI WebAssembly Execution",
   "metric.wasmSub": "coral-wasm · wasmi 2.0 (Fuel + RAM cap)",
   "metric.kvmLabel": "Native /dev/kvm 64-bit Boot",
@@ -110,21 +110,21 @@ window.CORAL_I18N_TH = {
   "bench.title": "ผลทดสอบจริง & ตารางเปรียบเทียบกับ Docker",
   "bench.lead":
     "ทดสอบจริงบนเครื่องเดียวกัน Linux x86_64 (Intel Core i5-13400F, 16 CPUs) ระหว่าง Coral v2.3.0 กับ Docker 29.10.0 / Server 29.9.3",
-  "bench.chartCaption": "ผลวัดความเร็วเริ่มต้นคอนเทนเนอร์และทรัพยากรจริงบนเครื่องเดียวกัน (Coral v2.3.0 vs Docker Engine 29.9.3)",
+  "bench.chartCaption": "ผลวัดความเร็วเริ่มต้นคอนเทนเนอร์และทรัพยากรจริงแบบควบคุมสภาพแวดล้อม (Coral v2.3.0 vs Docker Engine 29.10.0 rootless)",
   "bench.reportBtn": "อ่านรายงานสรุปฉบับเต็ม (REPORT_v2.3.md)",
   "bench.rawBtn": "ดูข้อมูล Benchmark ละเอียด (BENCHMARK.md)",
-  "bench.caption": "ตารางสรุปผลวัดความเร็วบนเครื่องเดียวกันและสถาปัตยกรรม (Alpine 3.20 · 20–30 รอบ)",
+  "bench.caption": "ตารางสรุปผลวัดความเร็วแบบควบคุมสภาพแวดล้อมและสถาปัตยกรรม (5 รอบ × 30 runs · median-of-medians · alpine / busybox / debian)",
   "bench.colFeature": "หัวข้อ / ตัวชี้วัดจริง",
   "bench.colCoral": "Coral CLI v2.3.0",
   "bench.colRunc": "Coral Daemon (CRI v1)",
   "bench.colDocker": "Docker 29.10 / 29.9.3",
   "bench.r1": "Startup P50 Latency (alpine:3.20)",
-  "bench.r1c": "23.22 ms (Min 3.52 ms · 50.8 ctr/s)",
-  "bench.r1r": "53.07 ms (Mean 49.12 ms · 20.4 ctr/s)",
-  "bench.r1d": "168.95 ms (no-net) · 260.58 ms (bridge)",
+  "bench.r1c": "8.88 ms (Min 7.14 ms · 96.7 ctr/s)",
+  "bench.r1r": "28.57 ms (Mean 35.61 ms · 28.1 ctr/s)",
+  "bench.r1d": "159.32 ms (no-net) · 237.56 ms (bridge)",
   "bench.r2": "ขนาด Binary & Daemon RAM",
-  "bench.r2c": "18.37 MB CLI (Rust Zero-GC)",
-  "bench.r2r": "9.1 MB idle / 12.0 MB active RSS",
+  "bench.r2c": "18.98 MB CLI (Rust Zero-GC)",
+  "bench.r2r": "8.4 MB idle / 15.0 MB หลัง 5 รอบ RSS",
   "bench.r2d": "36.16 MB CLI + dockerd/containerd VM",
   "bench.r3": "WASI WebAssembly Cold Start",
   "bench.r3c": "329 µs ในเอนจิน (5.72 ms CLI P50)",
@@ -188,9 +188,9 @@ window.CORAL_I18N_TH = {
     "ผลวัดรอบล่าสุดจากแพ็กเกจ coral-runtime 2.3.0 ที่ติดตั้งแบบ system-wide บนโฮสต์จริง เทียบกับ Docker Engine 29.10.0 แบบ rootless พร้อมสรุปสิ่งที่ควรปรับปรุ่งต่อ",
   "report.envTitle": "สภาพแวดล้อมการวัด",
   "report.envDesc":
-    "Ubuntu 26.10 · kernel 7.3.0-11-generic · 16 CPU · Coral 2.3.0 ติดตั้งแบบ system-wide จากแพ็กเกจ .deb (/usr/bin/coral, /usr/bin/coral-daemon) · Docker Engine 29.10.0 แบบ rootless (rootlesskit + slirp4netns, storage driver overlayfs)",
+    "Ubuntu 26.10 · kernel 7.3.0-11-generic · 16 CPU (pin ที่ 8-15) · Coral 2.3.0 ติดตั้งแบบ system-wide จากแพ็กเกจ .deb (/usr/bin/coral, /usr/bin/coral-daemon) · Docker Engine 29.10.0 แบบ rootless (rootlesskit + slirp4netns, storage driver overlayfs)",
   "report.tableCaption":
-    "ผลวัดรอบ system-wide: Coral v2.3.0 (แพ็กเกจ .deb) เทียบ Docker Engine 29.10.0 แบบ rootless · alpine:3.20 · 30/20 รอบ",
+    "ผลวัดรอบควบคุมสภาพแวดล้อม: 5 รอบ × 30 runs แบบ median-of-medians แยกโหมด warm (page cache อุ่น) · alpine / busybox / debian",
   "report.colWorkload": "โหมด / Workload",
   "report.colRuns": "รอบ",
   "report.colMin": "Min",
@@ -199,15 +199,15 @@ window.CORAL_I18N_TH = {
   "report.colThr": "Throughput",
   "report.colVs": "เทียบ Docker bridge",
   "report.findTitle": "ข้อค้นพบสำคัญจากรอบวัดนี้",
-  "report.find1Title": "การติดตั้งแบบแพ็กเกจไม่เพิ่ม overhead",
+  "report.find1Title": "ความเร็วไม่ขึ้นกับ distro ที่ใช้",
   "report.find1Desc":
-    "P50 ของ OCI direct (5.53 ms) และ CLI (6.18 ms) ตรงกับรอบที่วัดด้วย build ในโปรเจกต์ (5.50 / 6.33 ms) เพราะแพ็กเกจเป็นเพียงการคัดลอกไบนาร์เดิม ไม่มี wrapper หรือ process layer เพิ่ม",
-  "report.find2Title": "CRI Daemon เร็วกว่า raw runc ถึง 2.23 เท่า",
+    "alpine (8.88 ms), busybox (8.38 ms) และ debian:bookworm-slim (8.38 ms) ให้ผลใกล้เคียงกันภายในไม่กี่มิลลิวินาที แปลว่า overhead ของ engine มาจากการสร้างคอนเทนเนอร์ ไม่ใช่จากขนาดของ rootfs",
+  "report.find2Title": "CRI daemon ยังชนะ Docker แต่แพ้ raw runc",
   "report.find2Desc":
-    "coral-daemon ทำงานที่ 9.49 ms เทียบกับ runc ที่ 21.19 ms — overhead ที่ซ้อนอยู่บน CRI daemon ของ Coral จึงเป็นค่าติดลบเมื่อเทียบกับ OCI runtime ตัวเดียวกับที่ Docker ใช้จริง",
+    "เมื่อควบคุม page cache และภาระ CPU แล้ว coral-daemon ทำงานที่ 28.57 ms เทียบกับ runc ที่ 24.20 ms — ชั้น gRPC เพิ่มราว 4 ms การวัดรอบเดียวก่อนหน้าเคยรายงานว่า CRI daemon เร็วกว่า runc ถึง 2.23 เท่า ซึ่งเป็นผลจาก noise ของการวัด ไม่ใช่คุณสมบัติของ Coral — ข้อสรุปที่ยืนยันได้จริงคือ CRI daemon ยังชนะ Docker ถึง 8.3 เท่า",
   "report.find3Title": "ต้นทุนของ Docker stack อยู่ที่ bridge network",
   "report.find3Desc":
-    "docker run แบบ bridge ใช้เวลา 211.96 ms เทียบกับ runc ตรง ๆ ที่ 21.19 ms คิดเป็น ~+191 ms (+900%) สำหรับ docker CLI → dockerd → containerd → shim → runc พร้อมการตั้งค่า network namespace",
+    "docker run แบบ bridge ใช้เวลา 237.56 ms เทียบกับ runc ตรง ๆ ที่ 24.20 ms คิดเป็น ~+213 ms (+881%) สำหรับ docker CLI → dockerd → containerd → shim → runc พร้อมการตั้งค่า network namespace",
   "report.find4Title": "ขอบเขตของการเทียบเทียบ",
   "report.find4Desc":
     "รอบนี้วัด Docker แบบ rootless บนโฮสต์เดียวกับ Coral จึงเปรียบเทียบได้เฉพาะสัดส่วน overhead ไม่ใช่ตัวเลขข้ามโฮสต์กับผลของ Docker Desktop ในตารางเดิม",
@@ -233,7 +233,7 @@ window.CORAL_I18N_TH = {
     "เพิ่มตารางรอบ system-wide พร้อมระบุโฮสต์และโหมดของแต่ละรอบให้ชัดเจน (ทำในรอบนี้)",
   "report.bl3Area": "systemd unit ของแพ็กเกจไม่ระบุ state dir",
   "report.bl3Finding":
-    "unit ที่แพ็กเกจติดตั้งมาไม่มี --state-dir/--images-dir/--default-rootfs daemon จึงใช้ XDG_RUNTIME_DIR และมองไม่เห็น state เดิม ต้องเขียน drop-in เอง",
+    "unit ที่แพ็กเกจติดตั้งมาไม่มี --state-dir/--images-dir/--default-rootfs daemon จึงใช้ XDG_RUNTIME_DIR (tmpfs) แล้วมองไม่เห็น state เดิม ต้องเขียน drop-in เอง — แก้แล้วด้วยการชี้ไปที่ %h/.local/state/coral ซึ่งเป็นตำแหน่งแบบ persistent",
   "report.bl3Action":
     "ship ค่า default ที่ถูกต้อง หรือคำสั่ง coral-daemon --init ที่สร้าง unit พร้อมค่า state ของเครื่องให้เอง",
   "report.bl4Area": "AppImage ของ Coral Desktop bundle ไม่ผ่าน",
@@ -261,6 +261,11 @@ window.CORAL_I18N_TH = {
     "CI สร้าง ARM64 artifact แต่ไม่รันชุดทดสอบ และ coral-vmm ไม่ผ่านการ compile บน ARM เลย เพราะ import และ cfg gate ไม่สอดคล้องกัน",
   "report.bl8Action":
     "เพิ่ม ARM64 เข้า verify matrix แล้วแก้บั๊กทั้งหมดจน build, clippy และ unit test ผ่านบน aarch64 (ทำในรอบนี้)",
+  "report.bl9Area": "CRI daemon สูญเสีย state.json เป็นครั้งคราว",
+  "report.bl9Finding":
+    "รอบวัดรอบที่สองพบความล้มเหลว 2 ครั้งจาก ~300 runs ของ CRI daemon ด้วยข้อความ rename state.json: No such file or directory เกิดเมื่อ daemon จัดการ container หลายตัวพร้อมกัน",
+  "report.bl9Action":
+    "ทำให้การเขียน state.json เป็น atomic (เขียนไฟล์ชั่วคราวแล้ว rename) และจัดการกรณี rename ล้มเหลวด้วยการโหลด state ล่าสุดจาก journal แทนการล้มทั้งคำสั่ง",
   "report.stOpen": "ยังค้าง",
   "report.stDone": "แก้แล้วในรอบนี้",
   "report.reportBtn": "อ่านรายงานสรุปฉบับเต็ม (REPORT_v2.3.md)",
