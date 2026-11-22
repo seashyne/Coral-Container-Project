@@ -266,6 +266,11 @@ window.CORAL_I18N_TH = {
     "รอบวัดรอบที่สองพบความล้มเหลว 2 ครั้งจาก ~300 runs ของ CRI daemon ด้วยข้อความ rename state.json: No such file or directory เกิดเมื่อ daemon จัดการ container หลายตัวพร้อมกัน",
   "report.bl9Action":
     "ใช้ชื่อไฟล์ชั่วคราวที่ไม่ซ้ำกันต่อการเขียน พร้อม fsync ก่อน rename และถือว่าการลบ container พร้อมกันเป็นเคสไม่ผิดพลาด พร้อม regression test 6 เคส (ทำในรอบนี้)",
+  "report.bl10Area": "coral load ไฟล์ .tar.zst ล้มเหลวเป็นครั้งคราว",
+  "report.bl10Finding":
+    "CI จับได้จาก oci_features_e2e::image_tag_save_zstd_and_load_roundtrip_cli ด้วยข้อความ zstd decompression failed: (ว่าง) เพราะ tar reader หยุดที่ end-of-archive marker โดยไม่ drain pipe ทำให้ pipe ถูกปิดทั้งที่ zstd ยังเขียนข้อมูลไม่เสร็จ และตายด้วย SIGPIPE",
+  "report.bl10Action":
+    "ระบาย stdout ของ process ให้หมดก่อน wait และเก็บกวาด child process ฝั่ง save เมื่อเขียนไม่สำเร็จ พร้อม regression test ที่ทำให้เกิด race ได้แน่นอน (ทำในรอบนี้)",
   "report.stOpen": "ยังค้าง",
   "report.stDone": "แก้แล้วในรอบนี้",
   "report.reportBtn": "อ่านรายงานสรุปฉบับเต็ม (REPORT_v2.3.md)",

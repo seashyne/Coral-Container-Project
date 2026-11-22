@@ -266,6 +266,11 @@ window.CORAL_I18N_EN = {
     "The second measurement round saw 2 failures in ~300 CRI daemon runs with `rename state.json: No such file or directory`, triggered while the daemon handles several containers at once.",
   "report.bl9Action":
     "Use a unique temporary file name per write, fsync before the rename, and treat a concurrently removed container as a non-error — with six regression tests (done in this round).",
+  "report.bl10Area": "coral load of a .tar.zst archive intermittently fails",
+  "report.bl10Finding":
+    "CI caught it in oci_features_e2e::image_tag_save_zstd_and_load_roundtrip_cli with `zstd decompression failed:` (empty). The tar reader stops at the end-of-archive marker without draining the pipe, so the pipe is closed while zstd is still writing and the decompressor dies with SIGPIPE.",
+  "report.bl10Action":
+    "Drain the decompressor's stdout before waiting, and reap the compressor on the save side when the write fails — with a regression test that reproduces the race deterministically (done in this round).",
   "report.stOpen": "Open",
   "report.stDone": "Fixed in this round",
   "report.reportBtn": "Read Full Engineering Report (REPORT_v2.3.md)",

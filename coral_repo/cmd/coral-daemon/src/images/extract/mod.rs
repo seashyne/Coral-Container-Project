@@ -1,6 +1,9 @@
 //! Rootless-safe OCI tar / tar+gzip layer extraction with merged-`/usr` symlink
 //! traversal containment and OCI whiteout (`.wh.*` / `.wh..wh..opq`) handling.
 
+#[cfg(test)]
+mod tests;
+
 use super::remove_dir_force;
 use anyhow::{Context, Result, anyhow, bail};
 use flate2::read::GzDecoder;
@@ -38,11 +41,17 @@ pub fn extract_layer(blob_path: &Path, rootfs: &Path, media_type: &str) -> Resul
             .stderr(std::process::Stdio::piped())
             .spawn()
             .context("spawn 'zstd -d -c' to decompress OCI zstd layer")?;
-        let stdout = child
+        let mut stdout = child
             .stdout
             .take()
             .ok_or_else(|| anyhow!("failed to capture zstd stdout"))?;
-        let extract_res = extract_tar_stream(stdout, rootfs);
+        let extract_res = extract_tar_stream(&mut stdout, rootfs);
+        // The tar reader stops at the end-of-archive marker, so the
+        // decompressor may still have output pending. Drain the pipe before
+        // waiting, otherwise it is closed under its feet and it dies with
+        // SIGPIPE — which surfaced as an intermittent
+        // "zstd decompression failed" on valid archives.
+        let _ = io::copy(&mut stdout, &mut io::sink());
         let out = child.wait_with_output().context("wait for zstd process")?;
         extract_res?;
         if !out.status.success() {
@@ -271,75 +280,5 @@ fn remove_path_if_exists(path: &Path) -> Result<()> {
         }
         Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
         Err(e) => Err(e.into()),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use flate2::Compression;
-    use flate2::write::GzEncoder;
-    use tempfile::tempdir;
-
-    #[test]
-    fn extracts_gzip_layer_with_merged_usr_symlink_and_whiteouts() {
-        let dir = tempdir().unwrap();
-        let rootfs = dir.path().join("rootfs");
-        fs::create_dir_all(&rootfs).unwrap();
-
-        let layer1 = dir.path().join("layer1.tar.gz");
-        {
-            let f = File::create(&layer1).unwrap();
-            let enc = GzEncoder::new(f, Compression::fast());
-            let mut builder = tar::Builder::new(enc);
-
-            let mut hdr = tar::Header::new_gnu();
-            hdr.set_entry_type(EntryType::Symlink);
-            hdr.set_size(0);
-            hdr.set_mode(0o777);
-            hdr.set_cksum();
-            builder.append_link(&mut hdr, "bin", "/usr/bin").unwrap();
-
-            let data = b"hello coral";
-            let mut hdr = tar::Header::new_gnu();
-            hdr.set_size(data.len() as u64);
-            hdr.set_mode(0o755);
-            hdr.set_cksum();
-            builder.append_data(&mut hdr, "bin/hello", &data[..]).unwrap();
-
-            let old = b"old";
-            let mut hdr = tar::Header::new_gnu();
-            hdr.set_size(old.len() as u64);
-            hdr.set_mode(0o644);
-            hdr.set_cksum();
-            builder
-                .append_data(&mut hdr, "etc/old.conf", &old[..])
-                .unwrap();
-
-            builder.into_inner().unwrap().finish().unwrap();
-        }
-        extract_layer(&layer1, &rootfs, "application/vnd.oci.image.layer.v1.tar+gzip").unwrap();
-        assert_eq!(
-            fs::read_to_string(rootfs.join("usr/bin/hello")).unwrap(),
-            "hello coral"
-        );
-        assert!(rootfs.join("etc/old.conf").exists());
-
-        let layer2 = dir.path().join("layer2.tar.gz");
-        {
-            let f = File::create(&layer2).unwrap();
-            let enc = GzEncoder::new(f, Compression::fast());
-            let mut builder = tar::Builder::new(enc);
-            let mut hdr = tar::Header::new_gnu();
-            hdr.set_size(0);
-            hdr.set_mode(0o644);
-            hdr.set_cksum();
-            builder
-                .append_data(&mut hdr, "etc/.wh.old.conf", io::empty())
-                .unwrap();
-            builder.into_inner().unwrap().finish().unwrap();
-        }
-        extract_layer(&layer2, &rootfs, "application/vnd.oci.image.layer.v1.tar+gzip").unwrap();
-        assert!(!rootfs.join("etc/old.conf").exists());
     }
 }

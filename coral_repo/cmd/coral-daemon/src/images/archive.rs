@@ -124,12 +124,20 @@ pub fn save_image_archive(
             .stderr(std::process::Stdio::piped())
             .spawn()
             .context("spawn 'zstd' to compress image archive")?;
-        {
+        let write_result = {
             let stdin = child
                 .stdin
                 .take()
                 .ok_or_else(|| anyhow!("failed to open zstd stdin"))?;
-            let _ = write_rootfs_tar(stdin, rootfs, &meta_bytes)?;
+            write_rootfs_tar(stdin, rootfs, &meta_bytes).map(|_| ())
+        };
+        if let Err(e) = write_result {
+            // The compressor is still waiting for input; stop it and reap it
+            // instead of leaving an orphan behind.
+            let _ = child.kill();
+            let _ = child.wait();
+            let _ = fs::remove_file(output_path);
+            return Err(e);
         }
         let out = child.wait_with_output().context("wait for zstd compression")?;
         if !out.status.success() {
