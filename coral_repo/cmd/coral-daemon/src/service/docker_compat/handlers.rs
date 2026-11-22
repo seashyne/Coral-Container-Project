@@ -1,6 +1,7 @@
 //! Route handlers translating read-only Docker Engine REST API endpoints into `CoralDaemonService` queries.
 
 use super::HttpResponse;
+use super::archive_build::handle_docker_build;
 use super::containers::{handle_container_action, handle_create_container};
 use super::endpoints::{handle_events, handle_exec_route, handle_image_item, handle_image_pull};
 use super::resources::{handle_networks, handle_volumes};
@@ -23,6 +24,7 @@ pub(super) async fn dispatch_docker_request(
         ("GET", "/version") => handle_version(),
         ("GET", "/info") => handle_info(svc).await,
         ("GET", "/events") => handle_events(compat, query).await,
+        ("POST", "/build") => handle_docker_build(svc, compat, query, body).await,
         ("GET", "/images/json") => handle_list_images(svc).await,
         ("POST", "/images/create") => handle_image_pull(svc, compat, query).await,
         _ if route.starts_with("/images/") => {
@@ -31,7 +33,15 @@ pub(super) async fn dispatch_docker_request(
         ("GET", "/containers/json") => handle_list_containers(svc, query).await,
         ("POST", "/containers/create") => handle_create_container(svc, compat, query, body).await,
         _ if route.starts_with("/containers/") => {
-            handle_container_action(svc, compat, method, &route["/containers/".len()..], body).await
+            handle_container_action(
+                svc,
+                compat,
+                method,
+                &route["/containers/".len()..],
+                query,
+                body,
+            )
+            .await
         }
         _ if route.starts_with("/exec/") => {
             handle_exec_route(svc, compat, method, &route["/exec/".len()..]).await

@@ -187,3 +187,48 @@ services:
     assert_eq!(spec.services[0].image.as_deref(), Some("alpine:3.20"));
     assert_eq!(spec.services[0].ports, vec!["18888:6379"]);
 }
+
+#[test]
+fn parses_secrets_configs_deploy_replicas_and_include() {
+    let dir = tempdir().unwrap();
+    fs::write(dir.path().join("db_pass.txt"), "s3cr3t\n").unwrap();
+    fs::write(dir.path().join("app.conf"), "mode=prod\n").unwrap();
+    fs::write(
+        dir.path().join("extra.yml"),
+        "services:\n  redis:\n    image: redis:7\n",
+    )
+    .unwrap();
+
+    let yaml = r#"
+include:
+  - extra.yml
+
+secrets:
+  db_password:
+    file: ./db_pass.txt
+
+configs:
+  app_cfg:
+    file: ./app.conf
+
+services:
+  web:
+    image: nginx:alpine
+    deploy:
+      replicas: 3
+    secrets:
+      - db_password
+    configs:
+      - app_cfg
+"#;
+    let spec = ComposeSpec::from_yaml_with_dotenv(yaml, Some(dir.path())).unwrap();
+    assert!(spec.services.iter().any(|s| s.name == "redis"));
+    let web = spec.services.iter().find(|s| s.name == "web").unwrap();
+    assert_eq!(web.replicas, 3);
+    assert!(
+        web.volumes
+            .iter()
+            .any(|v| v.ends_with(":/run/secrets/db_password:ro"))
+    );
+    assert!(web.volumes.iter().any(|v| v.ends_with(":/app_cfg:ro")));
+}

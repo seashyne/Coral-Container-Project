@@ -28,6 +28,10 @@ pub struct ComposeSpec {
     pub project_name: Option<String>,
     pub services: Vec<ComposeService>,
     pub volumes: Vec<String>,
+    #[serde(default)]
+    pub secrets: HashMap<String, String>,
+    #[serde(default)]
+    pub configs: HashMap<String, String>,
 }
 
 /// Ready-to-submit CRI pod + container configuration derived from a `ComposeService`.
@@ -82,6 +86,12 @@ pub struct ComposeService {
     #[serde(default)]
     pub profiles: Vec<String>,
     #[serde(default)]
+    pub secrets: Vec<String>,
+    #[serde(default)]
+    pub configs: Vec<String>,
+    #[serde(default = "default_replicas")]
+    pub replicas: u32,
+    #[serde(default)]
     pub privileged: bool,
     pub memory_mb: i64,
     pub cpu_percent: i64,
@@ -123,6 +133,9 @@ impl Default for ComposeService {
             user: None,
             labels: HashMap::new(),
             profiles: Vec::new(),
+            secrets: Vec::new(),
+            configs: Vec::new(),
+            replicas: 1,
             privileged: false,
             memory_mb: 0,
             cpu_percent: 0,
@@ -133,4 +146,8 @@ impl Default for ComposeService {
             health_retries: 3,
         }
     }
+}
+
+fn default_replicas() -> u32 {
+    1
 }

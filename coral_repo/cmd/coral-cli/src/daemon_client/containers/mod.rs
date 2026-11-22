@@ -2,11 +2,13 @@
 //! over CRI v1 `RuntimeService` gRPC.
 
 mod lifecycle;
+mod lifecycle_ext;
 mod logs;
 mod run;
 mod stats;
 
 pub use lifecycle::{cmd_diff_via_daemon, cmd_exec, cmd_ps, cmd_rm, cmd_stop};
+pub use lifecycle_ext::{cmd_pause, cmd_rename, cmd_unpause, cmd_update};
 pub use logs::cmd_logs;
 pub use run::{DaemonRunOptions, cmd_run_via_daemon};
 pub use stats::cmd_stats;

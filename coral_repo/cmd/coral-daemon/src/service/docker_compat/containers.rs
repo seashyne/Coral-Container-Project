@@ -2,6 +2,7 @@
 //! (`POST /containers/create`, `POST /containers/{id}/start`, `stop`, `DELETE /containers/{id}`).
 
 use super::HttpResponse;
+use super::archive_build::handle_container_archive;
 use super::endpoints::{handle_container_wait, handle_exec_create};
 use super::handlers::{handle_container_logs, handle_inspect_container, parse_query_param};
 use super::state::DockerCompatState;
@@ -239,6 +240,7 @@ pub(super) async fn handle_container_action(
     compat: &DockerCompatState,
     method: &str,
     subpath: &str,
+    query: &str,
     body: &[u8],
 ) -> HttpResponse {
     let (id_raw, action) = subpath.split_once('/').unwrap_or((subpath, ""));
@@ -271,6 +273,46 @@ pub(super) async fn handle_container_action(
         },
         ("POST", "exec") => handle_exec_create(svc, compat, id, body).await,
         ("POST", "wait") => handle_container_wait(svc, id).await,
+        ("POST", "pause") => match svc.pause_container(id).await {
+            Ok(_) => {
+                compat.record_event("container", "pause", id, json!({})).await;
+                HttpResponse::empty("204 No Content")
+            }
+            Err(e) => HttpResponse::json("409 Conflict", &json!({ "message": e.message() })),
+        },
+        ("POST", "unpause") => match svc.unpause_container(id).await {
+            Ok(_) => {
+                compat.record_event("container", "unpause", id, json!({})).await;
+                HttpResponse::empty("204 No Content")
+            }
+            Err(e) => HttpResponse::json("404 Not Found", &json!({ "message": e.message() })),
+        },
+        ("POST", "rename") => {
+            let new_name = parse_query_param(query, "name").unwrap_or("");
+            match svc.rename_container(id, new_name).await {
+                Ok(_) => {
+                    compat
+                        .record_event("container", "rename", id, json!({ "name": new_name }))
+                        .await;
+                    HttpResponse::empty("204 No Content")
+                }
+                Err(e) => HttpResponse::json("409 Conflict", &json!({ "message": e.message() })),
+            }
+        }
+        ("POST", "update") => {
+            let payload = serde_json::from_slice::<Value>(body).unwrap_or_else(|_| json!({}));
+            let mem = payload.get("Memory").and_then(|v| v.as_i64());
+            let quota = payload.get("CpuQuota").and_then(|v| v.as_i64());
+            let period = payload.get("CpuPeriod").and_then(|v| v.as_i64());
+            let pids = payload.get("PidsLimit").and_then(|v| v.as_i64());
+            match svc.update_container_resources(id, mem, quota, period, pids).await {
+                Ok(_) => HttpResponse::json("200 OK", &json!({ "Warnings": [] })),
+                Err(e) => HttpResponse::json("404 Not Found", &json!({ "message": e.message() })),
+            }
+        }
+        ("PUT" | "GET", "archive") => {
+            handle_container_archive(svc, method, id, query, body).await
+        }
         ("DELETE", "") => {
             let pod_id = {
                 let store = svc.store.read().await;

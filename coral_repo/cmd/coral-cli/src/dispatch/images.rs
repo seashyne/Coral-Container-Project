@@ -59,12 +59,14 @@ pub(crate) fn build(ctx: &Ctx, args: BuildArgs) -> Result<ExitCode> {
         target,
         build_args,
         platform,
+        cache_from,
+        push,
         context,
         local,
         no_cache,
     } = args;
     let dockerfile_path = file.unwrap_or_else(|| context.join("Dockerfile"));
-    run_async(daemon_client::cmd_build(
+    run_async(daemon_client::cmd_build_with_options(
         &ctx.addr,
         &ctx.state_root,
         &ctx.images_dir,
@@ -76,6 +78,8 @@ pub(crate) fn build(ctx: &Ctx, args: BuildArgs) -> Result<ExitCode> {
         target.as_deref(),
         &build_args,
         platform.as_deref(),
+        &cache_from,
+        push,
     ))?;
     Ok(ExitCode::SUCCESS)
 }

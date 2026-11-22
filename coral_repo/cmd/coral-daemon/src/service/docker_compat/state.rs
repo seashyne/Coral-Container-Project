@@ -1,11 +1,11 @@
 //! In-memory state for the Docker Engine REST API compatibility shim:
-//! `/exec/{id}` instance tracking and `/events` ring buffer.
+//! `/exec/{id}` instance tracking, `/events` ring buffer, and live broadcast channel.
 
 use chrono::Utc;
 use serde_json::{Value, json};
 use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicU64, Ordering};
-use tokio::sync::RwLock;
+use tokio::sync::{RwLock, broadcast};
 
 const MAX_RETAINED_EVENTS: usize = 128;
 
@@ -19,11 +19,24 @@ pub(super) struct DockerExecRecord {
     pub(super) exit_code: i32,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct DockerCompatState {
     seq: AtomicU64,
     pub(super) execs: RwLock<HashMap<String, DockerExecRecord>>,
     events: RwLock<VecDeque<Value>>,
+    events_tx: broadcast::Sender<Value>,
+}
+
+impl Default for DockerCompatState {
+    fn default() -> Self {
+        let (events_tx, _) = broadcast::channel(MAX_RETAINED_EVENTS);
+        Self {
+            seq: AtomicU64::new(0),
+            execs: RwLock::new(HashMap::new()),
+            events: RwLock::new(VecDeque::new()),
+            events_tx,
+        }
+    }
 }
 
 impl DockerCompatState {
@@ -52,7 +65,8 @@ impl DockerCompatState {
         if ring.len() >= MAX_RETAINED_EVENTS {
             ring.pop_front();
         }
-        ring.push_back(ev);
+        ring.push_back(ev.clone());
+        let _ = self.events_tx.send(ev);
     }
 
     pub async fn snapshot_events(&self, since_epoch: Option<i64>) -> Vec<Value> {
@@ -65,6 +79,10 @@ impl DockerCompatState {
             })
             .cloned()
             .collect()
+    }
+
+    pub fn subscribe_events(&self) -> broadcast::Receiver<Value> {
+        self.events_tx.subscribe()
     }
 }
 

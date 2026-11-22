@@ -20,6 +20,7 @@ pub(crate) fn compose(ctx: &Ctx, args: ComposeArgs) -> Result<ExitCode> {
             build,
             wait,
             no_deps,
+            scale,
             services,
         } => {
             run_async(daemon_client::cmd_compose_up(
@@ -35,6 +36,7 @@ pub(crate) fn compose(ctx: &Ctx, args: ComposeArgs) -> Result<ExitCode> {
                 build,
                 wait,
                 no_deps,
+                &scale,
             ))?;
         }
         ComposeAction::Down { volumes } => {
@@ -135,6 +137,22 @@ pub(crate) fn compose(ctx: &Ctx, args: ComposeArgs) -> Result<ExitCode> {
                 timeout,
                 cmd,
             ));
+        }
+        ComposeAction::Watch {
+            interval_ms,
+            services,
+        } => {
+            run_async(daemon_client::cmd_compose_watch(
+                &ctx.addr,
+                &ctx.state_root,
+                &ctx.images_dir,
+                file.as_deref(),
+                env_file.as_deref(),
+                project_name.as_deref(),
+                &profiles,
+                &services,
+                interval_ms,
+            ))?;
         }
         ComposeAction::Config => {
             daemon_client::cmd_compose_config(file.as_deref(), env_file.as_deref())?;

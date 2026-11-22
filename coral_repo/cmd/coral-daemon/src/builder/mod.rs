@@ -12,6 +12,7 @@ mod context;
 pub mod dag;
 mod dag_exec;
 mod dockerfile;
+pub mod dockerignore;
 mod exec;
 mod step_copy;
 mod step_run;

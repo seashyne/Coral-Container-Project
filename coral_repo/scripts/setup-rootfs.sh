@@ -4,7 +4,12 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ROOTFS_DIR="${ROOT_DIR}/rootfs"
 ALPINE_VERSION="3.20.3"
-ARCH="x86_64"
+HOST_ARCH="$(uname -m)"
+case "${HOST_ARCH}" in
+    x86_64|amd64)  ARCH="x86_64" ;;
+    aarch64|arm64) ARCH="aarch64" ;;
+    *)             ARCH="${HOST_ARCH}" ;;
+esac
 TARBALL="alpine-minirootfs-${ALPINE_VERSION}-${ARCH}.tar.gz"
 URL="https://dl-cdn.alpinelinux.org/alpine/v3.20/releases/${ARCH}/${TARBALL}"
 

@@ -56,6 +56,16 @@ pub(super) fn apply_list_item(
                 svc.profiles.push(item.to_string());
             }
         }
+        "secrets" => {
+            if !svc.secrets.iter().any(|s| s == item) {
+                svc.secrets.push(item.to_string());
+            }
+        }
+        "configs" => {
+            if !svc.configs.iter().any(|c| c == item) {
+                svc.configs.push(item.to_string());
+            }
+        }
         "networks" => {
             if !svc.networks.iter().any(|n| n == item) {
                 svc.networks.push(item.to_string());

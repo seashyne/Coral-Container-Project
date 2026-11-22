@@ -26,6 +26,10 @@ impl ComposeSpec {
         let mut services_map: HashMap<String, ComposeService> = HashMap::new();
         let mut service_order: Vec<String> = Vec::new();
         let mut top_volumes: Vec<String> = Vec::new();
+        let mut top_secrets: HashMap<String, String> = HashMap::new();
+        let mut top_configs: HashMap<String, String> = HashMap::new();
+        let mut included_files: Vec<String> = Vec::new();
+        let mut cur_top_item: Option<String> = None;
         let mut explicit_envs: HashMap<String, Vec<String>> = HashMap::new();
 
         let mut section = TopSection::None;
@@ -46,6 +50,7 @@ impl ComposeSpec {
 
             if indent == 0 {
                 cur_service = None;
+                cur_top_item = None;
                 cur_prop = None;
                 cur_sub_prop = None;
                 service_indent = None;
@@ -66,6 +71,46 @@ impl ComposeSpec {
                 TopSection::Volumes => {
                     if indent <= 2 {
                         collect_top_volume(trimmed, &mut top_volumes);
+                    }
+                }
+                TopSection::Secrets | TopSection::Configs => {
+                    let target_map = if section == TopSection::Secrets {
+                        &mut top_secrets
+                    } else {
+                        &mut top_configs
+                    };
+                    if indent <= 2 && let Some((k, _)) = trimmed.split_once(':') {
+                        cur_top_item = Some(unquote_yaml(k.trim()));
+                    } else if let Some(ref item_name) = cur_top_item
+                        && let Some((k, v)) = trimmed.split_once(':')
+                        && k.trim() == "file"
+                    {
+                        let p = unquote_yaml(v.trim());
+                        if !p.is_empty() {
+                            target_map.insert(item_name.clone(), resolve_maybe_rel(&p, base_dir));
+                        }
+                    }
+                }
+                TopSection::Include => {
+                    if let Some(rest) = trimmed.strip_prefix('-') {
+                        let r = rest.trim();
+                        let path_val = if let Some((k, v)) = r.split_once(':')
+                            && k.trim() == "path"
+                        {
+                            unquote_yaml(v.trim())
+                        } else {
+                            unquote_yaml(r)
+                        };
+                        if !path_val.is_empty() {
+                            included_files.push(resolve_maybe_rel(&path_val, base_dir));
+                        }
+                    } else if let Some((k, v)) = trimmed.split_once(':')
+                        && k.trim() == "path"
+                    {
+                        let p = unquote_yaml(v.trim());
+                        if !p.is_empty() {
+                            included_files.push(resolve_maybe_rel(&p, base_dir));
+                        }
                     }
                 }
                 TopSection::Networks | TopSection::None => {}
@@ -169,6 +214,36 @@ impl ComposeSpec {
             }
         }
 
+        // Merge any `include:` compose YAML files before final validation and sorting.
+        for inc_path_str in included_files {
+            let inc_path = Path::new(&inc_path_str);
+            if let Ok(inc_raw) = std::fs::read_to_string(inc_path)
+                && let Ok(inc_spec) =
+                    Self::from_yaml_with_env(&inc_raw, inc_path.parent(), interp_vars)
+            {
+                for v in inc_spec.volumes {
+                    if !top_volumes.contains(&v) {
+                        top_volumes.push(v);
+                    }
+                }
+                for (k, v) in inc_spec.secrets {
+                    top_secrets.entry(k).or_insert(v);
+                }
+                for (k, v) in inc_spec.configs {
+                    top_configs.entry(k).or_insert(v);
+                }
+                for svc in inc_spec.services {
+                    let sname = svc.name.clone();
+                    if let std::collections::hash_map::Entry::Vacant(e) =
+                        services_map.entry(sname.clone())
+                    {
+                        service_order.push(sname);
+                        e.insert(svc);
+                    }
+                }
+            }
+        }
+
         if services_map.is_empty() {
             bail!("Compose file defines no services under 'services:'");
         }
@@ -208,6 +283,23 @@ impl ComposeSpec {
                     }
                 }
             }
+            // Bind-mount declared `secrets:` to `/run/secrets/<name>:ro` and `configs:` to `/<name>:ro`.
+            for sec_name in &svc.secrets {
+                if let Some(host_file) = top_secrets.get(sec_name) {
+                    let mount = format!("{host_file}:/run/secrets/{sec_name}:ro");
+                    if !svc.volumes.contains(&mount) {
+                        svc.volumes.push(mount);
+                    }
+                }
+            }
+            for cfg_name in &svc.configs {
+                if let Some(host_file) = top_configs.get(cfg_name) {
+                    let mount = format!("{host_file}:/{cfg_name}:ro");
+                    if !svc.volumes.contains(&mount) {
+                        svc.volumes.push(mount);
+                    }
+                }
+            }
             ordered_services.push(svc);
         }
 
@@ -215,6 +307,8 @@ impl ComposeSpec {
             project_name,
             services: ordered_services,
             volumes: top_volumes,
+            secrets: top_secrets,
+            configs: top_configs,
         })
     }
 }

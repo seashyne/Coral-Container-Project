@@ -73,9 +73,17 @@ pub struct BuildArgs {
     #[arg(long = "build-arg")]
     pub build_args: Vec<String>,
 
-    /// Target OCI platform for cross-arch BuildKit builds (e.g. `linux/amd64`, `linux/arm64`)
+    /// Target OCI platform(s) for cross-arch BuildKit builds (e.g. `linux/arm64` or `linux/amd64,linux/arm64`)
     #[arg(long)]
     pub platform: Option<String>,
+
+    /// Remote registry image(s) to pull first as warm layer/build cache (`--cache-from`)
+    #[arg(long = "cache-from")]
+    pub cache_from: Vec<String>,
+
+    /// Push the built image (or multi-arch OCI Image Index when multiple --platform targets are given)
+    #[arg(long)]
+    pub push: bool,
 
     /// Build context directory for `COPY`/`ADD` instructions
     #[arg(default_value = ".")]

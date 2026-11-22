@@ -8,7 +8,7 @@ mod registry;
 
 use clap::ValueEnum;
 
-pub use build::cmd_build;
+pub use build::{cmd_build, cmd_build_with_options};
 pub use list::{cmd_catalog, cmd_commit_via_daemon, cmd_images, cmd_rmi};
 pub use pull::cmd_pull;
 pub use registry::{cmd_load, cmd_save, cmd_tag};

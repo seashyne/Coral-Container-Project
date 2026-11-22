@@ -3,6 +3,8 @@
 //! without root privileges or host port forwarding.
 
 use crate::NetError;
+use crate::dns_server::EmbeddedDnsServer;
+use crate::vswitch_gw::handle_gateway_frame;
 use crate::vswitch_tap::open_tap_in_netns;
 use std::collections::HashMap;
 use std::io;
@@ -27,7 +29,17 @@ pub struct RootlessVSwitch {
 impl RootlessVSwitch {
     /// Creates a new rootless virtual Ethernet switch for `subnet_cidr` (e.g. `"10.89.0.0/24"`).
     pub fn start(subnet_cidr: &str) -> Result<Self, NetError> {
+        Self::start_with_dns(subnet_cidr, None)
+    }
+
+    /// Creates a new rootless virtual switch with an in-subnet virtual gateway (`10.89.x.1`)
+    /// answering ARP, ICMP Echo, and UDP DNS queries on `10.89.x.1:53`.
+    pub fn start_with_dns(
+        subnet_cidr: &str,
+        dns: Option<Arc<EmbeddedDnsServer>>,
+    ) -> Result<Self, NetError> {
         let (base_u32, mask, host_cap) = parse_ipv4_cidr(subnet_cidr)?;
+        let gw_ip = Ipv4Addr::from(base_u32 | 1);
         let ports: Arc<Mutex<HashMap<String, OwnedFd>>> = Arc::new(Mutex::new(HashMap::new()));
         let stop = Arc::new(AtomicBool::new(false));
         let ports_c = ports.clone();
@@ -35,18 +47,23 @@ impl RootlessVSwitch {
 
         let worker = thread::Builder::new()
             .name("coral-vswitch".into())
-            .spawn(move || switch_loop(ports_c, stop_c))
+            .spawn(move || switch_loop(ports_c, stop_c, gw_ip, dns))
             .map_err(NetError::Io)?;
 
         Ok(Self {
             subnet_base: base_u32,
             netmask: mask,
             host_capacity: host_cap,
-            next_host: AtomicU32::new(2), // .1 reserved for gateway
+            next_host: AtomicU32::new(2), // .1 reserved for virtual gateway
             ports,
             stop,
             worker: Some(worker),
         })
+    }
+
+    /// Returns the virtual gateway IPv4 address (`10.89.x.1`) for this subnet.
+    pub fn gateway_ip(&self) -> Ipv4Addr {
+        Ipv4Addr::from(self.subnet_base | 1)
     }
 
     /// Allocates the next unique IPv4 address on this virtual subnet (`.2`..`.254`).
@@ -111,7 +128,12 @@ fn parse_ipv4_cidr(cidr: &str) -> Result<(u32, Ipv4Addr, u32), NetError> {
     Ok((base_u32, Ipv4Addr::from(mask_u32), host_cap))
 }
 
-fn switch_loop(ports: Arc<Mutex<HashMap<String, OwnedFd>>>, stop: Arc<AtomicBool>) {
+fn switch_loop(
+    ports: Arc<Mutex<HashMap<String, OwnedFd>>>,
+    stop: Arc<AtomicBool>,
+    gw_ip: Ipv4Addr,
+    dns: Option<Arc<EmbeddedDnsServer>>,
+) {
     let mut mac_table: HashMap<[u8; 6], String> = HashMap::new();
     let mut frame_buf = [0u8; 2048];
 
@@ -167,6 +189,18 @@ fn switch_loop(ports: Arc<Mutex<HashMap<String, OwnedFd>>>, stop: Arc<AtomicBool
                     break;
                 }
                 let frame = &frame_buf[..n as usize];
+                if let Some(gw_reply) = handle_gateway_frame(frame, gw_ip, dns.as_deref()) {
+                    let _ = unsafe {
+                        libc::write(
+                            src_fd.as_raw_fd(),
+                            gw_reply.as_ptr().cast::<libc::c_void>(),
+                            gw_reply.len(),
+                        )
+                    };
+                    if (frame[0] & 1) == 0 {
+                        continue;
+                    }
+                }
                 let mut dst_mac = [0u8; 6];
                 let mut src_mac = [0u8; 6];
                 dst_mac.copy_from_slice(&frame[0..6]);

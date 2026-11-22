@@ -2,11 +2,13 @@
 //! (`docker.sock`) and TCP, allowing Docker API clients (Testcontainers, Traefik, Portainer,
 //! Docker CLI over `DOCKER_HOST=unix://.../docker.sock`) to query and manage Coral containers.
 
+mod archive_build;
 mod containers;
 mod endpoints;
 mod handlers;
 mod resources;
 mod state;
+mod streaming;
 #[cfg(test)]
 mod tests;
 
@@ -106,11 +108,27 @@ async fn handle_http_connection<S>(
 where
     S: AsyncRead + AsyncWrite + Unpin,
 {
-    let Some((method, target, body)) = read_http_request(&mut stream).await else {
+    let Some((method, target, headers, body)) = read_http_request(&mut stream).await else {
         return;
     };
     let (raw_path, query) = target.split_once('?').unwrap_or((&target, ""));
     let route = strip_api_version(raw_path);
+    if matches!(
+        streaming::try_handle_streaming_request(
+            &svc,
+            &compat,
+            &method,
+            route,
+            query,
+            &headers,
+            &mut stream,
+        )
+        .await,
+        Ok(true)
+    ) {
+        let _ = stream.shutdown().await;
+        return;
+    }
     let resp = handlers::dispatch_docker_request(&svc, &compat, &method, route, query, &body).await;
 
     let header = format!(
@@ -145,7 +163,9 @@ pub fn strip_api_version(path: &str) -> &str {
     path
 }
 
-async fn read_http_request<S>(stream: &mut S) -> Option<(String, String, Vec<u8>)>
+async fn read_http_request<S>(
+    stream: &mut S,
+) -> Option<(String, String, std::collections::HashMap<String, String>, Vec<u8>)>
 where
     S: AsyncRead + Unpin,
 {
@@ -173,12 +193,17 @@ where
     let target = parts.next()?.to_string();
 
     let mut content_length = 0usize;
+    let mut headers = std::collections::HashMap::new();
     for line in lines {
-        if let Some((k, v)) = line.split_once(':')
-            && k.trim().eq_ignore_ascii_case("content-length")
-            && let Ok(len) = v.trim().parse::<usize>()
-        {
-            content_length = len.min(4 * 1024 * 1024);
+        if let Some((k, v)) = line.split_once(':') {
+            let key = k.trim().to_ascii_lowercase();
+            let val = v.trim().to_string();
+            if key == "content-length"
+                && let Ok(len) = val.parse::<usize>()
+            {
+                content_length = len.min(32 * 1024 * 1024);
+            }
+            headers.insert(key, val);
         }
     }
 
@@ -192,7 +217,7 @@ where
         body.extend_from_slice(&chunk[..n]);
     }
     body.truncate(content_length);
-    Some((method, target, body))
+    Some((method, target, headers, body))
 }
 
 fn find_double_crlf(buf: &[u8]) -> Option<usize> {

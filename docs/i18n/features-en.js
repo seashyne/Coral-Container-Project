@@ -1,13 +1,13 @@
 /**
  * Coral Container Project — English (en) dictionary, part 2
- * * * Platform integration features introduced in v2.5.0.
+ * * * Platform integration features introduced in v2.6.0.
  * * * Loaded before i18n.js, which merges this into window.CORAL_I18N.
  */
 window.CORAL_I18N_EN_FEATURES = {
   "nav.features": "Platform Features",
-  "feat2.title": "Platform Integration Features (v2.5.0)",
+  "feat2.title": "Platform Integration Features (v2.6.0)",
   "feat2.lead":
-    "Five new capabilities ship in v2.5.0, all written in pure Rust with no extra external daemon, and all covered by the E2E suite.",
+    "Five new capabilities ship in v2.6.0, all written in pure Rust with no extra external daemon, and all covered by the E2E suite.",
   "feat2.cache.title": "Content-Addressable Layer Cache",
   "feat2.cache.desc":
     "coral pull never re-downloads a layer it already has. Every blob is SHA-256 verified on download and again on every cache lookup — a blob that no longer matches is deleted automatically — and fresh layers are promoted atomically via rename. Up to 4 layers download concurrently, then are reassembled in manifest order.",
@@ -25,7 +25,7 @@ window.CORAL_I18N_EN_FEATURES = {
     "Pass host hardware into a container with Docker-compatible --device, or let Coral discover GPUs automatically across NVIDIA, AMD ROCm (/dev/kfd) and DRM (/dev/dri) — together with --network-alias and --log-driver (raw, json-file, syslog, journald).",
   "feat2.usageTitle": "How to use them",
   "feat2.usageLead": "The key command for each capability",
-  "feat2.caption": "Example commands for the v2.5.0 platform integration features",
+  "feat2.caption": "Example commands for the v2.6.0 platform integration features",
   "feat2.colCapability": "Capability",
   "feat2.colUsage": "Usage",
   "feat2.rowCache": "Digest-addressed layer cache",

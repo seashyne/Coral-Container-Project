@@ -174,6 +174,51 @@ impl CoralDaemonService {
             "image_sbom" => self.handle_image_sbom(annotations).await,
             "vm_setup_kernel" => self.handle_vm_setup_kernel().await,
             "vm_boot" => self.handle_vm_boot(annotations).await,
+            "container_pause" => {
+                let cid = annotations
+                    .get("coral.container.id")
+                    .map(String::as_str)
+                    .unwrap_or("");
+                self.pause_container(cid).await
+            }
+            "container_unpause" => {
+                let cid = annotations
+                    .get("coral.container.id")
+                    .map(String::as_str)
+                    .unwrap_or("");
+                self.unpause_container(cid).await
+            }
+            "container_rename" => {
+                let cid = annotations
+                    .get("coral.container.id")
+                    .map(String::as_str)
+                    .unwrap_or("");
+                let new_name = annotations
+                    .get("coral.container.new_name")
+                    .map(String::as_str)
+                    .unwrap_or("");
+                self.rename_container(cid, new_name).await
+            }
+            "container_update" => {
+                let cid = annotations
+                    .get("coral.container.id")
+                    .map(String::as_str)
+                    .unwrap_or("");
+                let mem = annotations
+                    .get("coral.update.memory_bytes")
+                    .and_then(|v| v.parse::<i64>().ok());
+                let quota = annotations
+                    .get("coral.update.cpu_quota")
+                    .and_then(|v| v.parse::<i64>().ok());
+                let period = annotations
+                    .get("coral.update.cpu_period")
+                    .and_then(|v| v.parse::<i64>().ok());
+                let pids = annotations
+                    .get("coral.update.pids_limit")
+                    .and_then(|v| v.parse::<i64>().ok());
+                self.update_container_resources(cid, mem, quota, period, pids)
+                    .await
+            }
             "auto_gc" => {
                 let report = self.run_auto_gc_once().await;
                 serde_json::to_string(&report)

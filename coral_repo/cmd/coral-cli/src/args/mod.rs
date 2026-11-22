@@ -18,7 +18,8 @@ mod wasm;
 
 pub use compose::{ComposeAction, ComposeArgs};
 pub use container::{
-    CommitArgs, CpArgs, DiffArgs, ExecArgs, InspectArgs, LogsArgs, RmArgs, StatsArgs, StopArgs,
+    CommitArgs, CpArgs, DiffArgs, ExecArgs, InspectArgs, LogsArgs, PauseArgs, RenameArgs, RmArgs,
+    StatsArgs, StopArgs, UnpauseArgs, UpdateArgs,
 };
 pub use images::{
     BuildArgs, CatalogArgs, ImagesArgs, LoadArgs, PullArgs, PushArgs, RmiArgs, SaveArgs, TagArgs,
@@ -157,6 +158,18 @@ pub enum Commands {
 
     /// Stop a running container in coral-daemon
     Stop(StopArgs),
+
+    /// Freeze all processes inside a running container (`cgroup.freeze` / `SIGSTOP`)
+    Pause(PauseArgs),
+
+    /// Unfreeze a paused container
+    Unpause(UnpauseArgs),
+
+    /// Rename a container managed by coral-daemon
+    Rename(RenameArgs),
+
+    /// Live-update CPU, memory, or PIDs limits on a container without recreating it
+    Update(UpdateArgs),
 
     /// Remove a container from coral-daemon
     Rm(RmArgs),

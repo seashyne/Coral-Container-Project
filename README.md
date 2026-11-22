@@ -2,7 +2,7 @@
   <img src="docs/assets/coral-icon.png" alt="Coral Container Project Logo" width="88" />
 </p>
 
-<h1 align="center">Coral Container Project (<code>v2.5.0</code>)</h1>
+<h1 align="center">Coral Container Project (<code>v2.6.0</code>)</h1>
 
 **Coral** is a next-generation, memory-safe container runtime written in **Rust (Edition 2024)** — uniting a rootless-first **OCI v1.0.2** Linux container engine (with Multi-UID `subuid`/`subgid`, `--device`, and `--gpus`), **Kubernetes CRI v1 gRPC** daemon + **Docker Engine REST API (`docker.sock`) compatibility shim**, **Embedded UDP DNS**, **BuildKit-style Dockerfile** (`RUN <<EOF`, `--mount=type=cache|secret`), **Shared Content-Addressable Layer Cache + Parallel Pull**, **WASI Serverless HTTP WebAssembly** runtime (`coral-wasm`), pure-Rust Linux **`/dev/kvm` Separate-Kernel MicroVM with VirtIO-Blk & VirtIO-Net** (`coral-vmm`, Zero QEMU/Firecracker), **Prometheus `/metrics`**, **Ed25519 Image Signing + SPDX 2.3 SBOM**, multi-arch **x86_64 & ARM64**, and the redesigned **Coral Desktop** GUI (Linux / Windows / macOS `.dmg`).
 
@@ -16,14 +16,14 @@
 
 ---
 
-## Highlights (`v2.5.0`)
+## Highlights (`v2.6.0`)
 
-- **Zero-Copy Shared OverlayFS Lowerdirs & Hardlink Layer Store**: Extracts each OCI layer digest once into `<images_dir>/.layers/sha256/<hex>/`, deduplicates image rootfs via zero-copy hardlinks (zero duplicate disk blocks across tags sharing a base), and auto-wires multi-lowerdir OverlayFS (`lowerdir=top:...:base`).
-- **Full `docker.sock` Engine REST API Surface**: Expands `/v1.45` compatibility for Testcontainers, VS Code Dev Containers, and Traefik with `POST /images/create` (pull stream), `GET/DELETE /images/{name}`, `/containers/{id}/exec` + `/exec/{id}/start` (8-byte multiplexed frames), `/containers/{id}/wait`, `/events`, `/networks/*`, `/volumes/*`, and full `HostConfig` (`PortBindings`, `RestartPolicy`, `LogConfig`, `DeviceRequests`).
-- **True Rootless L2 Virtual Ethernet Switch (`10.89.x.0/24` without `-p`)**: Pure-Rust `RootlessVSwitch` using unprivileged `/dev/net/tun` (`IFF_TAP`) inside `CLONE_NEWUSER | CLONE_NEWNET` assigns real private IPs (`10.89.x.2`, `.3`, ...) so containers on custom networks communicate directly on every port without root or host port forwarding.
-- **NVIDIA Container Toolkit (CNCF CDI JSON + Host `.so` Driver Injection)**: Parses `/etc/cdi/*.json` & `/var/run/cdi/*.json` (`--gpus nvidia.com/gpu=all`) and auto-discovers/bind-mounts host NVIDIA user-space driver libraries (`libcuda.so*`, `libnvidia-ml.so*`, `nvidia-smi`) read-only with `LD_LIBRARY_PATH`.
-- **Multi-Arch Buildx (`--platform` + QEMU), Parallel BuildKit DAG & `coral machine`**: Supports `--platform` on `coral pull` & `coral build` (`TARGETOS`/`TARGETARCH`/`TARGETPLATFORM` + `binfmt_misc` QEMU checks), concurrent multi-stage topological wave builds with dead-stage elimination, and `coral machine init|start|stop|status|env` (Linux native, macOS Lima+VirtioFS, Windows WSL2).
-- **17.9×–26.8× Faster Startup than Docker on the Same Host**: `coral run --image alpine:3.20` starts rootlessly with OverlayFS CoW + DNS + Seccomp-BPF + Cap Drop in **8.88 ms P50** vs Docker Engine **159.32–237.56 ms P50**, with `coral-daemon` idle RAM at **8.4 MB**, plus WASI WebAssembly (`329 µs`) and pure-Rust `/dev/kvm` MicroVMs (`963 µs`).
+- **Streaming `docker.sock` Engine API (`Upgrade: tcp` Hijack, Chunked Logs/Events, `/archive`, `/build`)**: Full HTTP/1.1 `101 UPGRADED` hijack for `/exec/{id}/start`, chunked live `logs?follow=1` & broadcast `/events`, `PUT/GET /containers/{id}/archive` tar copy (Testcontainers), `POST /build` tar build API, plus `/pause`, `/unpause`, `/rename`, and `/update`.
+- **Rootless L2/L3 Virtual Switch (`10.89.x.0/24`) + In-Subnet Gateway & DNS (`10.89.x.1:53`)**: Pure-Rust `RootlessVSwitch` connects isolated `CLONE_NEWUSER | CLONE_NEWNET` containers on private `10.89.x.Y` IPs without root or `-p`, with a built-in `10.89.x.1` gateway answering ARP, ICMP Echo, and RFC 1035 UDP DNS (`10.89.x.1:53`).
+- **BuildKit & Buildx Pro (`.dockerignore`, Parallel DAG, Multi-Arch OCI Index Push, `bind`/`ssh` Mounts)**: Filters `COPY` & build cache hashes via `.dockerignore`, supports `RUN --mount=type=cache|secret|tmpfs|bind|ssh`, `--cache-from`, parallel multi-stage topological waves, and multi-arch `--platform linux/amd64,linux/arm64 --push` OCI Image Index publishing.
+- **Docker Compose v2 Production Parity & Live Lifecycle Controls**: Adds `secrets:` (`/run/secrets/<name>:ro`), `configs:`, `include:`, `deploy.replicas` + `--scale web=N`, `coral compose watch`, plus live `coral pause` / `coral unpause` (`cgroup.freeze`), `coral rename`, `coral update --memory --cpus --pids-limit`, and `coral machine`.
+- **Zero-Copy Hardlink/OverlayFS Layer Store & NVIDIA CDI/`.so` Injection**: Extracts each OCI layer once into `.layers/sha256/<hex>/` with zero-copy hardlinks + multi-lowerdir OverlayFS, and parses CNCF CDI JSON specs + host NVIDIA `.so`/`nvidia-smi` read-only mounts.
+- **17.9×–26.8× Faster Startup than Docker on the Same Host**: `coral run --image alpine:3.20` starts rootlessly in **8.88 ms P50** vs Docker Engine **159.32–237.56 ms P50**, with `coral-daemon` idle RAM at **8.4 MB**, plus WASI WebAssembly (`329 µs`) and pure-Rust `/dev/kvm` MicroVMs (`963 µs`).
 
 > Platform features introduced in `v2.4.0` and extended in `v2.5.0` are documented below.
 
@@ -172,12 +172,12 @@ curl -fsSL https://seashyne.github.io/Coral-Container-Project/install.sh | bash
 
 ### Debian / Ubuntu `.deb`
 
-Download the package matching your architecture — `coral-runtime_2.5.0_amd64.deb` (x86_64) or
-`coral-runtime_2.5.0_arm64.deb` (arm64) — and the `Coral Desktop` installer from
+Download the package matching your architecture — `coral-runtime_2.6.0_amd64.deb` (x86_64) or
+`coral-runtime_2.6.0_arm64.deb` (arm64) — and the `Coral Desktop` installer from
 [Releases](https://github.com/seashyne/Coral-Container-Project/releases/latest), then run:
 
 ```bash
-sudo dpkg -i coral-runtime_2.5.0_amd64.deb    # or ..._arm64.deb
+sudo dpkg -i coral-runtime_2.6.0_amd64.deb    # or ..._arm64.deb
 systemctl --user enable --now coral-daemon.service
 coral version
 ```

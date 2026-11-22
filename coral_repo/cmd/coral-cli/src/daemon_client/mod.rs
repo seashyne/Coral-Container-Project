@@ -9,14 +9,15 @@ pub mod system;
 pub use compose::{
     cmd_compose_build, cmd_compose_config, cmd_compose_down, cmd_compose_exec, cmd_compose_logs,
     cmd_compose_ps, cmd_compose_restart, cmd_compose_start, cmd_compose_stop, cmd_compose_up,
+    cmd_compose_watch,
 };
 pub use containers::{
-    DaemonRunOptions, cmd_diff_via_daemon, cmd_exec, cmd_logs, cmd_ps, cmd_rm, cmd_run_via_daemon,
-    cmd_stats, cmd_stop,
+    DaemonRunOptions, cmd_diff_via_daemon, cmd_exec, cmd_logs, cmd_pause, cmd_ps, cmd_rename,
+    cmd_rm, cmd_run_via_daemon, cmd_stats, cmd_stop, cmd_unpause, cmd_update,
 };
 pub use images::{
-    ProgressMode, cmd_build, cmd_catalog, cmd_commit_via_daemon, cmd_images, cmd_load, cmd_pull,
-    cmd_rmi, cmd_save, cmd_tag,
+    ProgressMode, cmd_build_with_options, cmd_catalog, cmd_commit_via_daemon, cmd_images,
+    cmd_load, cmd_pull, cmd_rmi, cmd_save, cmd_tag,
 };
 pub use pods::{cmd_pods_list, cmd_pods_rm, cmd_pods_stop};
 pub use system::{

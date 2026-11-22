@@ -1,9 +1,10 @@
 //! Build-step cache keys, source hashing, and cached-rootfs save/restore.
 
+use super::context::safe_join_context;
+use super::dockerignore::DockerIgnore;
 use crate::images;
 use anyhow::{Result, bail};
 use coral_runtime::overlay::commit_overlay_to_rootfs;
-use super::context::safe_join_context;
 use coral_runtime::rootfs::safe_join_rootfs;
 use sha2::{Digest, Sha256};
 use std::fs;
@@ -47,6 +48,11 @@ pub(super) fn hash_sources(
         h.update(extra_tag);
         h.update(b"|");
     }
+    let ignore = if !is_stage_src {
+        DockerIgnore::load(src_root)
+    } else {
+        DockerIgnore::default()
+    };
     for src_rel in sources {
         let src_path = if is_stage_src {
             safe_join_rootfs(src_root, src_rel)?
@@ -59,13 +65,21 @@ pub(super) fn hash_sources(
                 if is_stage_src { "stage rootfs" } else { "build context" }
             );
         }
-        hash_path_recursive(&src_path, &src_path, &mut h)?;
+        hash_path_recursive(src_root, &src_path, &ignore, &mut h)?;
     }
     Ok(h.finalize().to_vec())
 }
 
-pub(super) fn hash_path_recursive(root: &Path, cur: &Path, h: &mut Sha256) -> Result<()> {
-    let rel = cur.strip_prefix(root).unwrap_or(cur);
+pub(super) fn hash_path_recursive(
+    ctx_root: &Path,
+    cur: &Path,
+    ignore: &DockerIgnore,
+    h: &mut Sha256,
+) -> Result<()> {
+    let rel = cur.strip_prefix(ctx_root).unwrap_or(cur);
+    if !rel.as_os_str().is_empty() && ignore.is_ignored(rel) {
+        return Ok(());
+    }
     h.update(rel.to_string_lossy().as_bytes());
     let meta = fs::symlink_metadata(cur)?;
     if meta.file_type().is_symlink() {
@@ -78,7 +92,7 @@ pub(super) fn hash_path_recursive(root: &Path, cur: &Path, h: &mut Sha256) -> Re
         let mut entries: Vec<_> = fs::read_dir(cur)?.flatten().collect();
         entries.sort_by_key(|e| e.file_name());
         for entry in entries {
-            hash_path_recursive(root, &entry.path(), h)?;
+            hash_path_recursive(ctx_root, &entry.path(), ignore, h)?;
         }
     }
     Ok(())

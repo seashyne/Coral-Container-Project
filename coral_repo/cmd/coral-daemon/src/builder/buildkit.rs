@@ -14,6 +14,8 @@ pub(super) enum RunMountKind {
     Cache { id: String, target: String },
     Secret { id: String, target: String, src: Option<String> },
     Tmpfs { target: String },
+    Bind { src: Option<String>, target: String, read_write: bool },
+    Ssh { target: String },
 }
 
 /// Folds BuildKit heredoc blocks (`RUN <<EOF ... EOF`, `RUN <<-EOF ... EOF`, `RUN --mount=... <<'EOF'`)
@@ -94,10 +96,15 @@ fn parse_single_run_mount(spec: &str) -> Result<RunMountKind> {
     let mut target = String::new();
     let mut id = String::new();
     let mut src: Option<String> = None;
+    let mut read_write = false;
 
     for kv in spec.split(',') {
         let kv = kv.trim();
         if kv.is_empty() {
+            continue;
+        }
+        if kv == "rw" || kv == "readwrite" {
+            read_write = true;
             continue;
         }
         if let Some((k, v)) = kv.split_once('=') {
@@ -106,6 +113,7 @@ fn parse_single_run_mount(spec: &str) -> Result<RunMountKind> {
                 "target" | "dst" | "destination" => target = unquote(v.trim()),
                 "id" => id = unquote(v.trim()),
                 "src" | "source" => src = Some(unquote(v.trim())),
+                "rw" | "readwrite" => read_write = v.trim() == "true" || v.trim() == "1",
                 _ => {}
             }
         }
@@ -148,7 +156,25 @@ fn parse_single_run_mount(spec: &str) -> Result<RunMountKind> {
             }
             Ok(RunMountKind::Tmpfs { target })
         }
-        other => bail!("unsupported RUN --mount type '{other}' (supported: cache, secret, tmpfs)"),
+        "bind" => {
+            if target.is_empty() {
+                bail!("RUN --mount=type=bind requires target=<path>");
+            }
+            Ok(RunMountKind::Bind {
+                src,
+                target,
+                read_write,
+            })
+        }
+        "ssh" => {
+            if target.is_empty() {
+                target = "/run/buildkit/ssh_agent.sock".into();
+            }
+            Ok(RunMountKind::Ssh { target })
+        }
+        other => bail!(
+            "unsupported RUN --mount type '{other}' (supported: cache, secret, tmpfs, bind, ssh)"
+        ),
     }
 }
 
@@ -217,6 +243,46 @@ pub(super) fn attach_run_mounts_to_spec(
                     source: Some("tmpfs".into()),
                     options: vec!["nosuid".into(), "nodev".into(), "mode=1777".into()],
                 });
+            }
+            RunMountKind::Bind {
+                src,
+                target,
+                read_write,
+            } => {
+                let ctx = context_dir.ok_or_else(|| {
+                    anyhow!("RUN --mount=type=bind requires a build context directory")
+                })?;
+                let rel = src.as_deref().unwrap_or(".");
+                let host_src = safe_join_context(ctx, rel)?;
+                if !host_src.exists() {
+                    bail!("bind mount source '{rel}' not found in build context");
+                }
+                let abs_src = fs::canonicalize(&host_src)?;
+                let mode = if *read_write { "rw" } else { "ro" };
+                spec.mounts.push(Mount {
+                    destination: target.clone(),
+                    typ: Some("bind".into()),
+                    source: Some(abs_src.to_string_lossy().into_owned()),
+                    options: vec!["bind".into(), mode.into()],
+                });
+            }
+            RunMountKind::Ssh { target } => {
+                let sock = std::env::var("SSH_AUTH_SOCK").map_err(|_| {
+                    anyhow!("RUN --mount=type=ssh requires SSH_AUTH_SOCK to be set on host")
+                })?;
+                let host_sock = Path::new(&sock);
+                if !host_sock.exists() {
+                    bail!("SSH_AUTH_SOCK '{sock}' does not exist");
+                }
+                spec.mounts.push(Mount {
+                    destination: target.clone(),
+                    typ: Some("bind".into()),
+                    source: Some(sock),
+                    options: vec!["bind".into(), "rw".into()],
+                });
+                if let Some(proc_spec) = spec.process.as_mut() {
+                    proc_spec.env.push(format!("SSH_AUTH_SOCK={target}"));
+                }
             }
         }
     }

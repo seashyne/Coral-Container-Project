@@ -44,7 +44,12 @@ impl CoralDaemonService {
                 .labels
                 .insert("coral.network.name".into(), net_name.clone());
 
-            let ip = ensure_vswitch_and_allocate_ip(store, &net_name, &net_rec.subnet);
+            let ip = ensure_vswitch_and_allocate_ip(
+                store,
+                &net_name,
+                &net_rec.subnet,
+                self.dns_server.clone(),
+            );
             allocated_ip = Some(ip);
             let ip_str = ip.to_string();
             config
@@ -144,11 +149,13 @@ impl CoralDaemonService {
                 if let Some(vs) = store.vswitches.get(&net_name) {
                     Some(vs.clone())
                 } else if let Some(rec) = coral_net::find_network(&net_name) {
-                    RootlessVSwitch::start(&rec.subnet).ok().map(|vs| {
-                        let arc = Arc::new(vs);
-                        store.vswitches.insert(net_name.clone(), arc.clone());
-                        arc
-                    })
+                    RootlessVSwitch::start_with_dns(&rec.subnet, svc.dns_server.clone())
+                        .ok()
+                        .map(|vs| {
+                            let arc = Arc::new(vs);
+                            store.vswitches.insert(net_name.clone(), arc.clone());
+                            arc
+                        })
                 } else {
                     None
                 }
@@ -213,6 +220,7 @@ fn ensure_vswitch_and_allocate_ip(
     store: &mut DaemonStore,
     net_name: &str,
     subnet: &str,
+    dns: Option<Arc<coral_net::EmbeddedDnsServer>>,
 ) -> Ipv4Addr {
     if let Some(vs) = store.vswitches.get(net_name) {
         return vs.allocate_ip();
@@ -222,7 +230,7 @@ fn ensure_vswitch_and_allocate_ip(
     } else {
         subnet
     };
-    match RootlessVSwitch::start(effective_subnet) {
+    match RootlessVSwitch::start_with_dns(effective_subnet, dns) {
         Ok(vs) => {
             let ip = vs.allocate_ip();
             store.vswitches.insert(net_name.to_string(), Arc::new(vs));

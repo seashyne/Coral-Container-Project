@@ -3,7 +3,8 @@
 
 use super::{Ctx, run_async};
 use crate::args::{
-    CommitArgs, CpArgs, DiffArgs, ExecArgs, InspectArgs, LogsArgs, RmArgs, StatsArgs, StopArgs,
+    CommitArgs, CpArgs, DiffArgs, ExecArgs, InspectArgs, LogsArgs, PauseArgs, RenameArgs, RmArgs,
+    StatsArgs, StopArgs, UnpauseArgs, UpdateArgs,
 };
 use crate::cp;
 use crate::daemon_client;
@@ -147,6 +148,32 @@ pub(crate) fn exec(ctx: &Ctx, args: ExecArgs) -> Result<ExitCode> {
 pub(crate) fn stop(ctx: &Ctx, args: StopArgs) -> Result<ExitCode> {
     let StopArgs { id, timeout } = args;
     run_async(daemon_client::cmd_stop(&ctx.addr, &id, timeout))?;
+    Ok(ExitCode::SUCCESS)
+}
+
+pub(crate) fn pause(ctx: &Ctx, args: PauseArgs) -> Result<ExitCode> {
+    run_async(daemon_client::cmd_pause(&ctx.addr, &args.id))?;
+    Ok(ExitCode::SUCCESS)
+}
+
+pub(crate) fn unpause(ctx: &Ctx, args: UnpauseArgs) -> Result<ExitCode> {
+    run_async(daemon_client::cmd_unpause(&ctx.addr, &args.id))?;
+    Ok(ExitCode::SUCCESS)
+}
+
+pub(crate) fn rename(ctx: &Ctx, args: RenameArgs) -> Result<ExitCode> {
+    run_async(daemon_client::cmd_rename(&ctx.addr, &args.id, &args.new_name))?;
+    Ok(ExitCode::SUCCESS)
+}
+
+pub(crate) fn update(ctx: &Ctx, args: UpdateArgs) -> Result<ExitCode> {
+    run_async(daemon_client::cmd_update(
+        &ctx.addr,
+        &args.id,
+        args.memory.as_deref(),
+        args.cpus,
+        args.pids_limit,
+    ))?;
     Ok(ExitCode::SUCCESS)
 }
 

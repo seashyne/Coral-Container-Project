@@ -18,6 +18,9 @@ pub(super) enum TopSection {
     Services,
     Volumes,
     Networks,
+    Secrets,
+    Configs,
+    Include,
 }
 
 /// Applies a top-level (`indent == 0`) Compose key.
@@ -49,6 +52,18 @@ pub(super) fn apply_top_level_key(
         }
         "networks" => {
             *section = TopSection::Networks;
+            Ok(None)
+        }
+        "secrets" => {
+            *section = TopSection::Secrets;
+            Ok(None)
+        }
+        "configs" => {
+            *section = TopSection::Configs;
+            Ok(None)
+        }
+        "include" => {
+            *section = TopSection::Include;
             Ok(None)
         }
         other => {
@@ -185,6 +200,7 @@ pub(super) fn apply_service_property(
         }
         "ports" | "expose" | "volumes" | "environment" | "depends_on" | "dns" | "extra_hosts"
         | "labels" | "profiles" | "networks" | "devices" | "aliases" | "network_aliases"
+        | "secrets" | "configs"
             if val_raw.starts_with('[') && val_raw.ends_with(']') =>
         {
             for item in parse_inline_list(val_raw) {
@@ -260,6 +276,11 @@ pub(super) fn apply_sub_property(
         }
         "logging" if sub_key == "driver" && !sub_val.is_empty() => {
             svc.log_driver = Some(sub_val.to_string());
+        }
+        "deploy" if sub_key == "replicas" => {
+            if let Ok(r) = sub_val.parse::<u32>() {
+                svc.replicas = r.max(1);
+            }
         }
         _ => {}
     }

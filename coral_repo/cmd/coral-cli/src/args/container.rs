@@ -135,3 +135,46 @@ pub struct StatsArgs {
     #[arg(long, default_value_t = 1000)]
     pub interval: u64,
 }
+
+/// Arguments for `coral pause`.
+#[derive(Debug, Args)]
+pub struct PauseArgs {
+    /// Container ID or name
+    pub id: String,
+}
+
+/// Arguments for `coral unpause`.
+#[derive(Debug, Args)]
+pub struct UnpauseArgs {
+    /// Container ID or name
+    pub id: String,
+}
+
+/// Arguments for `coral rename`.
+#[derive(Debug, Args)]
+pub struct RenameArgs {
+    /// Existing container ID or name
+    pub id: String,
+
+    /// New container name
+    pub new_name: String,
+}
+
+/// Arguments for `coral update`.
+#[derive(Debug, Args)]
+pub struct UpdateArgs {
+    /// Container ID or name
+    pub id: String,
+
+    /// New memory limit (e.g. `512m`, `2g`)
+    #[arg(short = 'm', long = "memory")]
+    pub memory: Option<String>,
+
+    /// New CPU core limit (e.g. `0.5`, `2.0`)
+    #[arg(long = "cpus")]
+    pub cpus: Option<f64>,
+
+    /// New PIDs limit
+    #[arg(long = "pids-limit")]
+    pub pids_limit: Option<i64>,
+}

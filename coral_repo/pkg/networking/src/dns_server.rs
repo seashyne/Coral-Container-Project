@@ -78,6 +78,12 @@ impl EmbeddedDnsServer {
         let key = normalize_dns_name(name);
         self.records.read().ok()?.get(&key).copied()
     }
+
+    /// Answers a raw RFC 1035 DNS query packet directly using this server's registry
+    /// (used by `RootlessVSwitch` to serve in-subnet DNS on `10.89.x.1:53`).
+    pub fn answer_query(&self, pkt: &[u8]) -> Option<Vec<u8>> {
+        handle_dns_packet(pkt, &self.records)
+    }
 }
 
 impl Drop for EmbeddedDnsServer {

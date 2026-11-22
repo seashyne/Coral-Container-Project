@@ -3,6 +3,7 @@
 use super::cache::{compute_step_key, hash_sources, restore_cached_rootfs, save_cached_rootfs};
 use super::context::{copy_context_item, resolve_or_pull_base_image, safe_join_context};
 use super::dockerfile::parse_copy_args;
+use super::dockerignore::{DockerIgnore, copy_context_filtered};
 use super::exec::{StepExec, StepInfo};
 use anyhow::{Result, anyhow, bail};
 use coral_runtime::rootfs::safe_join_rootfs;
@@ -91,13 +92,29 @@ pub(super) async fn copy_or_add_step(
     };
     let dest_target = safe_join_rootfs(exec.staging_rootfs, &dest_in_container)?;
 
+    let dockerignore = if !is_stage_src {
+        DockerIgnore::load(&src_root)
+    } else {
+        DockerIgnore::default()
+    };
     for src_rel in sources {
-        let src_path = if is_stage_src {
-            safe_join_rootfs(&src_root, src_rel)?
+        if is_stage_src {
+            let src_path = safe_join_rootfs(&src_root, src_rel)?;
+            copy_context_item(&src_path, &dest_target, dest_raw.ends_with('/'))?;
         } else {
-            safe_join_context(&src_root, src_rel)?
-        };
-        copy_context_item(&src_path, &dest_target, dest_raw.ends_with('/'))?;
+            let src_path = safe_join_context(&src_root, src_rel)?;
+            if dockerignore.is_empty() {
+                copy_context_item(&src_path, &dest_target, dest_raw.ends_with('/'))?;
+            } else {
+                copy_context_filtered(
+                    &src_path,
+                    &dest_target,
+                    dest_raw.ends_with('/'),
+                    &src_root,
+                    &dockerignore,
+                )?;
+            }
+        }
     }
     if !exec.opts.no_cache
         && let Err(err) = save_cached_rootfs(exec.staging_rootfs, exec.staging_dir, &cache_dir)

@@ -4,6 +4,7 @@ mod compose_rpc;
 pub mod docker_compat;
 pub mod housekeeping;
 mod image_rpc;
+mod lifecycle_ext;
 pub mod metrics;
 pub mod nextgen;
 mod oci_spec;

@@ -121,6 +121,41 @@ impl CgroupManager {
         })
     }
 
+    /// Freezes all processes in a container's cgroup v2 (`cgroup.freeze = 1`).
+    /// Returns `Ok(true)` if frozen via cgroup v2, or `Ok(false)` if cgroup freezer is unavailable.
+    pub fn freeze(&self, container_id: &str) -> Result<bool, CgroupError> {
+        let freeze_path = self.container_cgroup_path(container_id).join("cgroup.freeze");
+        if !freeze_path.exists() {
+            return Ok(false);
+        }
+        write_cgroup_file(&freeze_path, "1")?;
+        Ok(true)
+    }
+
+    /// Unfreezes all processes in a container's cgroup v2 (`cgroup.freeze = 0`).
+    pub fn unfreeze(&self, container_id: &str) -> Result<bool, CgroupError> {
+        let freeze_path = self.container_cgroup_path(container_id).join("cgroup.freeze");
+        if !freeze_path.exists() {
+            return Ok(false);
+        }
+        write_cgroup_file(&freeze_path, "0")?;
+        Ok(true)
+    }
+
+    /// Updates resource limits live (`memory.max`, `cpu.max`, `pids.max`) on a running container cgroup.
+    pub fn update_limits(
+        &self,
+        container_id: &str,
+        config: &CgroupConfig,
+    ) -> Result<bool, CgroupError> {
+        let cg_path = self.container_cgroup_path(container_id);
+        if !cg_path.is_dir() {
+            return Ok(false);
+        }
+        self.write_limits(&cg_path, config)?;
+        Ok(true)
+    }
+
     /// Removes the container's cgroup directory (ignoring `NotFound`).
     pub fn cleanup(&self, container_id: &str) -> Result<(), CgroupError> {
         let cg_path = self.container_cgroup_path(container_id);
@@ -187,5 +222,42 @@ impl CgroupManager {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod freeze_update_tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn freezes_unfreezes_and_updates_limits_live_in_mock_cgroupfs() {
+        let dir = tempdir().unwrap();
+        let mgr = CgroupManager::with_root(dir.path());
+        let cg_dir = mgr.container_cgroup_path("ctr-live");
+        fs::create_dir_all(&cg_dir).unwrap();
+        fs::write(cg_dir.join("cgroup.freeze"), "0").unwrap();
+        fs::write(cg_dir.join("memory.max"), "max").unwrap();
+        fs::write(cg_dir.join("pids.max"), "max").unwrap();
+
+        assert!(mgr.freeze("ctr-live").unwrap());
+        assert_eq!(fs::read_to_string(cg_dir.join("cgroup.freeze")).unwrap(), "1");
+        assert!(mgr.unfreeze("ctr-live").unwrap());
+        assert_eq!(fs::read_to_string(cg_dir.join("cgroup.freeze")).unwrap(), "0");
+
+        let cfg = CgroupConfig {
+            memory_max: Some(128 * 1024 * 1024),
+            memory_high: None,
+            cpu_quota: None,
+            cpu_period: None,
+            cpu_weight: None,
+            pids_max: Some(64),
+        };
+        assert!(mgr.update_limits("ctr-live", &cfg).unwrap());
+        assert_eq!(
+            fs::read_to_string(cg_dir.join("memory.max")).unwrap(),
+            (128 * 1024 * 1024).to_string()
+        );
+        assert_eq!(fs::read_to_string(cg_dir.join("pids.max")).unwrap(), "64");
     }
 }

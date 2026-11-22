@@ -46,6 +46,10 @@ pub enum ComposeAction {
         #[arg(long)]
         no_deps: bool,
 
+        /// Scale a service to N instances (`--scale web=3`), repeatable
+        #[arg(long = "scale")]
+        scale: Vec<String>,
+
         /// Optional service names to start
         services: Vec<String>,
     },
@@ -134,6 +138,15 @@ pub enum ComposeAction {
         /// Command and arguments to run inside the service container
         #[arg(required = true, trailing_var_arg = true, allow_hyphen_values = true)]
         cmd: Vec<String>,
+    },
+    /// Watch build contexts and automatically rebuild & restart services on file changes
+    Watch {
+        /// Polling interval in milliseconds
+        #[arg(long, default_value_t = 1500)]
+        interval_ms: u64,
+
+        /// Optional service names to watch
+        services: Vec<String>,
     },
     /// Validate and render the resolved Compose configuration as JSON
     Config,
