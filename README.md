@@ -28,7 +28,15 @@
 
 ## Quick Install
 
-### One-Liner (Linux x86_64)
+> **Platform support:** the Coral engine (`coral`, `coral-daemon`) runs on **Linux only** — it is
+> built directly on Linux syscalls, user namespaces and cgroups. **x86_64 and arm64 (ARM64) are
+> both supported**, and CI builds and runs the full E2E suite on both architectures. The
+> **Coral Desktop** GUI is a separate client and is available for Linux, Windows and macOS;
+> it controls a Coral daemon and does not make the engine portable to those platforms.
+> The hardware **`/dev/kvm` MicroVM and the AI Agent Sandbox are x86_64-only**; every other
+> feature (OCI, CRI, CNI, images, signing, SBOM, WASM) works on arm64 as well.
+
+### One-Liner (Linux x86_64 / arm64)
 
 ```bash
 curl -fsSL https://seashyne.github.io/Coral-Container-Project/install.sh | bash
@@ -36,10 +44,12 @@ curl -fsSL https://seashyne.github.io/Coral-Container-Project/install.sh | bash
 
 ### Debian / Ubuntu `.deb`
 
-Download `coral-runtime_2.3.0_amd64.deb` (and `Coral Desktop_2.3.0_amd64.deb`) from [Releases](https://github.com/seashyne/Coral-Container-Project/releases/latest) and run:
+Download the package matching your architecture — `coral-runtime_2.3.0_amd64.deb` (x86_64) or
+`coral-runtime_2.3.0_arm64.deb` (arm64) — and the `Coral Desktop` installer from
+[Releases](https://github.com/seashyne/Coral-Container-Project/releases/latest), then run:
 
 ```bash
-sudo dpkg -i coral-runtime_2.3.0_amd64.deb
+sudo dpkg -i coral-runtime_2.3.0_amd64.deb    # or ..._arm64.deb
 systemctl --user enable --now coral-daemon.service
 coral version
 ```

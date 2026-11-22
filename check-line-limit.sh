@@ -2,8 +2,8 @@
 # Enforce the project-wide source file size limit.
 #
 # Rule: no first-party source file may exceed 400 lines.
-#   - Enforced: Rust (.rs), JavaScript (.js), CSS (.css), HTML (.html) in the
-#     Coral workspace.
+#   - Enforced: Rust (.rs), JavaScript (.js), CSS (.css), HTML (.html), and
+#     Python (.py) in the Coral workspace.
 #   - Skipped: files ignored by git (build outputs and generated artifacts such
 #     as the assembled desktop/docs frontends).
 #
@@ -57,6 +57,7 @@ add_rows() {
   list_files "$SCRIPT_DIR/docs" '*.js'
   list_files "$SCRIPT_DIR/docs" '*.css'
   list_files "$SCRIPT_DIR/docs" '*.html'
+  list_files "$SCRIPT_DIR/coral_repo/scripts" '*.py'
 } | sort -u | drop_ignored | while read -r file; do
   printf '%s %s\n' "$(wc -l <"$file")" "$file"
 done | add_rows

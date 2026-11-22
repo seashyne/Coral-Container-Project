@@ -87,9 +87,10 @@ pub fn boot_linux_microvm_with_devices(
     memory_mb: i64,
     timeout_secs: u64,
     extra_cmdline: Option<&str>,
-    disk_image: Option<&Path>,
-    disk_read_only: bool,
-    enable_net: bool,
+    #[cfg_attr(not(target_arch = "x86_64"), allow(unused_variables))] disk_image: Option<&Path>,
+    #[cfg_attr(not(target_arch = "x86_64"), allow(unused_variables))] disk_read_only: bool,
+    #[cfg_attr(not(target_arch = "x86_64"), allow(unused_variables))] enable_net: bool,
+    #[cfg_attr(not(target_arch = "x86_64"), allow(unused_variables))]
     port_forwards: &[crate::virtio_net::PortForwardRule],
 ) -> Result<SandboxReport> {
     let start = Instant::now();

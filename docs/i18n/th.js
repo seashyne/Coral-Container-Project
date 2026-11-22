@@ -46,7 +46,7 @@ window.CORAL_I18N_TH = {
     "รัน .wasm / .wat และ OCI Wasm Image ตรง ๆ ผ่าน WASI Preview 1 ในเวลาเพียง 326 µs ไม่ต้องพก Linux rootfs คุม CPU ด้วย Fuel Metering และเพดาน RAM แบบ Deterministic",
   "feat.vmm.title": "KVM MicroVM & AI Sandbox (coral-vmm)",
   "feat.vmm.desc":
-    "Pure-Rust Hypervisor คุยกับ /dev/kvm โดยตรง บูต 64-bit Long Mode ใน 2.94 ms พร้อมโหมด AI Agent Sandbox ตัดเน็ต Read-Only และสังหาร Process Group ทันทีเมื่อหมดเวลา",
+    "Pure-Rust Hypervisor คุยกับ /dev/kvm โดยตรง บูต 64-bit Long Mode ใน 2.94 ms พร้อมโหมด AI Agent Sandbox ตัดเน็ต Read-Only และสังหาร Process Group ทันทีเมื่อหมดเวลา (รองรับเฉพาะเครื่อง x86_64)",
   "install.title": "ดาวน์โหลด & วิธีติดตั้ง",
   "install.lead":
     "เลือกวิธีติดตั้งที่เหมาะกับระบบของคุณ — รองรับ Linux x86_64 (Rootless-first) และ Windows ผ่าน WSL2 + Coral Desktop",

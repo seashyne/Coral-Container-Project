@@ -46,7 +46,7 @@ window.CORAL_I18N_EN = {
     "Execute .wasm / .wat and OCI Wasm artifacts directly via WASI Preview 1 in 326 µs without a Linux rootfs, enforcing deterministic CPU fuel metering and linear memory ceilings.",
   "feat.vmm.title": "KVM MicroVM & AI Sandbox (coral-vmm)",
   "feat.vmm.desc":
-    "Pure-Rust /dev/kvm 64-bit Long Mode hypervisor booting in 2.94 ms, plus a zero-network read-only AI Agent Sandbox with full process-group timeout enforcement.",
+    "Pure-Rust /dev/kvm 64-bit Long Mode hypervisor booting in 2.94 ms, plus a zero-network read-only AI Agent Sandbox with full process-group timeout enforcement. x86_64 hosts only.",
   "install.title": "Download & Installation",
   "install.lead":
     "Pick the method that fits your setup — native Linux x86_64 (rootless-first) and Windows via WSL2 + Coral Desktop.",

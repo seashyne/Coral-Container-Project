@@ -1,10 +1,17 @@
 //! Long Mode guest runner: boots a raw payload inside a hardware-isolated `/dev/kvm` MicroVM.
 
+#[cfg(target_arch = "x86_64")]
 use super::regs::{KvmRegs, KvmSegment, KvmSregs, KvmUserspaceMemoryRegion};
-use anyhow::{Context, Result, bail};
+use anyhow::{Result, bail};
+#[cfg(target_arch = "x86_64")]
+use anyhow::Context;
+#[cfg(target_arch = "x86_64")]
 use std::fs::OpenOptions;
+#[cfg(target_arch = "x86_64")]
 use std::io;
+#[cfg(target_arch = "x86_64")]
 use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
+#[cfg(target_arch = "x86_64")]
 use std::time::{Duration, Instant};
 
 #[cfg(target_arch = "x86_64")]

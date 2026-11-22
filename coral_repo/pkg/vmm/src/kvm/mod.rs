@@ -7,7 +7,9 @@ mod mmap;
 mod regs;
 mod runner;
 
+#[cfg(target_arch = "x86_64")]
 pub(crate) use mmap::*;
+#[cfg(target_arch = "x86_64")]
 pub(crate) use regs::*;
 pub use runner::*;
 
@@ -18,22 +20,28 @@ use std::os::fd::AsRawFd;
 
 // Exact Linux KVM ioctl constants verified against <linux/kvm.h>.
 pub(crate) const KVM_GET_API_VERSION: libc::c_ulong = 0xae00;
+#[cfg(target_arch = "x86_64")]
 pub(crate) const KVM_CREATE_VM: libc::c_ulong = 0xae01;
 const KVM_CHECK_EXTENSION: libc::c_ulong = 0xae03;
+#[cfg(target_arch = "x86_64")]
 pub(crate) const KVM_GET_VCPU_MMAP_SIZE: libc::c_ulong = 0xae04;
 #[cfg(target_arch = "x86_64")]
 pub(crate) const KVM_GET_SUPPORTED_CPUID: libc::c_ulong = 0xc008_ae05;
+#[cfg(target_arch = "x86_64")]
 pub(crate) const KVM_CREATE_VCPU: libc::c_ulong = 0xae41;
+#[cfg(target_arch = "x86_64")]
 pub(crate) const KVM_SET_USER_MEMORY_REGION: libc::c_ulong = 0x4020_ae46;
 #[cfg(target_arch = "x86_64")]
 pub(crate) const KVM_SET_TSS_ADDR: libc::c_ulong = 0xae47;
 #[cfg(target_arch = "x86_64")]
 pub(crate) const KVM_SET_IDENTITY_MAP_ADDR: libc::c_ulong = 0x4008_ae48;
+#[cfg(target_arch = "x86_64")]
 pub(crate) const KVM_CREATE_IRQCHIP: libc::c_ulong = 0xae60;
 #[cfg(target_arch = "x86_64")]
 pub(crate) const KVM_IRQ_LINE: libc::c_ulong = 0x4008_ae61;
 #[cfg(target_arch = "x86_64")]
 pub(crate) const KVM_CREATE_PIT2: libc::c_ulong = 0x4040_ae77;
+#[cfg(target_arch = "x86_64")]
 pub(crate) const KVM_RUN: libc::c_ulong = 0xae80;
 #[cfg(target_arch = "x86_64")]
 pub(crate) const KVM_SET_REGS: libc::c_ulong = 0x4090_ae82;

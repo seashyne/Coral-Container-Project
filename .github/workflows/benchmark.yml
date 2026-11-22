@@ -1,0 +1,96 @@
+name: Nightly Startup Latency Benchmark
+
+on:
+  schedule:
+    # Every night at 02:00 UTC. Keeps an eye on startup-latency regressions
+    # that no unit test can catch.
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: "Measured runs per workload per round"
+        required: false
+        default: "30"
+      rounds:
+        description: "Repeats of the whole suite"
+        required: false
+        default: "3"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "nightly-benchmark"
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    name: Startup latency (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-22.04
+            arch: x86_64
+          - platform: ubuntu-24.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: coral_repo
+
+      - name: Install runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends slirp4netns passt uidmap fuse-overlayfs
+
+      - name: Build release binaries
+        working-directory: coral_repo
+        run: cargo build --release -p coral-cli -p coral-daemon
+
+      - name: Run the startup benchmark
+        working-directory: coral_repo
+        env:
+          RUNS: ${{ inputs.runs || '30' }}
+          ROUNDS: ${{ inputs.rounds || '3' }}
+          JSON_OUT: benchmark-results.json
+          CPUS: "0-3"
+          CORAL_BIN: ${{ github.workspace }}/coral_repo/target/release/coral
+          CORAL_DAEMON_BIN: ${{ github.workspace }}/coral_repo/target/release/coral-daemon
+        run: |
+          set -euo pipefail
+          ./scripts/setup-rootfs.sh
+          ./scripts/benchmark.sh \
+            --json "$JSON_OUT" \
+            || echo "[bench] benchmark exited non-zero — uploading whatever was produced"
+
+      - name: Summarize the results
+        working-directory: coral_repo
+        run: |
+          set -euo pipefail
+          if [[ -f benchmark-results.json ]]; then
+            python3 - <<'PY'
+          import json
+          data = json.load(open("benchmark-results.json"))
+          print("## Startup latency", data["host"]["kernel"], data["host"]["cpus"], "CPUs")
+          print()
+          print("| Workload | Mode | P50 (ms) | Mean (ms) | P95 (ms) |")
+          print("| --- | --- | ---: | ---: | ---: |")
+          for row in data["results"]:
+              print(f"| {row['label']} | {row['mode']} | {row['p50_median']:.2f} "
+                    f"| {row['mean_median']:.2f} | {row['p95_median']:.2f} |")
+          PY
+          else
+            echo "No benchmark JSON was produced." >&2
+            exit 1
+          fi
+
+      - name: Upload the benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: startup-latency-${{ matrix.arch }}
+          path: coral_repo/benchmark-results.json
+          if-no-files-found: error

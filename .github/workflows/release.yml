@@ -16,8 +16,16 @@ permissions:
 
 jobs:
   verify-runtime:
-    name: Verify Rust OCI & CRI E2E Suite
-    runs-on: ubuntu-22.04
+    name: Verify Rust OCI & CRI E2E Suite (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-22.04
+            arch: x86_64
+          - platform: ubuntu-24.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -29,6 +37,8 @@ jobs:
       - name: Run full Coral verify.sh gate
         working-directory: coral_repo
         run: ./verify.sh
+      - name: Report host architecture
+        run: uname -m
 
   package-linux-runtime:
     name: Package Linux Runtime (${{ matrix.arch }})
@@ -66,6 +76,14 @@ jobs:
           install -m 0755 install.sh dist/coral/install.sh
           install -m 0755 scripts/setup-rootfs.sh dist/coral/scripts/setup-rootfs.sh
           tar -C dist -czf "target/packages/coral-${{ steps.ver.outputs.tag }}-linux-${{ matrix.arch }}.tar.gz" coral
+      - name: Verify the packaged runtime
+        working-directory: coral_repo
+        run: |
+          set -euo pipefail
+          echo "built arch: $(dpkg --print-architecture)"
+          ls -lh target/packages/
+          dpkg-deb --info target/packages/coral-runtime_*.deb | head -12
+          dpkg-deb --contents target/packages/coral-runtime_*.deb
       - uses: actions/upload-artifact@v4
         with:
           name: coral-runtime-linux-${{ matrix.arch }}

@@ -282,6 +282,7 @@ pub fn boot_linux_bzimage_kvm(_opts: &LinuxBootOptions) -> Result<LinuxBootResul
     anyhow::bail!("pure-Rust x86-64 Linux bzImage KVM boot is currently supported on x86_64 Linux hosts")
 }
 
+#[cfg(target_arch = "x86_64")]
 pub(crate) fn parse_coral_vmm_exit_marker(serial: &str) -> Option<i32> {
     serial
         .lines()
