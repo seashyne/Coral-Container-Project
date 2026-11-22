@@ -34,22 +34,23 @@ pub(super) async fn copy_or_add_step(
 
     // Resolve either a build context source or `--from=<stage|index|image>` source.
     let (src_root, is_stage_src, extra_tag) = if let Some(ref fref) = from_ref {
-        if let Some(&idx) = exec.stage_names.get(&fref.to_ascii_lowercase()) {
-            let st = &exec.stages[idx];
-            (st.rootfs_dir.clone(), true, st.chain_key.as_bytes().to_vec())
-        } else if let Ok(idx) = fref.parse::<usize>()
-            && idx < exec.stages.len()
-        {
-            let st = &exec.stages[idx];
-            (st.rootfs_dir.clone(), true, st.chain_key.as_bytes().to_vec())
-        } else if exec
+        if exec
             .active_stage_name
             .is_some_and(|n| n.eq_ignore_ascii_case(fref))
-            || fref.parse::<usize>().ok() == Some(exec.stages.len())
+            || fref.parse::<usize>().ok() == Some(exec.active_stage_idx)
         {
             bail!("{verb} --from='{fref}' cannot reference the currently building stage");
+        } else if let Some(&idx) = exec.stage_names.get(&fref.to_ascii_lowercase())
+            && let Some(st) = exec.stages.get(&idx)
+        {
+            (st.rootfs_dir.clone(), true, st.chain_key.as_bytes().to_vec())
+        } else if let Ok(idx) = fref.parse::<usize>()
+            && let Some(st) = exec.stages.get(&idx)
+        {
+            (st.rootfs_dir.clone(), true, st.chain_key.as_bytes().to_vec())
         } else {
-            let img_root = resolve_or_pull_base_image(fref, exec.opts.images_dir).await?;
+            let img_root =
+                resolve_or_pull_base_image(fref, exec.opts.images_dir, exec.opts.platform).await?;
             let tag_bytes = img_root.to_string_lossy().as_bytes().to_vec();
             (img_root, true, tag_bytes)
         }

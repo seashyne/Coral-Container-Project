@@ -2,10 +2,15 @@
 
 pub mod devices;
 pub mod dns;
+pub mod gpu_cdi;
 pub mod volumes;
 
 pub use devices::{
     discover_gpu_mounts_and_envs, discover_gpu_mounts_and_envs_in, parse_device_mount,
+};
+pub use gpu_cdi::{
+    discover_nvidia_driver_mounts, discover_nvidia_driver_mounts_in, is_cdi_spec,
+    resolve_cdi_device, resolve_cdi_device_in,
 };
 pub use dns::{append_host_entry_in_place, host_dns_mounts, prepare_dns_and_hosts_mounts};
 pub use volumes::{

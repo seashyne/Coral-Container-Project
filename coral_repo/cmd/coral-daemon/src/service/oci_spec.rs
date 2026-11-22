@@ -241,6 +241,23 @@ impl CoralDaemonService {
 
         // Enable Copy-on-Write OverlayFS isolation per container by default so shared base images stay clean.
         spec.annotations.insert("coral.overlay".into(), "true".into());
+        if !cfg.annotations.contains_key("coral.overlay.lowerdir")
+            && cfg
+                .annotations
+                .get("coral.overlay")
+                .map(String::as_str)
+                .unwrap_or("true")
+                != "false"
+            && let Some(shared_layers) = images::load_image_layers_manifest(rootfs)
+            && !shared_layers.is_empty()
+        {
+            let joined = shared_layers
+                .iter()
+                .map(|p| p.to_string_lossy().into_owned())
+                .collect::<Vec<_>>()
+                .join(":");
+            spec.annotations.insert("coral.overlay.lowerdir".into(), joined);
+        }
         for (k, v) in &cfg.annotations {
             spec.annotations.insert(k.clone(), v.clone());
         }

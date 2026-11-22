@@ -57,8 +57,24 @@ fn host_oci_arch() -> &'static str {
     }
 }
 
-pub(super) fn select_linux_platform_digest(manifests: &[serde_json::Value]) -> Result<String> {
-    let target_arch = host_oci_arch();
+/// Selects a matching `linux/<arch>` manifest digest from an OCI image index,
+/// honoring an explicit `platform_override` such as `"linux/arm64"` or `"arm64"`.
+pub(super) fn select_linux_platform_digest_for(
+    manifests: &[serde_json::Value],
+    platform_override: Option<&str>,
+) -> Result<String> {
+    let target_arch = platform_override
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(|p| {
+            let arch = p.rsplit('/').next().unwrap_or(p).to_ascii_lowercase();
+            match arch.as_str() {
+                "x86_64" | "amd64" => "amd64".to_string(),
+                "aarch64" | "arm64" | "arm64v8" => "arm64".to_string(),
+                other => other.to_string(),
+            }
+        })
+        .unwrap_or_else(|| host_oci_arch().to_string());
     let mut fallback: Option<String> = None;
 
     for m in manifests {

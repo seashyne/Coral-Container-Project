@@ -9,6 +9,8 @@ mod build;
 mod buildkit;
 mod cache;
 mod context;
+pub mod dag;
+mod dag_exec;
 mod dockerfile;
 mod exec;
 mod step_copy;

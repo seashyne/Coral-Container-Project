@@ -6,6 +6,8 @@ pub mod dns_server;
 pub mod egress;
 pub mod netns;
 pub mod networks;
+pub mod vswitch;
+pub mod vswitch_tap;
 
 use std::io;
 use thiserror::Error;
@@ -18,6 +20,8 @@ pub use cni_runner::{
     has_cni_configs,
 };
 pub use dns_server::{EmbeddedDnsServer, build_dns_query_packet, handle_dns_packet};
+pub use vswitch::RootlessVSwitch;
+pub use vswitch_tap::open_tap_in_netns;
 pub use egress::{EgressBackend, RootlessEgressGuard, detect_egress_backend};
 pub use netns::{
     PortMapping, PortProtocol, bring_loopback_up, connect_container_port, connect_container_udp,

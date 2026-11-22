@@ -65,6 +65,13 @@ pub fn discover_gpu_mounts_and_envs_in(
         return Ok((Vec::new(), Vec::new()));
     }
 
+    // 0. CNCF Container Device Interface (CDI) spec (`--gpus nvidia.com/gpu=all` or `cdi=...`).
+    if super::gpu_cdi::is_cdi_spec(spec)
+        && let Some((cdi_mounts, cdi_envs)) = super::gpu_cdi::resolve_cdi_device(spec)
+    {
+        return Ok((cdi_mounts, cdi_envs));
+    }
+
     let wanted_index: Option<u32> = if spec.eq_ignore_ascii_case("all") {
         None
     } else if let Some(idx_str) = spec.strip_prefix("device=") {
@@ -112,11 +119,41 @@ pub fn discover_gpu_mounts_and_envs_in(
     let visible = wanted_index
         .map(|i| i.to_string())
         .unwrap_or_else(|| "all".to_string());
-    let envs = vec![
+    let mut envs = vec![
         format!("NVIDIA_VISIBLE_DEVICES={visible}"),
         "NVIDIA_DRIVER_CAPABILITIES=compute,utility".to_string(),
         format!("ROCR_VISIBLE_DEVICES={visible}"),
     ];
+
+    // 3. NVIDIA Container Toolkit driver injection: prefer CNCF CDI spec if present on host,
+    //    otherwise auto-bind host `libcuda.so*`, `libnvidia-ml.so*`, and `nvidia-smi` read-only.
+    let has_nvidia_nodes = mounts.iter().any(|m| m.destination.starts_with("/dev/nvidia"));
+    if has_nvidia_nodes {
+        let cdi_query = format!("nvidia.com/gpu={visible}");
+        if let Some((cdi_mounts, cdi_envs)) = super::gpu_cdi::resolve_cdi_device(&cdi_query) {
+            for m in cdi_mounts {
+                if !mounts.iter().any(|e| e.destination == m.destination) {
+                    mounts.push(m);
+                }
+            }
+            for e in cdi_envs {
+                if !envs.contains(&e) {
+                    envs.push(e);
+                }
+            }
+        } else {
+            let (drv_mounts, ld_dirs) = super::gpu_cdi::discover_nvidia_driver_mounts();
+            for m in drv_mounts {
+                if !mounts.iter().any(|e| e.destination == m.destination) {
+                    mounts.push(m);
+                }
+            }
+            if !ld_dirs.is_empty() {
+                envs.push(format!("LD_LIBRARY_PATH={}", ld_dirs.join(":")));
+            }
+        }
+    }
+
     Ok((mounts, envs))
 }
 

@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version tag (e.g. v2.4.0)"
+        description: "Release version tag (e.g. v2.5.0)"
         required: false
-        default: "v2.4.0"
+        default: "v2.5.0"
 
 permissions:
   contents: write
@@ -34,6 +34,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: coral_repo
+      - name: Allow unprivileged user namespaces on Ubuntu 24.04 runners
+        run: |
+          if [ -f /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
       - name: Run full Coral verify.sh gate
         working-directory: coral_repo
         run: ./verify.sh
@@ -62,7 +67,7 @@ jobs:
         id: ver
         run: |
           TAG="${GITHUB_REF_NAME}"
-          if [[ "$TAG" != v* ]]; then TAG="${{ inputs.version || 'v2.4.0' }}"; fi
+          if [[ "$TAG" != v* ]]; then TAG="${{ inputs.version || 'v2.5.0' }}"; fi
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           echo "num=${TAG#v}" >> "$GITHUB_OUTPUT"
       - name: Build .deb and .tar.gz bundles

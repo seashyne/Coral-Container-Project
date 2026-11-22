@@ -108,6 +108,16 @@ pub fn run_from_image_local(
     if !args.no_overlay {
         spec.annotations
             .insert("coral.overlay".into(), "true".into());
+        if let Some(shared_layers) = images::load_image_layers_manifest(&rootfs_path)
+            && !shared_layers.is_empty()
+        {
+            let joined = shared_layers
+                .iter()
+                .map(|p| p.to_string_lossy().into_owned())
+                .collect::<Vec<_>>()
+                .join(":");
+            spec.annotations.insert("coral.overlay.lowerdir".into(), joined);
+        }
     }
     if args.privileged {
         spec.annotations

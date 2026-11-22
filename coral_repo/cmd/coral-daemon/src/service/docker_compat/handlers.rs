@@ -2,6 +2,9 @@
 
 use super::HttpResponse;
 use super::containers::{handle_container_action, handle_create_container};
+use super::endpoints::{handle_events, handle_exec_route, handle_image_item, handle_image_pull};
+use super::resources::{handle_networks, handle_volumes};
+use super::state::DockerCompatState;
 use crate::service::CoralDaemonService;
 use coral_api::ContainerState as CriContainerState;
 use serde_json::{Value, json};
@@ -9,6 +12,7 @@ use std::fs;
 
 pub(super) async fn dispatch_docker_request(
     svc: &CoralDaemonService,
+    compat: &DockerCompatState,
     method: &str,
     route: &str,
     query: &str,
@@ -18,11 +22,27 @@ pub(super) async fn dispatch_docker_request(
         ("GET" | "HEAD", "/_ping") => HttpResponse::text("200 OK", "OK"),
         ("GET", "/version") => handle_version(),
         ("GET", "/info") => handle_info(svc).await,
+        ("GET", "/events") => handle_events(compat, query).await,
         ("GET", "/images/json") => handle_list_images(svc).await,
+        ("POST", "/images/create") => handle_image_pull(svc, compat, query).await,
+        _ if route.starts_with("/images/") => {
+            handle_image_item(svc, method, &route["/images/".len()..]).await
+        }
         ("GET", "/containers/json") => handle_list_containers(svc, query).await,
-        ("POST", "/containers/create") => handle_create_container(svc, query, body).await,
+        ("POST", "/containers/create") => handle_create_container(svc, compat, query, body).await,
         _ if route.starts_with("/containers/") => {
-            handle_container_action(svc, method, &route["/containers/".len()..]).await
+            handle_container_action(svc, compat, method, &route["/containers/".len()..], body).await
+        }
+        _ if route.starts_with("/exec/") => {
+            handle_exec_route(svc, compat, method, &route["/exec/".len()..]).await
+        }
+        (_, "/networks") => handle_networks(method, "", body).await,
+        _ if route.starts_with("/networks/") => {
+            handle_networks(method, &route["/networks/".len()..], body).await
+        }
+        (_, "/volumes") => handle_volumes(method, "", body).await,
+        _ if route.starts_with("/volumes/") => {
+            handle_volumes(method, &route["/volumes/".len()..], body).await
         }
         _ => HttpResponse::json(
             "404 Not Found",

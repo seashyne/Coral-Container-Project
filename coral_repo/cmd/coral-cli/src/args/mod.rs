@@ -3,6 +3,7 @@
 mod compose;
 mod container;
 mod images;
+mod machine;
 mod misc;
 mod network;
 mod oci;
@@ -22,6 +23,7 @@ pub use container::{
 pub use images::{
     BuildArgs, CatalogArgs, ImagesArgs, LoadArgs, PullArgs, PushArgs, RmiArgs, SaveArgs, TagArgs,
 };
+pub use machine::{MachineAction, MachineArgs};
 pub use misc::{CompletionArgs, CriStatusArgs, KeygenArgs, SbomArgs, SignArgs, VerifyArgs};
 pub use network::{NetworkAction, NetworkArgs};
 pub use oci::{CniConfigArgs, CreateArgs, DeleteArgs, KillArgs, SpecArgs, StartArgs, StateArgs};
@@ -131,6 +133,9 @@ pub enum Commands {
 
     /// Native Linux `/dev/kvm` 64-bit MicroVM hypervisor (`coral vm probe / run`)
     Vm(VmArgs),
+
+    /// Cross-platform Coral Machine / VM manager (`coral machine init / start / stop / status / env`)
+    Machine(MachineArgs),
 
     /// AI Agent / Untrusted Code hardened sandbox & MicroVM runner (`coral sandbox run`)
     Sandbox(SandboxArgs),

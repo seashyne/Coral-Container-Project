@@ -25,6 +25,7 @@ pub(crate) fn pull(ctx: &Ctx, args: PullArgs) -> Result<ExitCode> {
         &ctx.images_dir,
         &args.image,
         args.rootfs.as_deref(),
+        args.platform.as_deref(),
         args.local,
         &ctx.state_root,
         args.progress,
@@ -57,6 +58,7 @@ pub(crate) fn build(ctx: &Ctx, args: BuildArgs) -> Result<ExitCode> {
         file,
         target,
         build_args,
+        platform,
         context,
         local,
         no_cache,
@@ -73,6 +75,7 @@ pub(crate) fn build(ctx: &Ctx, args: BuildArgs) -> Result<ExitCode> {
         no_cache,
         target.as_deref(),
         &build_args,
+        platform.as_deref(),
     ))?;
     Ok(ExitCode::SUCCESS)
 }

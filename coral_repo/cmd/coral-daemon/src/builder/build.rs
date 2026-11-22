@@ -1,7 +1,7 @@
 //! Image build entry point: runs the Dockerfile steps and installs the built rootfs.
 
+use super::dag_exec::execute_dag_build;
 use super::dockerfile::parse_dockerfile;
-use super::steps::execute_build_steps;
 use crate::images::{self, OciImageConfig, StoredImage};
 use anyhow::{Context, Result, bail};
 use std::fs;
@@ -19,6 +19,7 @@ pub struct BuildOptions<'a> {
     pub no_cache: bool,
     pub target: Option<&'a str>,
     pub build_args: &'a [String],
+    pub platform: Option<&'a str>,
 }
 
 pub(super) struct BuiltStage {
@@ -56,7 +57,7 @@ pub async fn build_image(opts: BuildOptions<'_>) -> Result<StoredImage> {
     fs::create_dir_all(&staging_rootfs)
         .with_context(|| format!("create build staging rootfs '{}'", staging_rootfs.display()))?;
 
-    let build_res = execute_build_steps(
+    let build_res = execute_dag_build(
         &instructions,
         &staging_dir,
         &staging_rootfs,

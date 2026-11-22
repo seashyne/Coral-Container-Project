@@ -20,7 +20,7 @@ pub use extract::extract_layer;
 pub use progress::{PullPhase, PullProgress, PullProgressReporter, render_line};
 pub use push::{PushResult, push_image};
 pub use reference::{ImageRef, normalize_lookup_tag};
-pub use registry::pull_image;
+pub use registry::{load_image_layers_manifest, pull_image, pull_image_for_platform};
 pub use security::{
     ImageSignatureEnvelope, KeypairReport, VerifyReport, compute_image_tree_digest,
     default_key_paths, generate_keypair, generate_spdx_sbom, sign_image, verify_image,

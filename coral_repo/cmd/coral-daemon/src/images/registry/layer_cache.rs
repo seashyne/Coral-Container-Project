@@ -19,6 +19,7 @@ const MAX_CONCURRENT_LAYER_DOWNLOADS: usize = 4;
 
 pub(super) struct DownloadedLayer {
     pub(super) idx: usize,
+    pub(super) digest: String,
     pub(super) blob_path: PathBuf,
     pub(super) media_type: String,
     pub(super) cached_in_store: bool,
@@ -143,6 +144,7 @@ pub(super) async fn download_layers_parallel(
                 }
                 return Ok::<DownloadedLayer, anyhow::Error>(DownloadedLayer {
                     idx,
+                    digest: layer.digest,
                     blob_path: cached_path,
                     media_type: layer.media_type,
                     cached_in_store: true,
@@ -221,6 +223,7 @@ pub(super) async fn download_layers_parallel(
             {
                 Ok(DownloadedLayer {
                     idx,
+                    digest: layer.digest,
                     blob_path: cached_path,
                     media_type: layer.media_type,
                     cached_in_store: true,
@@ -228,6 +231,7 @@ pub(super) async fn download_layers_parallel(
             } else {
                 Ok(DownloadedLayer {
                     idx,
+                    digest: layer.digest,
                     blob_path: part_path,
                     media_type: layer.media_type,
                     cached_in_store: false,

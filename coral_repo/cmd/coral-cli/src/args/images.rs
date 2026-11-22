@@ -22,6 +22,10 @@ pub struct PullArgs {
     #[arg(long)]
     pub rootfs: Option<PathBuf>,
 
+    /// Target OCI platform (e.g. `linux/amd64`, `linux/arm64`)
+    #[arg(long)]
+    pub platform: Option<String>,
+
     /// Pull directly into local --images-dir without going through coral-daemon
     #[arg(long)]
     pub local: bool,
@@ -68,6 +72,10 @@ pub struct BuildArgs {
     /// Set build-time variable (`KEY=VAL`) passed to Dockerfile `ARG`, repeatable
     #[arg(long = "build-arg")]
     pub build_args: Vec<String>,
+
+    /// Target OCI platform for cross-arch BuildKit builds (e.g. `linux/amd64`, `linux/arm64`)
+    #[arg(long)]
+    pub platform: Option<String>,
 
     /// Build context directory for `COPY`/`ADD` instructions
     #[arg(default_value = ".")]

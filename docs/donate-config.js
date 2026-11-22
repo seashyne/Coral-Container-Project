@@ -7,7 +7,7 @@
  *    and set `promptpay.qrImage = "assets/promptpay-qr.png"`.
  */
 window.CORAL_SPONSOR_CONFIG = {
-  releaseVersion: "v2.4.0",
+  releaseVersion: "v2.5.0",
   repoSlug: "seashyne/Coral-Container-Project",
 
   promptpay: {

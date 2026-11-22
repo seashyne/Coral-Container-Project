@@ -14,6 +14,7 @@ mod pty_rpc;
 mod runtime_rpc;
 mod streaming;
 mod supervisor;
+mod vswitch_net;
 
 use crate::images::{self, StoredImage};
 use chrono::Utc;
@@ -84,6 +85,7 @@ pub(crate) struct DaemonStore {
     pub containers: HashMap<String, ManagedContainer>,
     pub port_forwarders: HashMap<String, Vec<JoinHandle<()>>>,
     pub supervisors: HashMap<String, JoinHandle<()>>,
+    pub vswitches: HashMap<String, Arc<coral_net::RootlessVSwitch>>,
     pub images: Vec<StoredImage>,
     pub pod_cidr: Option<String>,
     pub auto_gc_runs: u64,
@@ -382,5 +384,6 @@ impl CoralDaemonService {
                 h.abort();
             }
         }
+        store.vswitches.clear();
     }
 }

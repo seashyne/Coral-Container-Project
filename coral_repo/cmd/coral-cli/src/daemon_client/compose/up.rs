@@ -82,6 +82,7 @@ pub async fn cmd_compose_up(
                     false,
                     svc.build_target.as_deref(),
                     &svc.build_args,
+                    None,
                 )
                 .await
                 .with_context(|| format!("build compose service '{}'", svc.name))?;
@@ -221,6 +222,7 @@ pub async fn cmd_compose_build(
             no_cache,
             svc.build_target.as_deref(),
             &svc.build_args,
+            None,
         )
         .await
         .with_context(|| format!("build compose service '{}'", svc.name))?;

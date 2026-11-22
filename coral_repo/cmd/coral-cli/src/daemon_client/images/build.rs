@@ -21,6 +21,7 @@ pub async fn cmd_build(
     no_cache: bool,
     target: Option<&str>,
     build_args: &[String],
+    platform: Option<&str>,
 ) -> Result<()> {
     let tag_trimmed = tag.trim();
     if tag_trimmed.is_empty() {
@@ -47,6 +48,9 @@ pub async fn cmd_build(
         }
         if !build_args.is_empty() {
             annotations.insert("coral.build.args".into(), build_args.join("\n"));
+        }
+        if let Some(plat) = platform.map(str::trim).filter(|s| !s.is_empty()) {
+            annotations.insert("coral.platform".into(), plat.to_string());
         }
         eprintln!(
             "Building '{tag_trimmed}' from {} via coral-daemon ({addr})...",
@@ -82,6 +86,7 @@ pub async fn cmd_build(
         no_cache,
         target,
         build_args,
+        platform,
     })
     .await?;
 

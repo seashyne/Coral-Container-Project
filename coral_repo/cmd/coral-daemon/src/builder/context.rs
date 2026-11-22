@@ -6,12 +6,18 @@ use coral_runtime::overlay::commit_overlay_to_rootfs;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
-pub(super) async fn resolve_or_pull_base_image(base_ref: &str, images_dir: &Path) -> Result<PathBuf> {
-    let index = images::load_index(images_dir);
-    if let Some(found) = images::find_image(&index, base_ref) {
-        let p = PathBuf::from(&found.rootfs_path);
-        if p.is_dir() {
-            return Ok(p);
+pub(super) async fn resolve_or_pull_base_image(
+    base_ref: &str,
+    images_dir: &Path,
+    platform: Option<&str>,
+) -> Result<PathBuf> {
+    if platform.is_none() {
+        let index = images::load_index(images_dir);
+        if let Some(found) = images::find_image(&index, base_ref) {
+            let p = PathBuf::from(&found.rootfs_path);
+            if p.is_dir() {
+                return Ok(p);
+            }
         }
     }
     if Path::new(base_ref).is_dir() {
@@ -19,7 +25,7 @@ pub(super) async fn resolve_or_pull_base_image(base_ref: &str, images_dir: &Path
     }
     // No progress reporter: this pull is an implicit `FROM` base-image fetch during a build,
     // driven by the builder rather than by `coral pull`, so there is no `coral.progress_id`.
-    let pulled = images::pull_image(base_ref, images_dir, None).await?;
+    let pulled = images::pull_image_for_platform(base_ref, images_dir, None, platform).await?;
     let path = PathBuf::from(&pulled.rootfs_path);
     let mut index = images::load_index(images_dir);
     let orphaned = images::upsert_image(&mut index, pulled);

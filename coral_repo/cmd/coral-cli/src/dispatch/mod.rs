@@ -4,6 +4,7 @@
 mod compose;
 mod containers;
 mod images;
+mod machine;
 mod network;
 mod nextgen;
 mod oci;
@@ -75,6 +76,7 @@ pub(crate) fn dispatch(cli: Cli) -> Result<ExitCode> {
         Commands::Stats(args) => containers::stats(&ctx, args),
         Commands::Wasm(args) => nextgen::wasm(&ctx, args),
         Commands::Vm(args) => nextgen::vm(&ctx, args),
+        Commands::Machine(args) => machine::machine(&ctx, args),
         Commands::Sandbox(args) => nextgen::sandbox(&ctx, args),
         Commands::Keygen(args) => nextgen::keygen(&ctx, args),
         Commands::Sign(args) => nextgen::sign(&ctx, args),

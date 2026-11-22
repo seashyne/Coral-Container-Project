@@ -3,11 +3,16 @@
 //! Docker CLI over `DOCKER_HOST=unix://.../docker.sock`) to query and manage Coral containers.
 
 mod containers;
+mod endpoints;
 mod handlers;
+mod resources;
+mod state;
 #[cfg(test)]
 mod tests;
 
 use super::CoralDaemonService;
+use state::DockerCompatState;
+use std::sync::Arc;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::net::{TcpListener, UnixListener};
 use tokio::sync::watch;
@@ -51,6 +56,7 @@ pub async fn serve_docker_unix(
     listener: UnixListener,
     mut shutdown: watch::Receiver<bool>,
 ) -> anyhow::Result<()> {
+    let compat = Arc::new(DockerCompatState::default());
     loop {
         let accepted = tokio::select! {
             _ = shutdown.changed() => break,
@@ -60,8 +66,9 @@ pub async fn serve_docker_unix(
             continue;
         };
         let svc_c = svc.clone();
+        let compat_c = compat.clone();
         tokio::spawn(async move {
-            handle_http_connection(svc_c, stream).await;
+            handle_http_connection(svc_c, compat_c, stream).await;
         });
     }
     Ok(())
@@ -73,6 +80,7 @@ pub async fn serve_docker_tcp(
     listener: TcpListener,
     mut shutdown: watch::Receiver<bool>,
 ) -> anyhow::Result<()> {
+    let compat = Arc::new(DockerCompatState::default());
     loop {
         let accepted = tokio::select! {
             _ = shutdown.changed() => break,
@@ -82,14 +90,19 @@ pub async fn serve_docker_tcp(
             continue;
         };
         let svc_c = svc.clone();
+        let compat_c = compat.clone();
         tokio::spawn(async move {
-            handle_http_connection(svc_c, stream).await;
+            handle_http_connection(svc_c, compat_c, stream).await;
         });
     }
     Ok(())
 }
 
-async fn handle_http_connection<S>(svc: CoralDaemonService, mut stream: S)
+async fn handle_http_connection<S>(
+    svc: CoralDaemonService,
+    compat: Arc<DockerCompatState>,
+    mut stream: S,
+)
 where
     S: AsyncRead + AsyncWrite + Unpin,
 {
@@ -98,7 +111,7 @@ where
     };
     let (raw_path, query) = target.split_once('?').unwrap_or((&target, ""));
     let route = strip_api_version(raw_path);
-    let resp = handlers::dispatch_docker_request(&svc, &method, route, query, &body).await;
+    let resp = handlers::dispatch_docker_request(&svc, &compat, &method, route, query, &body).await;
 
     let header = format!(
         "HTTP/1.1 {}\r\nContent-Type: {}\r\nContent-Length: {}\r\nApi-Version: 1.45\r\nDocker-Experimental: false\r\nServer: Coral/{} (linux)\r\nConnection: close\r\n\r\n",

@@ -28,6 +28,7 @@ pub(super) async fn start_container(
         log_path,
         ports_spec,
         is_bridge_net,
+        vswitch_attach,
         is_wasm,
         wasm_args,
         wasm_envs,
@@ -83,6 +84,13 @@ pub(super) async fn start_container(
             .filter(|&b| b > 0)
             .map(|b| (b / (1024 * 1024)).max(1) as usize)
             .unwrap_or(64);
+        let vswitch_attach = match (
+            ctr.config.labels.get("coral.network.name").cloned(),
+            ctr.config.labels.get("coral.network.ip").cloned(),
+        ) {
+            (Some(net), Some(ip)) => Some((net, ip)),
+            _ => None,
+        };
         let ret = (
             id,
             ctr.bundle_dir.clone(),
@@ -90,6 +98,7 @@ pub(super) async fn start_container(
             ctr.log_path.clone(),
             ctr.config.annotations.get("coral.ports").cloned(),
             is_bridge,
+            vswitch_attach,
             is_wasm,
             wasm_args,
             wasm_envs,
@@ -137,6 +146,9 @@ pub(super) async fn start_container(
         store: svc.store.clone(),
         log_policy: svc.current_log_policy(),
     });
+    if let Some((net_name, ip_str)) = vswitch_attach {
+        svc.spawn_vswitch_attach(id.clone(), net_name, ip_str);
+    }
     if let Some(prev) = svc.store.write().await.supervisors.insert(id, sup_handle) {
         prev.abort();
     }
@@ -173,6 +185,11 @@ pub(super) async fn stop_container(
         .await;
 
     let mut store = svc.store.write().await;
+    let net_name = store
+        .containers
+        .get(&id)
+        .and_then(|c| c.config.labels.get("coral.network.name").cloned());
+    CoralDaemonService::detach_vswitch_port(&store, &id, net_name.as_deref());
     if let Some(handles) = store.port_forwarders.remove(&id) {
         for h in handles {
             h.abort();
@@ -211,6 +228,8 @@ pub(super) async fn remove_container(
             .containers
             .remove(&id)
             .ok_or_else(|| Status::not_found(format!("container '{query}' not found")))?;
+        let net_name = removed.config.labels.get("coral.network.name").map(String::as_str);
+        CoralDaemonService::detach_vswitch_port(&store, &id, net_name);
         svc.persist_state(&store);
         (id, removed)
     };

@@ -2,8 +2,12 @@
 
 use super::auth::{PullAuth, authorized_get};
 use super::layer_cache::{LayerFetchContext, download_layers_parallel};
+use super::layer_store::{
+    extract_or_reuse_layer, layers_safe_for_direct_overlay, materialize_hardlink_rootfs,
+    save_image_layers_manifest,
+};
 use super::manifest::{
-    parse_config_digest, parse_layers, select_linux_platform_digest,
+    parse_config_digest, parse_layers, select_linux_platform_digest_for,
 };
 use super::util::{ACCEPT_MANIFESTS, safe_slug};
 use crate::images::auth::{load_registry_auth, registry_scheme};
@@ -15,7 +19,7 @@ use crate::images::{StoredImage, dir_size, ensure_scratch_image, remove_dir_forc
 use anyhow::{Context, Result};
 use sha2::{Digest, Sha256};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tracing::info;
 
@@ -24,7 +28,18 @@ pub async fn pull_image(
     images_dir: &Path,
     reporter: Option<Arc<PullProgressReporter>>,
 ) -> Result<StoredImage> {
-    match pull_image_inner(image_ref_str, images_dir, reporter.clone()).await {
+    pull_image_for_platform(image_ref_str, images_dir, reporter, None).await
+}
+
+/// Pulls an OCI image for an explicit target platform (e.g. `"linux/arm64"` or `"linux/amd64"`),
+/// defaulting to the host architecture when `platform_override` is `None`.
+pub async fn pull_image_for_platform(
+    image_ref_str: &str,
+    images_dir: &Path,
+    reporter: Option<Arc<PullProgressReporter>>,
+    platform_override: Option<&str>,
+) -> Result<StoredImage> {
+    match pull_image_inner(image_ref_str, images_dir, reporter.clone(), platform_override).await {
         Ok(stored) => {
             if let Some(rep) = reporter {
                 rep.set_phase(PullPhase::Done);
@@ -34,8 +49,6 @@ pub async fn pull_image(
         }
         Err(err) => {
             if let Some(rep) = reporter {
-                // Leave the `failed` snapshot on disk: the CLI reads it to print the reason and
-                // removes the file itself. Auto-GC sweeps anything a crashed CLI leaves behind.
                 rep.fail(format!("{err:#}"));
             }
             Err(err)
@@ -47,6 +60,7 @@ async fn pull_image_inner(
     image_ref_str: &str,
     images_dir: &Path,
     reporter: Option<Arc<PullProgressReporter>>,
+    platform_override: Option<&str>,
 ) -> Result<StoredImage> {
     if let Some(rep) = &reporter {
         rep.set_phase(PullPhase::Resolving);
@@ -104,7 +118,7 @@ async fn pull_image_inner(
 
     let (layers, resolved_digest, config_digest) =
         if let Some(manifests) = manifest_json.get("manifests").and_then(|v| v.as_array()) {
-            let chosen_digest = select_linux_platform_digest(manifests)?;
+            let chosen_digest = select_linux_platform_digest_for(manifests, platform_override)?;
             let child_url =
                 format!("{scheme}://{registry}/v2/{repository}/manifests/{chosen_digest}");
             let child_resp = authorized_get(
@@ -167,6 +181,8 @@ async fn pull_image_inner(
     fs::create_dir_all(&staging_rootfs)
         .with_context(|| format!("create staging dir '{}'", staging_rootfs.display()))?;
 
+    let mut shared_layers_base_to_top: Vec<PathBuf> = Vec::new();
+    let mut all_layers_shared = true;
     let pull_result: Result<()> = async {
         let downloaded = download_layers_parallel(
             &LayerFetchContext {
@@ -190,14 +206,29 @@ async fn pull_image_inner(
                 rep.set_phase(PullPhase::Extracting);
                 rep.flush();
             }
-            let rootfs_clone = staging_rootfs.clone();
+            let images_dir_clone = images_dir.to_path_buf();
             let blob_clone = item.blob_path.clone();
-            let media_type = item.media_type;
-            tokio::task::spawn_blocking(move || {
-                extract_layer(&blob_clone, &rootfs_clone, &media_type)
+            let digest_clone = item.digest.clone();
+            let media_type = item.media_type.clone();
+            let shared_dir = tokio::task::spawn_blocking(move || {
+                extract_or_reuse_layer(&images_dir_clone, &blob_clone, &digest_clone, &media_type)
             })
             .await
             .context("join layer extraction task")??;
+
+            if let Some(layer_dir) = shared_dir {
+                shared_layers_base_to_top.push(layer_dir);
+            } else {
+                all_layers_shared = false;
+                let rootfs_clone = staging_rootfs.clone();
+                let blob_clone = item.blob_path.clone();
+                let media_type = item.media_type;
+                tokio::task::spawn_blocking(move || {
+                    extract_layer(&blob_clone, &rootfs_clone, &media_type)
+                })
+                .await
+                .context("join direct layer extraction task")??;
+            }
 
             if !item.cached_in_store {
                 let _ = fs::remove_file(&item.blob_path);
@@ -206,6 +237,16 @@ async fn pull_image_inner(
                 rep.finish_layer();
                 rep.flush();
             }
+        }
+
+        if all_layers_shared && !shared_layers_base_to_top.is_empty() {
+            let layers_to_link = shared_layers_base_to_top.clone();
+            let rootfs_clone = staging_rootfs.clone();
+            tokio::task::spawn_blocking(move || {
+                materialize_hardlink_rootfs(&layers_to_link, &rootfs_clone)
+            })
+            .await
+            .context("join hardlink rootfs materialization")??;
         }
         Ok(())
     }
@@ -249,6 +290,17 @@ async fn pull_image_inner(
     let abs_rootfs = fs::canonicalize(&final_rootfs)?;
     if let Some(cfg) = &fetched_config {
         let _ = cfg.save_for_rootfs(&abs_rootfs);
+    }
+    if all_layers_shared
+        && !shared_layers_base_to_top.is_empty()
+        && layers_safe_for_direct_overlay(&shared_layers_base_to_top)
+    {
+        let top_to_base: Vec<PathBuf> = shared_layers_base_to_top
+            .into_iter()
+            .rev()
+            .filter_map(|p| fs::canonicalize(p).ok())
+            .collect();
+        let _ = save_image_layers_manifest(&abs_rootfs, &top_to_base);
     }
     let size = dir_size(&abs_rootfs);
     let repo_tags = vec![display_tag.clone()];

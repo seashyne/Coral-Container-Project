@@ -1,13 +1,13 @@
 /**
  * Coral Container Project — Thai (th) dictionary, part 2
- * * * Platform integration features introduced in v2.4.0.
+ * * * Platform integration features introduced in v2.5.0.
  * * * Loaded before i18n.js, which merges this into window.CORAL_I18N.
  */
 window.CORAL_I18N_TH_FEATURES = {
   "nav.features": "ฟีเจอร์เชิงแพลตฟอร์ม",
-  "feat2.title": "ฟีเจอร์เชิงแพลตฟอร์มระหว่างระบบ (v2.4.0)",
+  "feat2.title": "ฟีเจอร์เชิงแพลตฟอร์มระหว่างระบบ (v2.5.0)",
   "feat2.lead":
-    "ห้าความสามารถใหม่ที่เพิ่มเข้ามาใน v2.4.0 เขียนด้วย Rust ล้วน ไม่ต้องติดตั้ง daemon ภายนอกเพิ่ม และมี E2E test ครอบคลุม",
+    "ห้าความสามารถใหม่ที่เพิ่มเข้ามาใน v2.5.0 เขียนด้วย Rust ล้วน ไม่ต้องติดตั้ง daemon ภายนอกเพิ่ม และมี E2E test ครอบคลุม",
   "feat2.cache.title": "Content-Addressable Layer Cache",
   "feat2.cache.desc":
     "coral pull ไม่ดาวน์โหลด layer ที่เคยมีอยู่แล้วอีก ทุก blob ถูกตรวจสอบ SHA-256 ตอนดาวน์โหลดและตอนอ่านจากแคช (ไฟล์ที่เสียจะถูกลบอัตโนมัติ) ย้ายเข้าแคชแบบ atomic ผ่าน rename และดาวน์โหลดขนานสูงสุด 4 ชั้นก่อนประกอบกลับตามลำดับ manifest",
@@ -25,7 +25,7 @@ window.CORAL_I18N_TH_FEATURES = {
     "ส่งผ่านอุปกรณ์เข้าคอนเทนเนอร์ด้วย --device แบบ Docker-compatible และค้นพบ GPU อัตโนมัติทั้ง NVIDIA, AMD ROCm (/dev/kfd) และ DRM (/dev/dri) พร้อมตัวเลือก --network-alias และ --log-driver (raw, json-file, syslog, journald)",
   "feat2.usageTitle": "ใช้งานอย่างไร",
   "feat2.usageLead": "สรุปคำสั่งสำคัญของแต่ละความสามารถ",
-  "feat2.caption": "คำสั่งตัวอย่างสำหรับฟีเจอร์เชิงแพลตฟอร์มใน v2.4.0",
+  "feat2.caption": "คำสั่งตัวอย่างสำหรับฟีเจอร์เชิงแพลตฟอร์มใน v2.5.0",
   "feat2.colCapability": "ความสามารถ",
   "feat2.colUsage": "วิธีใช้",
   "feat2.rowCache": "แคช layer ตาม digest",

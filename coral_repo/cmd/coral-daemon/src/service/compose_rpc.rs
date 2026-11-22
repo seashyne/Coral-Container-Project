@@ -93,6 +93,7 @@ impl CoralDaemonService {
                     no_cache: false,
                     target: svc.build_target.as_deref(),
                     build_args: &svc.build_args,
+                    platform: None,
                 })
                 .await
                 .map_err(|e| {

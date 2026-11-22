@@ -86,6 +86,12 @@ impl ImageService for CoralDaemonService {
                 .get("coral.build.args")
                 .map(|raw| raw.lines().map(ToOwned::to_owned).collect())
                 .unwrap_or_default();
+            let platform = spec
+                .annotations
+                .get("coral.platform")
+                .map(String::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty());
             let stored = crate::builder::build_image(crate::builder::BuildOptions {
                 tag: &image_name,
                 dockerfile_content: dockerfile,
@@ -96,6 +102,7 @@ impl ImageService for CoralDaemonService {
                 no_cache,
                 target,
                 build_args: &build_args,
+                platform,
             })
             .await
             .map_err(|e| Status::internal(format!("build image '{image_name}': {e:#}")))?;
@@ -236,7 +243,11 @@ impl ImageService for CoralDaemonService {
                 .map(|id| {
                     images::PullProgressReporter::new(&self.cfg.state_dir, id, &image_name)
                 });
-            images::pull_image(&image_name, &self.images_dir, reporter)
+            let platform_override = spec
+                .annotations
+                .get("coral.platform")
+                .map(String::as_str);
+            images::pull_image_for_platform(&image_name, &self.images_dir, reporter, platform_override)
                 .await
                 .map_err(|e| Status::internal(format!("pull image '{image_name}': {e:#}")))?
         };

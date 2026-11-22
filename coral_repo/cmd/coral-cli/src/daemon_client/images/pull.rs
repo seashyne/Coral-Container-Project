@@ -11,11 +11,13 @@ use coral_daemon::images;
 use std::collections::HashMap;
 use std::path::Path;
 
+#[allow(clippy::too_many_arguments)]
 pub async fn cmd_pull(
     addr: &str,
     images_dir: &Path,
     image: &str,
     rootfs: Option<&Path>,
+    platform: Option<&str>,
     local_only: bool,
     state_root: &Path,
     progress_mode: ProgressMode,
@@ -30,6 +32,9 @@ pub async fn cmd_pull(
         let mut annotations = HashMap::new();
         if let Some(p) = rootfs {
             annotations.insert("coral.rootfs".into(), p.to_string_lossy().into_owned());
+        }
+        if let Some(plat) = platform.map(str::trim).filter(|s| !s.is_empty()) {
+            annotations.insert("coral.platform".into(), plat.to_string());
         }
         // A local directory is a rootfs registration, not a registry pull: no bytes to track.
         let track_progress = progress_mode != ProgressMode::None
@@ -116,7 +121,7 @@ pub async fn cmd_pull(
             "Pulling '{image_name}' directly into {}...",
             images_dir.display()
         );
-        images::pull_image(image_name, images_dir, None).await?
+        images::pull_image_for_platform(image_name, images_dir, None, platform).await?
     };
 
     let mut index = images::load_index(images_dir);

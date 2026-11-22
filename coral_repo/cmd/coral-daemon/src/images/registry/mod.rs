@@ -3,8 +3,10 @@
 
 mod auth;
 pub(crate) mod layer_cache;
+pub mod layer_store;
 mod manifest;
 mod pull;
 mod util;
 
-pub use pull::pull_image;
+pub use layer_store::load_image_layers_manifest;
+pub use pull::{pull_image, pull_image_for_platform};

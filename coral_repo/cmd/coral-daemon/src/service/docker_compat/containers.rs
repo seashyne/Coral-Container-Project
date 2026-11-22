@@ -2,7 +2,9 @@
 //! (`POST /containers/create`, `POST /containers/{id}/start`, `stop`, `DELETE /containers/{id}`).
 
 use super::HttpResponse;
+use super::endpoints::{handle_container_wait, handle_exec_create};
 use super::handlers::{handle_container_logs, handle_inspect_container, parse_query_param};
+use super::state::DockerCompatState;
 use crate::service::CoralDaemonService;
 use coral_api::runtime_service_server::RuntimeService;
 use coral_api::{
@@ -17,6 +19,7 @@ use tonic::Request;
 
 pub(super) async fn handle_create_container(
     svc: &CoralDaemonService,
+    compat: &DockerCompatState,
     query: &str,
     body: &[u8],
 ) -> HttpResponse {
@@ -111,6 +114,37 @@ pub(super) async fn handle_create_container(
         {
             mem_bytes = m;
         }
+        if let Some(pb) = hc.get("PortBindings").and_then(|v| v.as_object()) {
+            let mut ports = Vec::new();
+            for (ctr_spec, bindings) in pb {
+                let (cport, proto) = ctr_spec.split_once('/').unwrap_or((ctr_spec, "tcp"));
+                if let Some(arr) = bindings.as_array() {
+                    for b in arr {
+                        let hport = b.get("HostPort").and_then(|v| v.as_str()).unwrap_or("");
+                        if !hport.is_empty() {
+                            ports.push(format!("{hport}:{cport}/{proto}"));
+                        }
+                    }
+                }
+            }
+            if !ports.is_empty() {
+                annotations.insert("coral.ports".into(), ports.join(","));
+            }
+        }
+        if let Some(rp) = hc.get("RestartPolicy").and_then(|v| v.get("Name")).and_then(|v| v.as_str())
+            && !rp.is_empty()
+            && rp != "no"
+        {
+            annotations.insert("coral.restart".into(), rp.to_string());
+        }
+        if let Some(lc) = hc.get("LogConfig").and_then(|v| v.get("Type")).and_then(|v| v.as_str())
+            && !lc.is_empty()
+        {
+            annotations.insert("coral.log.driver".into(), lc.to_string());
+        }
+        if hc.get("DeviceRequests").and_then(|v| v.as_array()).is_some_and(|a| !a.is_empty()) {
+            annotations.insert("coral.gpus".into(), "all".into());
+        }
     }
 
     let pod_resp = match svc
@@ -176,13 +210,19 @@ pub(super) async fn handle_create_container(
         }))
         .await
     {
-        Ok(r) => HttpResponse::json(
-            "201 Created",
-            &json!({
-                "Id": r.into_inner().container_id,
-                "Warnings": []
-            }),
-        ),
+        Ok(r) => {
+            let cid = r.into_inner().container_id;
+            compat
+                .record_event("container", "create", &cid, json!({}))
+                .await;
+            HttpResponse::json(
+                "201 Created",
+                &json!({
+                    "Id": cid,
+                    "Warnings": []
+                }),
+            )
+        }
         Err(e) => {
             let _ = svc
                 .remove_pod_sandbox(Request::new(RemovePodSandboxRequest {
@@ -196,8 +236,10 @@ pub(super) async fn handle_create_container(
 
 pub(super) async fn handle_container_action(
     svc: &CoralDaemonService,
+    compat: &DockerCompatState,
     method: &str,
     subpath: &str,
+    body: &[u8],
 ) -> HttpResponse {
     let (id_raw, action) = subpath.split_once('/').unwrap_or((subpath, ""));
     let id = id_raw.trim_matches('/');
@@ -208,7 +250,10 @@ pub(super) async fn handle_container_action(
             }))
             .await
         {
-            Ok(_) => HttpResponse::empty("204 No Content"),
+            Ok(_) => {
+                compat.record_event("container", "start", id, json!({})).await;
+                HttpResponse::empty("204 No Content")
+            }
             Err(e) => HttpResponse::json("404 Not Found", &json!({ "message": e.message() })),
         },
         ("POST", "stop") | ("POST", "kill") => match svc
@@ -218,9 +263,14 @@ pub(super) async fn handle_container_action(
             }))
             .await
         {
-            Ok(_) => HttpResponse::empty("204 No Content"),
+            Ok(_) => {
+                compat.record_event("container", "stop", id, json!({})).await;
+                HttpResponse::empty("204 No Content")
+            }
             Err(e) => HttpResponse::json("404 Not Found", &json!({ "message": e.message() })),
         },
+        ("POST", "exec") => handle_exec_create(svc, compat, id, body).await,
+        ("POST", "wait") => handle_container_wait(svc, id).await,
         ("DELETE", "") => {
             let pod_id = {
                 let store = svc.store.read().await;
@@ -248,6 +298,7 @@ pub(super) async fn handle_container_action(
                             }))
                             .await;
                     }
+                    compat.record_event("container", "destroy", id, json!({})).await;
                     HttpResponse::empty("204 No Content")
                 }
                 Err(e) => HttpResponse::json("404 Not Found", &json!({ "message": e.message() })),
