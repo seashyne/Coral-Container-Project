@@ -2,10 +2,43 @@ use coral_oci::{ContainerState, ContainerStatus, validate_container_id};
 use nix::sys::signal::kill;
 use nix::unistd::Pid;
 use std::fs;
-use std::io;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::RuntimeError;
+
+/// Counter that makes every temporary state file name unique.
+static TMP_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+/// Builds a temporary file path that no other writer will use.
+///
+/// The name carries the process id and a monotonic counter. Two processes can
+/// write the same container's state at the same time — the daemon records the
+/// spawn result while the forked container supervisor records the exit status
+/// — and a shared name would let one of them rename the file away before the
+/// other renames it, which fails with `ENOENT`.
+fn unique_temp_path(dir: &Path) -> PathBuf {
+    let seq = TMP_COUNTER.fetch_add(1, Ordering::Relaxed);
+    dir.join(format!("state.json.tmp.{}.{seq}", std::process::id()))
+}
+
+/// Moves the freshly written temporary file over the real state file.
+///
+/// A container that is removed while its state is being written takes its
+/// state directory with it, and the rename then fails with `ENOENT`. There is
+/// nothing left to persist in that case, so the save succeeds instead of
+/// failing the whole container operation.
+fn commit_state_file(dir: &Path, tmp: &Path, target: &Path) -> Result<(), RuntimeError> {
+    match fs::rename(tmp, target) {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == io::ErrorKind::NotFound && !dir.exists() => Ok(()),
+        Err(e) => {
+            let _ = fs::remove_file(tmp);
+            Err(RuntimeError::sys("rename state.json", e))
+        }
+    }
+}
 
 /// Resolves the default Coral container state root directory.
 /// - Root (`euid == 0`): `/run/coral`
@@ -66,20 +99,45 @@ impl StateStore {
     }
 
     /// Atomically persists `state.json` via write-to-temp + rename.
+    ///
+    /// The temporary file name is unique per write, so concurrent writers of
+    /// the same container never race for the same file. The content is flushed
+    /// to disk before the rename, so the file that becomes visible is never a
+    /// partially written one.
+    ///
+    /// If the container's state directory disappears while the write is in
+    /// flight the container was removed concurrently. There is then nothing
+    /// left to persist, so the save succeeds instead of failing the whole
+    /// container operation.
     pub fn save(&self, state: &ContainerState) -> Result<(), RuntimeError> {
         validate_container_id(&state.id)?;
         let dir = self.container_dir(&state.id);
         fs::create_dir_all(&dir)
             .map_err(|e| RuntimeError::sys("ensure container state dir", e))?;
 
-        let tmp = dir.join("state.json.tmp");
         let target = self.state_file(&state.id);
         let json = serde_json::to_string_pretty(state)
             .map_err(|e| RuntimeError::InitFailed(format!("serialize state.json: {e}")))?;
 
-        fs::write(&tmp, format!("{json}\n"))
-            .map_err(|e| RuntimeError::sys("write temporary state.json", e))?;
-        fs::rename(&tmp, &target).map_err(|e| RuntimeError::sys("rename state.json", e))?;
+        let tmp = unique_temp_path(&dir);
+        let write_result = (|| -> io::Result<()> {
+            let mut file = fs::File::create(&tmp)?;
+            file.write_all(format!("{json}\n").as_bytes())?;
+            file.sync_all()?;
+            Ok(())
+        })();
+        if let Err(e) = write_result {
+            let _ = fs::remove_file(&tmp);
+            return Err(RuntimeError::sys("write temporary state.json", e));
+        }
+
+        commit_state_file(&dir, &tmp, &target)?;
+
+        // Best effort: make the rename itself durable. A failure here does not
+        // invalidate the state that was just written.
+        if let Ok(dir_handle) = fs::File::open(&dir) {
+            let _ = dir_handle.sync_all();
+        }
         Ok(())
     }
 
@@ -189,5 +247,106 @@ mod tests {
 
         store.remove("c1").unwrap();
         assert!(matches!(store.load("c1"), Err(RuntimeError::NotFound(_))));
+    }
+
+    /// Regression test: two writers of the same container's state must not
+    /// race for the same temporary file.
+    ///
+    /// The daemon records the spawn result while the forked container
+    /// supervisor records the exit status. Both wrote through a shared
+    /// `state.json.tmp`, so whichever renamed first left the other with
+    /// `rename state.json: No such file or directory`.
+    #[test]
+    fn save_survives_concurrent_writers_of_the_same_container() {
+        let dir = tempdir().unwrap();
+        let store = StateStore::new(dir.path());
+
+        let base = ContainerState::new("c1", PathBuf::from("/tmp/bundle"), BTreeMap::new());
+        store.init_container(&base).unwrap();
+
+        let mut handles = Vec::new();
+        for worker in 0..8 {
+            let worker_store = store.clone();
+            let worker_base = base.clone();
+            handles.push(std::thread::spawn(move || {
+                for round in 0..25 {
+                    let mut state = worker_base.clone();
+                    state.exit_code = Some(worker * 100 + round);
+                    state.status = ContainerStatus::Stopped;
+                    worker_store.save(&state).unwrap_or_else(|e| {
+                        panic!("concurrent save failed on worker {worker} round {round}: {e}")
+                    });
+                }
+            }));
+        }
+        for handle in handles {
+            handle.join().unwrap();
+        }
+
+        // The file that survived must still be complete and parseable.
+        let loaded = store.load("c1").unwrap();
+        assert_eq!(loaded.status, ContainerStatus::Stopped);
+        assert!(loaded.exit_code.is_some());
+    }
+
+    /// A save must not leave temporary files behind.
+    #[test]
+    fn save_leaves_no_temporary_files_behind() {
+        let dir = tempdir().unwrap();
+        let store = StateStore::new(dir.path());
+
+        let state = ContainerState::new("c1", PathBuf::from("/tmp/bundle"), BTreeMap::new());
+        store.init_container(&state).unwrap();
+        store.save(&state).unwrap();
+
+        let leftovers: Vec<_> = fs::read_dir(store.container_dir("c1"))
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .filter(|name| name.starts_with("state.json.tmp"))
+            .collect();
+        assert!(leftovers.is_empty(), "leftover temp files: {leftovers:?}");
+    }
+
+    /// Every temporary file name must be distinct, even within one process.
+    #[test]
+    fn temporary_state_paths_are_unique() {
+        let dir = tempdir().unwrap();
+        let first = unique_temp_path(dir.path());
+        let second = unique_temp_path(dir.path());
+        assert_ne!(first, second);
+        assert_eq!(first.parent(), Some(dir.path()));
+    }
+
+    /// A container removed while its state is being written must not fail the
+    /// whole operation: there is simply nothing left to persist.
+    #[test]
+    fn commit_tolerates_a_container_removed_mid_write() {
+        let dir = tempdir().unwrap();
+        let container_dir = dir.path().join("c1");
+        let tmp = container_dir.join("state.json.tmp.1.0");
+        let target = container_dir.join("state.json");
+
+        // The container directory is gone before the rename happens, which is
+        // exactly what the daemon does when it deletes a container while the
+        // container supervisor is still recording the exit status.
+        commit_state_file(&container_dir, &tmp, &target)
+            .expect("a concurrently removed container must not fail the save");
+    }
+
+    /// A rename that fails for any other reason must still surface the error.
+    #[test]
+    fn commit_reports_other_rename_failures() {
+        let dir = tempdir().unwrap();
+        let container_dir = dir.path().join("c1");
+        fs::create_dir_all(&container_dir).unwrap();
+        let tmp = container_dir.join("state.json.tmp.1.0");
+        let target = container_dir.join("state.json");
+
+        // The temporary file does not exist, and the container directory does,
+        // so this is a genuine failure rather than a concurrent removal.
+        let err = commit_state_file(&container_dir, &tmp, &target)
+            .expect_err("a missing temporary file must be reported");
+        assert!(matches!(err, RuntimeError::Sys { .. }));
     }
 }

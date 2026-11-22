@@ -265,7 +265,7 @@ window.CORAL_I18N_EN = {
   "report.bl9Finding":
     "The second measurement round saw 2 failures in ~300 CRI daemon runs with `rename state.json: No such file or directory`, triggered while the daemon handles several containers at once.",
   "report.bl9Action":
-    "Make the state.json write atomic (write a temporary file, then rename) and recover from a failed rename by loading the latest state from the journal instead of failing the whole command.",
+    "Use a unique temporary file name per write, fsync before the rename, and treat a concurrently removed container as a non-error — with six regression tests (done in this round).",
   "report.stOpen": "Open",
   "report.stDone": "Fixed in this round",
   "report.reportBtn": "Read Full Engineering Report (REPORT_v2.3.md)",

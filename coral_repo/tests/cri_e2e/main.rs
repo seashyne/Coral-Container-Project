@@ -14,6 +14,7 @@ mod wasm_oci_workload;
 mod kubelet_cni;
 mod kubernetes_socket;
 mod udp_portforward_compose;
+mod state_file_atomicity;
 
 use coral_api::image_service_client::ImageServiceClient;
 use coral_api::image_service_server::ImageServiceServer;

@@ -265,7 +265,7 @@ window.CORAL_I18N_TH = {
   "report.bl9Finding":
     "รอบวัดรอบที่สองพบความล้มเหลว 2 ครั้งจาก ~300 runs ของ CRI daemon ด้วยข้อความ rename state.json: No such file or directory เกิดเมื่อ daemon จัดการ container หลายตัวพร้อมกัน",
   "report.bl9Action":
-    "ทำให้การเขียน state.json เป็น atomic (เขียนไฟล์ชั่วคราวแล้ว rename) และจัดการกรณี rename ล้มเหลวด้วยการโหลด state ล่าสุดจาก journal แทนการล้มทั้งคำสั่ง",
+    "ใช้ชื่อไฟล์ชั่วคราวที่ไม่ซ้ำกันต่อการเขียน พร้อม fsync ก่อน rename และถือว่าการลบ container พร้อมกันเป็นเคสไม่ผิดพลาด พร้อม regression test 6 เคส (ทำในรอบนี้)",
   "report.stOpen": "ยังค้าง",
   "report.stDone": "แก้แล้วในรอบนี้",
   "report.reportBtn": "อ่านรายงานสรุปฉบับเต็ม (REPORT_v2.3.md)",
