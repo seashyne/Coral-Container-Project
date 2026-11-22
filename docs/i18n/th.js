@@ -255,7 +255,7 @@ window.CORAL_I18N_TH = {
   "report.bl7Finding":
     "รอบ system-wide วัดเฉพาะ alpine:3.20 ขณะที่รอบแรกยังครอบคลุม debian:bookworm-slim และ busybox:musl",
   "report.bl7Action":
-    "เพิ่ม distro matrix ใน benchmark.sh และรันรอบ system-wide ด้วย PULL_EXTRA=1",
+    "เพิ่ม distro matrix ใน benchmark.sh และรันรอบควบคุมสภาพแวดล้อมด้วย PULL_EXTRA=1 จนครอบคลุม alpine, busybox และ debian พร้อมกัน (ทำในรอบนี้)",
   "report.bl8Area": "ARM64 ไม่เคยผ่าน E2E จริง",
   "report.bl8Finding":
     "CI สร้าง ARM64 artifact แต่ไม่รันชุดทดสอบ และ coral-vmm ไม่ผ่านการ compile บน ARM เลย เพราะ import และ cfg gate ไม่สอดคล้องกัน",
