@@ -2,7 +2,7 @@
   <img src="docs/assets/coral-icon.png" alt="Coral Container Project Logo" width="88" />
 </p>
 
-<h1 align="center">Coral Container Project (<code>v2.6.0</code>)</h1>
+<h1 align="center">Coral Container Project (<code>v2.7.0</code>)</h1>
 
 **Coral** is a next-generation, memory-safe container runtime written in **Rust (Edition 2024)** — uniting a rootless-first **OCI v1.0.2** Linux container engine (with Multi-UID `subuid`/`subgid`, `--device`, and `--gpus`), **Kubernetes CRI v1 gRPC** daemon + **Docker Engine REST API (`docker.sock`) compatibility shim**, **Embedded UDP DNS**, **BuildKit-style Dockerfile** (`RUN <<EOF`, `--mount=type=cache|secret`), **Shared Content-Addressable Layer Cache + Parallel Pull**, **WASI Serverless HTTP WebAssembly** runtime (`coral-wasm`), pure-Rust Linux **`/dev/kvm` Separate-Kernel MicroVM with VirtIO-Blk & VirtIO-Net** (`coral-vmm`, Zero QEMU/Firecracker), **Prometheus `/metrics`**, **Ed25519 Image Signing + SPDX 2.3 SBOM**, multi-arch **x86_64 & ARM64**, and the redesigned **Coral Desktop** GUI (Linux / Windows / macOS `.dmg`).
 
@@ -16,7 +16,7 @@
 
 ---
 
-## Highlights (`v2.6.0`)
+## Highlights (`v2.7.0`)
 
 - **Streaming `docker.sock` Engine API (`Upgrade: tcp` Hijack, Chunked Logs/Events, `/archive`, `/build`)**: Full HTTP/1.1 `101 UPGRADED` hijack for `/exec/{id}/start`, chunked live `logs?follow=1` & broadcast `/events`, `PUT/GET /containers/{id}/archive` tar copy (Testcontainers), `POST /build` tar build API, plus `/pause`, `/unpause`, `/rename`, and `/update`.
 - **Rootless L2/L3 Virtual Switch (`10.89.x.0/24`) + In-Subnet Gateway & DNS (`10.89.x.1:53`)**: Pure-Rust `RootlessVSwitch` connects isolated `CLONE_NEWUSER | CLONE_NEWNET` containers on private `10.89.x.Y` IPs without root or `-p`, with a built-in `10.89.x.1` gateway answering ARP, ICMP Echo, and RFC 1035 UDP DNS (`10.89.x.1:53`).
@@ -172,12 +172,12 @@ curl -fsSL https://seashyne.github.io/Coral-Container-Project/install.sh | bash
 
 ### Debian / Ubuntu `.deb`
 
-Download the package matching your architecture — `coral-runtime_2.6.0_amd64.deb` (x86_64) or
-`coral-runtime_2.6.0_arm64.deb` (arm64) — and the `Coral Desktop` installer from
+Download the package matching your architecture — `coral-runtime_2.7.0_amd64.deb` (x86_64) or
+`coral-runtime_2.7.0_arm64.deb` (arm64) — and the `Coral Desktop` installer from
 [Releases](https://github.com/seashyne/Coral-Container-Project/releases/latest), then run:
 
 ```bash
-sudo dpkg -i coral-runtime_2.6.0_amd64.deb    # or ..._arm64.deb
+sudo dpkg -i coral-runtime_2.7.0_amd64.deb    # or ..._arm64.deb
 systemctl --user enable --now coral-daemon.service
 coral version
 ```

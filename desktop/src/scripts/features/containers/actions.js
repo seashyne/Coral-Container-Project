@@ -18,6 +18,36 @@ async function containerAction(act, id) {
       await loadContainers(false);
       updateChrome();
     });
+  } else if (act === "pause" || act === "unpause") {
+    await guard(async () => {
+      await invoke(act === "pause" ? "pause_container" : "unpause_container", { id });
+      toast(act === "pause" ? "Container paused" : "Container resumed");
+      await loadContainers(false);
+      updateChrome();
+    });
+  } else if (act === "rename") {
+    const cur = state.containers.find((r) => r.id === id)?.name || "";
+    const newName = window.prompt("New container name:", cur);
+    if (!newName || !newName.trim() || newName.trim() === cur) return;
+    await guard(async () => {
+      await invoke("rename_container", { id, newName: newName.trim() });
+      toast(`Renamed container to ${newName.trim()}`);
+      await loadContainers(false);
+      updateChrome();
+    });
+  } else if (act === "update") {
+    const memRaw = window.prompt("New Memory limit in MB (leave blank to keep):", "");
+    if (memRaw === null) return;
+    const cpuRaw = window.prompt("New CPU % limit (e.g. 50 = 0.5 cores, leave blank to keep):", "");
+    if (cpuRaw === null) return;
+    const memoryMb = Number(memRaw) > 0 ? Math.round(Number(memRaw)) : null;
+    const cpuPercent = Number(cpuRaw) > 0 ? Math.round(Number(cpuRaw)) : null;
+    if (!memoryMb && !cpuPercent) return;
+    await guard(async () => {
+      await invoke("update_container", { id, memoryMb, cpuPercent, pidsLimit: null });
+      toast("Updated container resource limits live");
+      await loadContainers(false);
+    });
   } else if (act === "remove") {
     await guard(async () => {
       await invoke("remove_container", { id });
@@ -90,9 +120,16 @@ function openRowMenu(btn, id) {
     <button type="button" data-menu-act="metrics">${ICONS.sliders}<span>${esc(t("containers.menuMetrics"))}</span></button>
     ${
       c.state === "running"
-        ? `<button type="button" data-menu-act="stop">${ICONS.square}<span>${esc(t("containers.stopContainer"))}</span></button>`
+        ? `${
+            c.paused
+              ? `<button type="button" data-menu-act="unpause">${ICONS.play}<span>Resume (Unpause)</span></button>`
+              : `<button type="button" data-menu-act="pause">${ICONS.sliders}<span>Pause (Freeze)</span></button>`
+          }
+          <button type="button" data-menu-act="stop">${ICONS.square}<span>${esc(t("containers.stopContainer"))}</span></button>`
         : `<button type="button" data-menu-act="start">${ICONS.play}<span>${esc(t("containers.startContainer"))}</span></button>`
     }
+    <button type="button" data-menu-act="rename">${ICONS.sliders}<span>Rename</span></button>
+    <button type="button" data-menu-act="update">${ICONS.sliders}<span>Update Limits</span></button>
     <div class="sep"></div>
     <button type="button" class="danger" data-menu-act="remove">${ICONS.trash}<span>${esc(t("containers.removeContainer"))}</span></button>`;
   menu.classList.remove("hidden");

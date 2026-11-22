@@ -208,7 +208,7 @@ function renderInstalledImages(rows) {
     </div>`;
 }
 
-async function pullOciImage(ref) {
+async function pullOciImage(ref, platform = null) {
   const imageRef = ref.trim();
   if (!imageRef) return;
   if (!state.connected) {
@@ -216,13 +216,11 @@ async function pullOciImage(ref) {
     return;
   }
   if (state.pulling.has(imageRef)) return;
-
   state.pulling.add(imageRef);
   updatePullStatusBanner();
   renderBaseCatalog();
-
   try {
-    await invoke("pull_image", { name: imageRef, rootfs: null });
+    await invoke("pull_image", { name: imageRef, rootfs: null, platform });
     toast(
       imageRef === "scratch"
         ? t("toast.pulledScratch")
@@ -284,6 +282,7 @@ async function buildDockerfileImage(e) {
   const dockerfile = $("build-dockerfile").value;
   const contextDir = $("build-context").value.trim() || null;
   const noCache = Boolean($("build-no-cache")?.checked);
+  const platform = $("build-platform")?.value.trim() || null;
   if (!name || !dockerfile.trim()) {
     toast("Provide both an image tag and Dockerfile instructions", true);
     return;
@@ -291,7 +290,7 @@ async function buildDockerfileImage(e) {
   $("build-submit").disabled = true;
   try {
     await guard(async () => {
-      await invoke("build_image", { name, dockerfile, contextDir, noCache });
+      await invoke("build_image", { name, dockerfile, contextDir, noCache, platform });
       toast(t("toast.builtImage", { name }));
       $("build-tag").value = "";
       closeDialog("image-dialog");

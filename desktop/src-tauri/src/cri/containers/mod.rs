@@ -7,8 +7,9 @@ pub use run::*;
 
 use super::{AppState, container_state_name, err};
 use coral_api::{
-    ContainerStatusRequest, ExecSyncRequest, ListContainersRequest, RemoveContainerRequest,
-    RemovePodSandboxRequest, StartContainerRequest, StopContainerRequest, StopPodSandboxRequest,
+    ContainerStatusRequest, ExecSyncRequest, ListContainersRequest, PodSandboxConfig,
+    RemoveContainerRequest, RemovePodSandboxRequest, RunPodSandboxRequest, StartContainerRequest,
+    StopContainerRequest, StopPodSandboxRequest,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -22,6 +23,8 @@ pub struct ContainerRow {
     pub image: String,
     pub image_ref: String,
     pub state: String,
+    pub paused: bool,
+    pub ip: String,
     pub health: String,
     pub created_at: i64,
     pub pod_id: String,
@@ -45,6 +48,15 @@ pub async fn list_containers(state: State<'_, AppState>) -> Result<Vec<Container
                 .get("coral.health.status")
                 .cloned()
                 .unwrap_or_default();
+            let paused = c
+                .labels
+                .get("coral.paused")
+                .is_some_and(|v| v == "true" || v == "1");
+            let ip = c
+                .labels
+                .get("coral.network.ip")
+                .cloned()
+                .unwrap_or_default();
             ContainerRow {
                 name: c
                     .metadata
@@ -58,6 +70,8 @@ pub async fn list_containers(state: State<'_, AppState>) -> Result<Vec<Container
                     .unwrap_or_default(),
                 image_ref: c.image_ref,
                 state: container_state_name(c.state).into(),
+                paused,
+                ip,
                 health,
                 created_at: c.created_at,
                 pod_id: c.pod_sandbox_id,
@@ -264,4 +278,97 @@ pub async fn exec_container(
         stderr: String::from_utf8_lossy(&resp.stderr).into_owned(),
         exit_code: resp.exit_code,
     })
+}
+
+async fn run_container_system_action(
+    state: &State<'_, AppState>,
+    action: &str,
+    mut annotations: HashMap<String, String>,
+) -> Result<String, String> {
+    annotations.insert("coral.system.action".into(), action.to_string());
+    let resp = state
+        .runtime()
+        .await?
+        .run_pod_sandbox(RunPodSandboxRequest {
+            config: Some(PodSandboxConfig {
+                metadata: None,
+                hostname: String::new(),
+                log_directory: String::new(),
+                labels: HashMap::new(),
+                annotations,
+            }),
+            runtime_handler: "coral".into(),
+        })
+        .await
+        .map_err(err)?
+        .into_inner();
+    Ok(resp.pod_sandbox_id)
+}
+
+#[tauri::command]
+pub async fn pause_container(state: State<'_, AppState>, id: String) -> Result<String, String> {
+    run_container_system_action(
+        &state,
+        "container_pause",
+        HashMap::from([("coral.container.id".into(), id)]),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn unpause_container(state: State<'_, AppState>, id: String) -> Result<String, String> {
+    run_container_system_action(
+        &state,
+        "container_unpause",
+        HashMap::from([("coral.container.id".into(), id)]),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn rename_container(
+    state: State<'_, AppState>,
+    id: String,
+    new_name: String,
+) -> Result<String, String> {
+    run_container_system_action(
+        &state,
+        "container_rename",
+        HashMap::from([
+            ("coral.container.id".into(), id),
+            ("coral.container.new_name".into(), new_name),
+        ]),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn update_container(
+    state: State<'_, AppState>,
+    id: String,
+    memory_mb: Option<i64>,
+    cpu_percent: Option<i64>,
+    pids_limit: Option<i64>,
+) -> Result<String, String> {
+    let mut map = HashMap::from([("coral.container.id".into(), id)]);
+    if let Some(mb) = memory_mb
+        && mb > 0
+    {
+        map.insert(
+            "coral.update.memory_bytes".into(),
+            (mb * 1024 * 1024).to_string(),
+        );
+    }
+    if let Some(cpu) = cpu_percent
+        && cpu > 0
+    {
+        map.insert("coral.update.cpu_quota".into(), (cpu * 1_000).to_string());
+        map.insert("coral.update.cpu_period".into(), "100000".into());
+    }
+    if let Some(pids) = pids_limit
+        && pids > 0
+    {
+        map.insert("coral.update.pids_limit".into(), pids.to_string());
+    }
+    run_container_system_action(&state, "container_update", map).await
 }

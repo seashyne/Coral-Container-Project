@@ -1,6 +1,6 @@
       <!-- 5. Platform Integration Features (v2.4) -->
       <section id="features" class="doc-section" tabindex="-1">
-        <h2 data-i18n="feat2.title">ฟีเจอร์เชิงแพลตฟอร์มระหว่างระบบ (v2.6.0)</h2>
+        <h2 data-i18n="feat2.title">ฟีเจอร์เชิงแพลตฟอร์มระหว่างระบบ (v2.7.0)</h2>
         <p class="section-lead" data-i18n="feat2.lead"></p>
 
         <div class="cards-grid">
@@ -49,28 +49,28 @@
             </thead>
             <tbody>
               <tr>
-                <th scope="row" data-i18n="feat2.rowCache">แคช layer ตาม digest</th>
-                <td><code class="inline">coral pull alpine:3.20</code> — layer ที่เคยดึงแล้วถูกใช้ซ้ำจาก <code class="inline">.layer-cache/sha256/</code></td>
+                <th scope="row" data-i18n="feat2.rowCache">Zero-copy shared layer store</th>
+                <td><code class="inline">coral pull --platform linux/arm64 alpine:3.20</code> — แชร์ inode จาก <code class="inline">.layers/sha256/</code> และส่ง multi-lowerdir OverlayFS อัตโนมัติ</td>
               </tr>
               <tr>
-                <th scope="row" data-i18n="feat2.rowDns">ค้นหาชื่อบริการในเครือข่าย</th>
-                <td><code class="inline">coral run --network app-net --network-alias db ...</code> — resolve ได้ทั้ง <code class="inline">db</code> และ <code class="inline">db.coral.local</code></td>
+                <th scope="row" data-i18n="feat2.rowDns">Rootless L2/L3 vswitch &amp; DNS</th>
+                <td><code class="inline">coral network create app-net &amp;&amp; coral run --network app-net --network-alias db ...</code> — แจก IP <code class="inline">10.89.x.Y</code> + Gateway DNS <code class="inline">10.89.x.1:53</code> &amp; NAT</td>
               </tr>
               <tr>
-                <th scope="row" data-i18n="feat2.rowBuildkit">BuildKit heredoc &amp; mount</th>
-                <td><code class="inline">RUN --mount=type=cache,target=/root/.cache/pip ...</code> — รองรับ <code class="inline">type=cache</code>, <code class="inline">type=secret</code> และ <code class="inline">type=tmpfs</code></td>
+                <th scope="row" data-i18n="feat2.rowBuildkit">Multi-arch Buildx &amp; .dockerignore</th>
+                <td><code class="inline">coral build -t ghcr.io/me/app:v1 --platform linux/amd64,linux/arm64 --push .</code> — Parallel DAG + <code class="inline">.dockerignore</code> + <code class="inline">--mount=type=cache|secret|bind|ssh</code></td>
               </tr>
               <tr>
-                <th scope="row" data-i18n="feat2.rowDocker">Docker Engine API</th>
-                <td><code class="inline">DOCKER_HOST=unix:///run/coral/docker.sock docker ps</code> — ใช้กับ Docker CLI, Testcontainers, Traefik และ Portainer ได้</td>
+                <th scope="row" data-i18n="feat2.rowDocker">Streaming Docker Engine API</th>
+                <td><code class="inline">DOCKER_HOST=unix://~/.local/state/coral/daemon/docker.sock docker ps</code> — รองรับ <code class="inline">Upgrade: tcp</code>, chunked logs/events, <code class="inline">/archive</code>, <code class="inline">/build</code></td>
               </tr>
               <tr>
-                <th scope="row" data-i18n="feat2.rowGpu">GPU และอุปกรณ์</th>
-                <td><code class="inline">coral run --gpus all --device /dev/video0:/dev/video0:ro ...</code> — รองรับ NVIDIA, AMD ROCm และ DRM</td>
+                <th scope="row" data-i18n="feat2.rowGpu">NVIDIA CDI / .so และอุปกรณ์</th>
+                <td><code class="inline">coral run --gpus nvidia.com/gpu=all --device /dev/video0:/dev/video0:ro ...</code> — CNCF CDI + ฉีด <code class="inline">libcuda.so*</code> / <code class="inline">nvidia-smi</code> อัตโนมัติ</td>
               </tr>
               <tr>
-                <th scope="row" data-i18n="feat2.rowAlias">Alias และ log driver</th>
-                <td><code class="inline">--network-alias</code> และ <code class="inline">--log-driver</code> — รองรับ <code class="inline">raw</code>, <code class="inline">json-file</code>, <code class="inline">syslog</code> และ <code class="inline">journald</code></td>
+                <th scope="row" data-i18n="feat2.rowAlias">Live controls, Compose v2 &amp; Machine</th>
+                <td><code class="inline">coral pause/unpause/rename/update</code>, <code class="inline">coral compose up --scale web=3</code>, <code class="inline">coral compose watch</code>, <code class="inline">coral machine init</code></td>
               </tr>
             </tbody>
           </table>

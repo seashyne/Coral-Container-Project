@@ -8,6 +8,7 @@ pub mod netns;
 pub mod networks;
 pub mod vswitch;
 pub mod vswitch_gw;
+pub mod vswitch_nat;
 pub mod vswitch_tap;
 
 use std::io;

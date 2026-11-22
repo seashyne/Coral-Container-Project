@@ -1,39 +1,39 @@
 /**
  * Coral Container Project — Thai (th) dictionary, part 2
- * * * Platform integration features introduced in v2.6.0.
+ * * * Platform integration & deep Docker-parity features through v2.7.0.
  * * * Loaded before i18n.js, which merges this into window.CORAL_I18N.
  */
 window.CORAL_I18N_TH_FEATURES = {
   "nav.features": "ฟีเจอร์เชิงแพลตฟอร์ม",
-  "feat2.title": "ฟีเจอร์เชิงแพลตฟอร์มระหว่างระบบ (v2.6.0)",
+  "feat2.title": "ฟีเจอร์เชิงแพลตฟอร์มระดับลึก (v2.7.0)",
   "feat2.lead":
-    "ห้าความสามารถใหม่ที่เพิ่มเข้ามาใน v2.6.0 เขียนด้วย Rust ล้วน ไม่ต้องติดตั้ง daemon ภายนอกเพิ่ม และมี E2E test ครอบคลุม",
-  "feat2.cache.title": "Content-Addressable Layer Cache",
+    "ความสามารถระดับ Production ครบชุดใน v2.7.0 เขียนด้วย Rust ล้วน ไม่ต้องติดตั้ง daemon ภายนอก และมีชุด unit/E2E test ครอบคลุมทุกข้อ",
+  "feat2.cache.title": "Zero-Copy Shared Layer Store & Cache",
   "feat2.cache.desc":
-    "coral pull ไม่ดาวน์โหลด layer ที่เคยมีอยู่แล้วอีก ทุก blob ถูกตรวจสอบ SHA-256 ตอนดาวน์โหลดและตอนอ่านจากแคช (ไฟล์ที่เสียจะถูกลบอัตโนมัติ) ย้ายเข้าแคชแบบ atomic ผ่าน rename และดาวน์โหลดขนานสูงสุด 4 ชั้นก่อนประกอบกลับตามลำดับ manifest",
-  "feat2.dns.title": "Embedded DNS Service Discovery",
+    "coral pull แคชไฟล์บีบอัดใน .layer-cache/sha256/ (โหลดขนาน 4 สตรีม + ตรวจ SHA-256 สองชั้น) และแตกแต่ละ layer เพียงครั้งเดียวลง .layers/sha256/ แล้วแชร์พื้นที่ข้ามอิมเมจด้วย zero-copy hardlink พร้อม multi-lowerdir OverlayFS",
+  "feat2.dns.title": "Rootless L2/L3 Virtual Switch, NAT & DNS",
   "feat2.dns.desc":
-    "daemon รันเซิร์ฟเวอร์ DNS ตาม RFC 1035 บน UDP ไว้ภายในตัวเอง ลงทะเบียนชื่อคอนเทนเนอร์ ชื่อ service ของ Compose และ --network-alias ให้ resolve ได้ทั้งชื่อธรรมดาและ *.coral.local พร้อมเขียน /etc/hosts และอัปเดตคอนเทนเนอร์ที่รันอยู่แบบ in-place ให้ resolve ได้ทั้งสองทาง",
-  "feat2.buildkit.title": "BuildKit Dockerfile Extensions",
+    "เครือข่าย custom รัน Pure-Rust RootlessVSwitch ผ่าน /dev/net/tun (IFF_TAP) แบบไร้ root แจก IP ส่วนตัวจริง 10.89.x.Y ข้าม netns คุยกันทุกพอร์ตโดยไม่ต้องใช้ -p พร้อม gateway 10.89.x.1 ที่ตอบ ARP, ICMP, UDP DNS (10.89.x.1:53) และ Userspace UDP/TCP NAT ในตัว",
+  "feat2.buildkit.title": "BuildKit/Buildx Pro & Parallel Multi-Stage DAG",
   "feat2.buildkit.desc":
-    "coral build รองรับ heredoc (RUN <<EOF), RUN --mount=type=cache สำหรับแคชฝั่ง host, type=secret ที่ mount แบบ read-only จาก build context และ type=tmpfs พร้อมคำสั่ง metadata ของ image ได้แก่ EXPOSE, VOLUME, SHELL, HEALTHCHECK และ ONBUILD รวมถึง Multi-stage COPY --from=<stage|index|image>",
-  "feat2.dockersock.title": "docker.sock — Docker Engine API",
+    "รองรับ .dockerignore, RUN <<EOF, RUN --mount=type=cache|secret|tmpfs|bind|ssh, รัน multi-stage อิสระแบบขนาน (parallel topological waves + ตัด dead stage), --platform + ตรวจ QEMU binfmt, --cache-from และ push Multi-Arch OCI Image Index (--platform linux/amd64,linux/arm64 --push)",
+  "feat2.dockersock.title": "Streaming docker.sock Engine API",
   "feat2.dockersock.desc":
-    "coral-daemon เปิด Docker Engine REST API (/v1.24 ถึง /v1.47) บน Unix socket (ค่าเริ่มต้น <state_dir>/docker.sock โหมด 0660 — เมื่อรันผ่าน systemd unit ของแพ็กเกจจะอยู่ที่ ~/.local/state/coral/daemon/docker.sock) และบน TCP ทำให้ Docker CLI, Testcontainers, Traefik และ Portainer สั่งงาน Coral ได้ผ่าน DOCKER_HOST=unix:// โดยไม่ต้องแก้โค้ดใด ๆ",
-  "feat2.gpu.title": "GPU & Device Passthrough",
+    "เปิด Docker Engine REST API (/v1.24–/v1.47) บน Unix socket และ TCP รองรับ HTTP 101 UPGRADED hijack สำหรับ /exec/{id}/start, chunked live logs?follow=1 & /events broadcast, PUT/GET /containers/{id}/archive, POST /build, /networks, /volumes และ /pause, /rename, /update",
+  "feat2.gpu.title": "NVIDIA CDI/.so Injection, Compose v2 & Live Controls",
   "feat2.gpu.desc":
-    "ส่งผ่านอุปกรณ์เข้าคอนเทนเนอร์ด้วย --device แบบ Docker-compatible และค้นพบ GPU อัตโนมัติทั้ง NVIDIA, AMD ROCm (/dev/kfd) และ DRM (/dev/dri) พร้อมตัวเลือก --network-alias และ --log-driver (raw, json-file, syslog, journald)",
+    "อ่าน CNCF CDI JSON (/etc/cdi/*.json) และ bind-mount ไลบรารีไดรเวอร์โฮสต์ libcuda.so*/nvidia-smi แบบ read-only ร่วมกับ AMD ROCm/DRM พร้อม Compose v2 (secrets, configs, include, --scale/replicas, watch), คำสั่ง live coral pause/unpause/rename/update และ coral machine (Linux/Lima VirtioFS/WSL2)",
   "feat2.usageTitle": "ใช้งานอย่างไร",
-  "feat2.usageLead": "สรุปคำสั่งสำคัญของแต่ละความสามารถ",
-  "feat2.caption": "คำสั่งตัวอย่างสำหรับฟีเจอร์เชิงแพลตฟอร์มใน v2.6.0",
+  "feat2.usageLead": "สรุปคำสั่งสำคัญของแต่ละความสามารถใน v2.7.0",
+  "feat2.caption": "คำสั่งตัวอย่างสำหรับฟีเจอร์เชิงแพลตฟอร์มใน v2.7.0",
   "feat2.colCapability": "ความสามารถ",
   "feat2.colUsage": "วิธีใช้",
-  "feat2.rowCache": "แคช layer ตาม digest",
-  "feat2.rowDns": "ค้นหาชื่อบริการในเครือข่าย",
-  "feat2.rowBuildkit": "BuildKit heredoc และ mount",
-  "feat2.rowDocker": "Docker Engine API",
-  "feat2.rowGpu": "GPU และอุปกรณ์",
-  "feat2.rowAlias": "Alias และ log driver",
+  "feat2.rowCache": "Zero-copy shared layer store",
+  "feat2.rowDns": "Rootless L2/L3 vswitch & DNS",
+  "feat2.rowBuildkit": "Multi-arch Buildx & .dockerignore",
+  "feat2.rowDocker": "Streaming Docker Engine API",
+  "feat2.rowGpu": "NVIDIA CDI / .so และอุปกรณ์",
+  "feat2.rowAlias": "Live controls, Compose v2 & Machine",
   "feat2.composeLead":
-    "คีย์ gpus, devices, log_driver และ aliases ใช้งานได้ในไฟล์ Compose ของ Coral ทั้ง coral-compose.yml และ docker-compose.yml",
+    "ใช้งาน secrets, configs, include, deploy.replicas, gpus, devices, log_driver และ aliases ได้โดยตรงทั้งใน coral-compose.yml และ docker-compose.yml",
 };

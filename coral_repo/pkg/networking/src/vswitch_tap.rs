@@ -250,6 +250,42 @@ unsafe fn configure_if_ipv4(
                 libc::close(ctl);
                 return Err(e);
             }
+            if ifr_flags.ifr_ifru.ifru_flags != 0 {
+                let gw_u32 = (u32::from(ip) & u32::from(netmask)) | 1;
+                let gw_ip = Ipv4Addr::from(gw_u32);
+                let mut rt: libc::rtentry = std::mem::zeroed();
+                let sin_zero = libc::sockaddr_in {
+                    sin_family: libc::AF_INET as libc::sa_family_t,
+                    sin_port: 0,
+                    sin_addr: libc::in_addr { s_addr: 0 },
+                    sin_zero: [0; 8],
+                };
+                let sin_gw = libc::sockaddr_in {
+                    sin_family: libc::AF_INET as libc::sa_family_t,
+                    sin_port: 0,
+                    sin_addr: libc::in_addr {
+                        s_addr: u32::from_ne_bytes(gw_ip.octets()),
+                    },
+                    sin_zero: [0; 8],
+                };
+                std::ptr::copy_nonoverlapping(
+                    (&raw const sin_zero).cast::<u8>(),
+                    (&raw mut rt.rt_dst).cast::<u8>(),
+                    std::mem::size_of::<libc::sockaddr_in>(),
+                );
+                std::ptr::copy_nonoverlapping(
+                    (&raw const sin_zero).cast::<u8>(),
+                    (&raw mut rt.rt_genmask).cast::<u8>(),
+                    std::mem::size_of::<libc::sockaddr_in>(),
+                );
+                std::ptr::copy_nonoverlapping(
+                    (&raw const sin_gw).cast::<u8>(),
+                    (&raw mut rt.rt_gateway).cast::<u8>(),
+                    std::mem::size_of::<libc::sockaddr_in>(),
+                );
+                rt.rt_flags = (libc::RTF_UP | libc::RTF_GATEWAY) as libc::c_ushort;
+                let _ = libc::ioctl(ctl, libc::SIOCADDRT, &raw mut rt);
+            }
         }
         libc::close(ctl);
         Ok(())

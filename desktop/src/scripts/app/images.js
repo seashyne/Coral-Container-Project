@@ -93,12 +93,13 @@ $("discover-pull-form")?.addEventListener("submit", async (e) => {
 $("oci-pull-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const ref = $("oci-image-ref").value.trim();
+  const platform = $("oci-pull-platform")?.value.trim() || null;
   if (!ref) return;
   $("oci-pull-submit").disabled = true;
   closeDialog("image-dialog");
   $("oci-image-ref").value = "";
   try {
-    await pullOciImage(ref);
+    await pullOciImage(ref, platform);
   } finally {
     $("oci-pull-submit").disabled = false;
   }

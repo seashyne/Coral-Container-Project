@@ -132,10 +132,12 @@ function containerRowHtml(c, treeInfo = null) {
   const pillClass = c.state === "running" ? "running" : c.state === "unknown" ? "failed" : "";
   const mono = (c.name || c.id).slice(0, 2).toUpperCase();
   const health = c.health || c.labels?.["coral.health.status"] || "";
+  const pausedHtml = c.paused ? `<span class="health-badge starting">paused</span>` : "";
+  const ipHtml = c.ip ? `<span class="port-chip static mono" title="Rootless Virtual Switch IP">${esc(c.ip)}</span>` : "";
   const healthHtml =
-    health && health !== "none"
+    (health && health !== "none"
       ? `<span class="health-badge ${esc(health)}">${esc(tHealth(health))}</span>`
-      : "";
+      : "") + pausedHtml + ipHtml;
 
   const ports = parseMappedPorts(c.labels?.["coral.ports"]);
   const portsHtml = ports.length

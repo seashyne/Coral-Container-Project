@@ -42,12 +42,18 @@ pub async fn pull_image(
     state: State<'_, AppState>,
     name: String,
     rootfs: Option<String>,
+    platform: Option<String>,
 ) -> Result<String, String> {
     let mut annotations = HashMap::new();
     if let Some(path) = rootfs
         && !path.trim().is_empty()
     {
         annotations.insert("coral.rootfs".into(), path.trim().into());
+    }
+    if let Some(plat) = platform
+        && !plat.trim().is_empty()
+    {
+        annotations.insert("coral.platform".into(), plat.trim().into());
     }
     let resp = state
         .image()
@@ -114,6 +120,7 @@ pub async fn build_image(
     dockerfile: String,
     context_dir: Option<String>,
     no_cache: Option<bool>,
+    platform: Option<String>,
 ) -> Result<String, String> {
     let tag = name.trim().to_string();
     if tag.is_empty() {
@@ -131,6 +138,11 @@ pub async fn build_image(
     }
     if no_cache.unwrap_or(false) {
         annotations.insert("coral.no_cache".into(), "true".into());
+    }
+    if let Some(plat) = platform
+        && !plat.trim().is_empty()
+    {
+        annotations.insert("coral.platform".into(), plat.trim().into());
     }
     let resp = state
         .image()

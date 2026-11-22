@@ -20,6 +20,11 @@
             <label for="oci-image-ref" data-i18n="modal.ociImageRef">OCI Image Reference</label>
             <div class="input-btn">
               <input id="oci-image-ref" class="field mono" type="text" placeholder="e.g. nginx:alpine, redis:alpine, itzg/minecraft-server" required />
+              <select id="oci-pull-platform" class="field mono" style="max-width:140px;" aria-label="Target platform">
+                <option value="">Auto (host)</option>
+                <option value="linux/amd64">linux/amd64</option>
+                <option value="linux/arm64">linux/arm64</option>
+              </select>
               <button id="oci-pull-submit" type="submit" class="btn primary" data-i18n="modal.btnPull">Pull Image</button>
             </div>
             <p class="hint" data-i18n="modal.pullHint">Downloads and caches layers directly on the Coral daemon host without requiring Docker daemon.</p>
@@ -51,6 +56,11 @@ RUN echo 'Built with Coral' > /etc/coral-info</textarea>
               <input id="build-no-cache" type="checkbox" />
               <span data-i18n="modal.buildNoCache">Rebuild without cache</span>
             </label>
+            <select id="build-platform" class="field mono" style="max-width:145px;" aria-label="Build platform">
+              <option value="">Auto (host)</option>
+              <option value="linux/amd64">linux/amd64</option>
+              <option value="linux/arm64">linux/arm64</option>
+            </select>
             <button id="build-submit" type="submit" class="btn primary" data-i18n="modal.btnBuild">Build Image</button>
           </div>
         </form>

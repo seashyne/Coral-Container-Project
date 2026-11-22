@@ -5,6 +5,7 @@
 use crate::NetError;
 use crate::dns_server::EmbeddedDnsServer;
 use crate::vswitch_gw::handle_gateway_frame;
+use crate::vswitch_nat::UserspaceNatEngine;
 use crate::vswitch_tap::open_tap_in_netns;
 use std::collections::HashMap;
 use std::io;
@@ -47,7 +48,7 @@ impl RootlessVSwitch {
 
         let worker = thread::Builder::new()
             .name("coral-vswitch".into())
-            .spawn(move || switch_loop(ports_c, stop_c, gw_ip, dns))
+            .spawn(move || switch_loop(ports_c, stop_c, base_u32, mask, gw_ip, dns))
             .map_err(NetError::Io)?;
 
         Ok(Self {
@@ -131,10 +132,13 @@ fn parse_ipv4_cidr(cidr: &str) -> Result<(u32, Ipv4Addr, u32), NetError> {
 fn switch_loop(
     ports: Arc<Mutex<HashMap<String, OwnedFd>>>,
     stop: Arc<AtomicBool>,
+    subnet_base: u32,
+    netmask: Ipv4Addr,
     gw_ip: Ipv4Addr,
     dns: Option<Arc<EmbeddedDnsServer>>,
 ) {
     let mut mac_table: HashMap<[u8; 6], String> = HashMap::new();
+    let mut nat = UserspaceNatEngine::new(subnet_base, netmask);
     let mut frame_buf = [0u8; 2048];
 
     while !stop.load(Ordering::Relaxed) {
@@ -161,14 +165,14 @@ fn switch_loop(
             })
             .collect();
 
-        let ready = unsafe { libc::poll(pfds.as_mut_ptr(), pfds.len() as libc::nfds_t, 15) };
-        if ready <= 0 {
-            continue;
-        }
-
+        let ready = unsafe { libc::poll(pfds.as_mut_ptr(), pfds.len() as libc::nfds_t, 5) };
         let Ok(guard) = ports.lock() else {
             break;
         };
+        nat.poll_replies(&guard);
+        if ready <= 0 {
+            continue;
+        }
         for (idx, pfd) in pfds.iter().enumerate() {
             if (pfd.revents & libc::POLLIN) == 0 {
                 continue;
@@ -189,6 +193,9 @@ fn switch_loop(
                     break;
                 }
                 let frame = &frame_buf[..n as usize];
+                if nat.handle_outbound_frame(src_id, frame, src_fd.as_raw_fd()) {
+                    continue;
+                }
                 if let Some(gw_reply) = handle_gateway_frame(frame, gw_ip, dns.as_deref()) {
                     let _ = unsafe {
                         libc::write(

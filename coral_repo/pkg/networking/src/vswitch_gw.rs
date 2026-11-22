@@ -42,7 +42,9 @@ fn handle_arp(frame: &[u8], gw_ip: Ipv4Addr) -> Option<Vec<u8>> {
         return None;
     }
     let target_ip = Ipv4Addr::new(arp[24], arp[25], arp[26], arp[27]);
-    if target_ip != gw_ip {
+    let oct = gw_ip.octets();
+    let host_alias_ip = Ipv4Addr::new(oct[0], oct[1], oct[2], 254);
+    if target_ip != gw_ip && target_ip != host_alias_ip {
         return None;
     }
 
@@ -61,7 +63,7 @@ fn handle_arp(frame: &[u8], gw_ip: Ipv4Addr) -> Option<Vec<u8>> {
     reply.push(4); // PLEN
     reply.extend_from_slice(&2u16.to_be_bytes()); // OPER = Reply
     reply.extend_from_slice(&GATEWAY_MAC);
-    reply.extend_from_slice(&gw_ip.octets());
+    reply.extend_from_slice(&target_ip.octets());
     reply.extend_from_slice(sender_mac);
     reply.extend_from_slice(sender_ip);
     Some(reply)
@@ -149,7 +151,7 @@ fn handle_udp_dns(
     Some(wrap_ipv4_frame(peer_mac, gw_ip, peer_ip, 17, &out_udp))
 }
 
-fn wrap_ipv4_frame(
+pub(crate) fn wrap_ipv4_frame(
     dst_mac: &[u8],
     src_ip: Ipv4Addr,
     dst_ip: Ipv4Addr,
@@ -177,7 +179,7 @@ fn wrap_ipv4_frame(
     frame
 }
 
-fn internet_checksum(data: &[u8]) -> u16 {
+pub(crate) fn internet_checksum(data: &[u8]) -> u16 {
     let mut sum: u32 = 0;
     let (chunks, rem) = data.as_chunks::<2>();
     for pair in chunks {
@@ -192,7 +194,7 @@ fn internet_checksum(data: &[u8]) -> u16 {
     !(sum as u16)
 }
 
-fn udp_ipv4_checksum(src: Ipv4Addr, dst: Ipv4Addr, udp: &[u8]) -> u16 {
+pub(crate) fn udp_ipv4_checksum(src: Ipv4Addr, dst: Ipv4Addr, udp: &[u8]) -> u16 {
     let mut pseudo = Vec::with_capacity(12 + udp.len());
     pseudo.extend_from_slice(&src.octets());
     pseudo.extend_from_slice(&dst.octets());
@@ -251,5 +253,131 @@ mod tests {
         let dns_payload = &dns_frame[14 + 20 + 8..];
         assert_eq!(&dns_payload[0..2], &[0x42, 0x42]);
         assert_eq!(&dns_payload[dns_payload.len() - 4..], &[10, 89, 1, 5]);
+    }
+
+    #[test]
+    fn rootless_vswitch_nat_routes_outbound_udp_and_tcp_from_isolated_netns() {
+        use crate::RootlessVSwitch;
+        use std::io::{Read, Write};
+        use std::net::{TcpListener, TcpStream, UdpSocket};
+        use std::sync::Arc;
+        use std::thread;
+        use std::time::Duration;
+
+        // 1. Start host-side UDP echo server and TCP server on 127.0.0.1
+        let udp_srv = UdpSocket::bind("127.0.0.1:0").unwrap();
+        let udp_port = udp_srv.local_addr().unwrap().port();
+        udp_srv
+            .set_read_timeout(Some(Duration::from_secs(3)))
+            .unwrap();
+        let udp_handle = thread::spawn(move || {
+            let mut buf = [0u8; 64];
+            if let Ok((n, peer)) = udp_srv.recv_from(&mut buf) {
+                let mut reply = b"udp:".to_vec();
+                reply.extend_from_slice(&buf[..n]);
+                let _ = udp_srv.send_to(&reply, peer);
+            }
+        });
+
+        let tcp_srv = TcpListener::bind("127.0.0.1:0").unwrap();
+        let tcp_port = tcp_srv.local_addr().unwrap().port();
+        let tcp_handle = thread::spawn(move || {
+            if let Ok((mut s, _)) = tcp_srv.accept() {
+                let mut buf = [0u8; 64];
+                if let Ok(n) = s.read(&mut buf) {
+                    let mut reply = b"tcp:".to_vec();
+                    reply.extend_from_slice(&buf[..n]);
+                    let _ = s.write_all(&reply);
+                    let _ = s.flush();
+                }
+            }
+        });
+
+        let dns = Arc::new(EmbeddedDnsServer::start("127.0.0.1:0".parse().unwrap()).unwrap());
+        dns.register_host("svc-nat", Ipv4Addr::new(10, 89, 88, 9));
+        let vswitch = RootlessVSwitch::start_with_dns("10.89.88.0/24", Some(dns)).unwrap();
+        let ctr_ip = vswitch.allocate_ip();
+
+        let mut ready = [-1i32; 2];
+        let mut go = [-1i32; 2];
+        let mut out = [-1i32; 2];
+        unsafe {
+            assert_eq!(libc::pipe(ready.as_mut_ptr()), 0);
+            assert_eq!(libc::pipe(go.as_mut_ptr()), 0);
+            assert_eq!(libc::pipe(out.as_mut_ptr()), 0);
+        }
+
+        let pid = unsafe { libc::fork() };
+        if pid == 0 {
+            unsafe {
+                libc::close(ready[0]);
+                libc::close(go[1]);
+                libc::close(out[0]);
+                if libc::unshare(libc::CLONE_NEWUSER | libc::CLONE_NEWNET) != 0 {
+                    libc::_exit(2);
+                }
+                let _ = crate::bring_loopback_up();
+                let b = [1u8];
+                libc::write(ready[1], b.as_ptr().cast(), 1);
+                let mut g = [0u8];
+                libc::read(go[0], g.as_mut_ptr().cast(), 1);
+            }
+            let mut result = String::new();
+            // A. Outbound UDP through NAT (`10.89.88.254:<udp_port>` -> host `127.0.0.1:<udp_port>`)
+            if let Ok(u) = UdpSocket::bind("0.0.0.0:0") {
+                let _ = u.set_read_timeout(Some(Duration::from_secs(2)));
+                let _ = u.send_to(b"hi", format!("10.89.88.254:{udp_port}"));
+                let mut buf = [0u8; 64];
+                if let Ok((n, _)) = u.recv_from(&mut buf) {
+                    result.push_str(&String::from_utf8_lossy(&buf[..n]));
+                    result.push('|');
+                }
+            }
+            // B. Outbound TCP through NAT (`10.89.88.254:<tcp_port>` -> host `127.0.0.1:<tcp_port>`)
+            if let Ok(mut t) = TcpStream::connect_timeout(
+                &format!("10.89.88.254:{tcp_port}").parse().unwrap(),
+                Duration::from_secs(2),
+            ) {
+                let _ = t.set_read_timeout(Some(Duration::from_secs(2)));
+                let _ = t.write_all(b"ping");
+                let mut buf = [0u8; 64];
+                if let Ok(n) = t.read(&mut buf) {
+                    result.push_str(&String::from_utf8_lossy(&buf[..n]));
+                }
+            }
+            unsafe {
+                libc::write(out[1], result.as_ptr().cast(), result.len());
+                libc::_exit(0);
+            }
+        }
+
+        unsafe {
+            libc::close(ready[1]);
+            libc::close(go[0]);
+            libc::close(out[1]);
+            let mut b = [0u8];
+            libc::read(ready[0], b.as_mut_ptr().cast(), 1);
+        }
+        vswitch.attach_container("nat-ctr", pid, ctr_ip).unwrap();
+        unsafe {
+            let g = [1u8];
+            libc::write(go[1], g.as_ptr().cast(), 1);
+        }
+
+        let mut received = [0u8; 128];
+        let n = unsafe { libc::read(out[0], received.as_mut_ptr().cast(), received.len()) };
+        let mut st = 0;
+        unsafe {
+            libc::waitpid(pid, &raw mut st, 0);
+            for fd in [ready[0], go[1], out[0]] {
+                libc::close(fd);
+            }
+        }
+        vswitch.detach_container("nat-ctr");
+        let _ = udp_handle.join();
+        let _ = tcp_handle.join();
+
+        let text = String::from_utf8_lossy(&received[..n.max(0) as usize]);
+        assert_eq!(text, "udp:hi|tcp:ping");
     }
 }
