@@ -20,18 +20,25 @@ pub fn alpine_rootfs() -> PathBuf {
 }
 
 /// Ensures the `coral` OCI CLI binary is built and returns its absolute path.
+///
+/// When the binary already exists the build step is skipped. That keeps the
+/// suite usable for cross-compiled targets (for example `aarch64` binaries
+/// produced on an x86_64 host) and avoids a rebuild for every test binary.
 pub fn ensure_coral_binary() -> &'static PathBuf {
     CORAL_BIN.get_or_init(|| {
         let root = workspace_root();
         let candidate = root.join("target/debug/coral");
 
-        let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
-        let status = Command::new(cargo)
-            .current_dir(&root)
-            .args(["build", "--bin", "coral"])
-            .status()
-            .expect("invoke cargo build --bin coral");
-        assert!(status.success(), "failed to build `coral` binary");
+        if !candidate.is_file() {
+            let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
+            let status = Command::new(cargo)
+                .current_dir(&root)
+                .args(["build", "--bin", "coral"])
+                .status()
+                .expect("invoke cargo build --bin coral");
+            assert!(status.success(), "failed to build `coral` binary");
+        }
+
         assert!(
             candidate.is_file(),
             "expected built binary at {}",

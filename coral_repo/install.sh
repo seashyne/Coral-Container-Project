@@ -11,6 +11,9 @@ SYSTEMD_USER_DIR="$HOME/.config/systemd/user"
 echo "============================================================"
 echo "  Coral Container Runtime v2.3 — System Installer (Linux)   "
 echo "============================================================"
+echo "  Host architecture: $(uname -m)"
+echo "  (x86_64 and arm64 are supported; the KVM MicroVM and the"
+echo "   AI Agent sandbox require an x86_64 host)"
 
 # 1. Ensure Alpine 3.20 minirootfs is prepared
 "$REPO_DIR/scripts/setup-rootfs.sh"
