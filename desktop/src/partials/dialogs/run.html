@@ -97,6 +97,27 @@
               <span data-i18n="modal.runHealthCmd">Healthcheck Command (optional)</span>
               <input id="run-health-cmd" class="field mono" type="text" placeholder="e.g. test -f /tmp/ready" />
             </label>
+            <label>
+              <span data-i18n="modal.runNetworkAliases">Network Aliases (optional)</span>
+              <input id="run-network-aliases" class="field mono" type="text" placeholder="e.g. db, cache" />
+            </label>
+            <label>
+              <span data-i18n="modal.runGpus">GPU Passthrough (optional)</span>
+              <input id="run-gpus" class="field mono" type="text" placeholder="e.g. all or 0" />
+            </label>
+            <label>
+              <span data-i18n="modal.runDevices">Host Devices (optional)</span>
+              <input id="run-devices" class="field mono" type="text" placeholder="/dev/dri:/dev/dri" />
+            </label>
+            <label>
+              <span data-i18n="modal.runLogDriver">Log Driver</span>
+              <select id="run-log-driver" class="field">
+                <option value="raw" data-i18n="modal.logRaw">Default (Raw rotating file)</option>
+                <option value="json-file" data-i18n="modal.logJson">Docker json-file</option>
+                <option value="syslog" data-i18n="modal.logSyslog">Syslog (/dev/log)</option>
+                <option value="journald" data-i18n="modal.logJournald">Systemd journald</option>
+              </select>
+            </label>
           </div>
         </div>
       </details>

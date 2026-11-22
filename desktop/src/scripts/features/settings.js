@@ -20,6 +20,10 @@ async function loadSettingsForm() {
     if ($("set-images-dir")) $("set-images-dir").value = s.imagesDir || "";
     if ($("set-state-dir")) $("set-state-dir").value = s.stateDir;
     if ($("set-wsl-distro")) $("set-wsl-distro").value = s.wslDistro;
+    if ($("set-docker-sock")) {
+      const base = (s.stateDir || "").trim() || "~/.local/state/coral/daemon";
+      $("set-docker-sock").value = `unix://${base.replace(/\/+$/, "")}/docker.sock`;
+    }
     updateModeHint();
 
     syncThemeControls();

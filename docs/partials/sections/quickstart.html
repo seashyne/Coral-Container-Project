@@ -24,10 +24,13 @@ coral run -d --name mc-server -p 25565:25565 -m 4G \
   -e EULA=TRUE -e TYPE=PAPER -e VERSION=LATEST \
   -v mc-data:/data --restart unless-stopped itzg/minecraft-server
 
-# Detached worker with live healthcheck, logs, interactive shell &amp; stats
-coral run -d --name worker --restart always \
-  --health-cmd "test -f /tmp/ready" --health-interval 5 \
+# Detached worker with GPU/device passthrough, network alias, json-file logs &amp; healthcheck
+coral run -d --name worker --network-alias api-worker --gpus all --log-driver json-file \
+  --restart always --health-cmd "test -f /tmp/ready" --health-interval 5 \
   alpine:3.20 /bin/sh -c 'touch /tmp/ready; sleep 3600'
+
+# Connect Docker REST tools (Testcontainers, Traefik, curl) via Coral's docker.sock shim
+curl -s --unix-socket "$HOME/.local/state/coral/daemon/docker.sock" http://localhost/v1.45/version
 
 coral ps
 coral logs -f --tail 50 mc-server
@@ -42,8 +45,8 @@ coral cp ./config.yaml worker:/data/config.yaml</code></pre>
               <div class="tab-panel-body">
                 <div class="code-block">
                   <button type="button" class="copy-btn" data-copy-target="code-cli-2" data-i18n="copy.btn">คัดลอก</button>
-                  <pre id="code-cli-2"><code># Build OCI image from Dockerfile with Content-Addressable Step Cache
-coral build -t myapp:2.1 .
+                  <pre id="code-cli-2"><code># Build OCI image with BuildKit heredocs, RUN --mount=type=cache|secret &amp; step cache
+coral build -t myapp:2.4 .
 
 # Cryptographic Ed25519 image signing, tamper verification &amp; SPDX 2.3 SBOM
 coral keygen

@@ -251,6 +251,8 @@ Object.assign(window.CORAL_DESKTOP_LOCALES.en, {
   "settings.imagesDir": "Images folder (optional)",
   "settings.stateDir": "State folder (optional)",
   "settings.wslDistro": "WSL2 distro name",
+  "settings.dockerSock": "Docker Compatibility Socket (DOCKER_HOST)",
+  "settings.dockerSockHint": "Export DOCKER_HOST with this socket path to connect Testcontainers, Traefik, or Docker REST clients directly to Coral.",
   "settings.browseBin": "Browse binary",
   "settings.browseDir": "Browse directory",
   "settings.btnSaveAdv": "Save Advanced Settings",

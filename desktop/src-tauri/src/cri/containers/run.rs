@@ -33,6 +33,14 @@ pub struct RunParams {
     pub health_cmd: String,
     #[serde(default)]
     pub health_interval_secs: u64,
+    #[serde(default)]
+    pub network_aliases: String,
+    #[serde(default)]
+    pub devices: String,
+    #[serde(default)]
+    pub gpus: String,
+    #[serde(default)]
+    pub log_driver: String,
 }
 
 #[tauri::command]
@@ -104,6 +112,23 @@ pub async fn run_container(
             .saturating_mul(1_000);
         annotations.insert("coral.health.interval_ms".into(), interval_ms.to_string());
         annotations.insert("coral.health.retries".into(), "3".into());
+    }
+    if !params.network_aliases.trim().is_empty() {
+        annotations.insert(
+            "coral.network.aliases".into(),
+            params.network_aliases.trim().into(),
+        );
+    }
+    if !params.devices.trim().is_empty() {
+        annotations.insert("coral.devices".into(), params.devices.trim().into());
+    }
+    if !params.gpus.trim().is_empty() {
+        annotations.insert("coral.gpus".into(), params.gpus.trim().into());
+    }
+    if !params.log_driver.trim().is_empty()
+        && !params.log_driver.trim().eq_ignore_ascii_case("raw")
+    {
+        annotations.insert("coral.log.driver".into(), params.log_driver.trim().into());
     }
 
     let mut labels = HashMap::from([("managed-by".into(), "coral-desktop".into())]);

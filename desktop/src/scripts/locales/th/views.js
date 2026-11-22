@@ -251,6 +251,8 @@ Object.assign(window.CORAL_DESKTOP_LOCALES.th, {
   "settings.imagesDir": "โฟลเดอร์เก็บอิมเมจ (ไม่บังคับ)",
   "settings.stateDir": "โฟลเดอร์เก็บสถานะ (ไม่บังคับ)",
   "settings.wslDistro": "ชื่อ WSL2 distro",
+  "settings.dockerSock": "Docker Compatibility Socket (DOCKER_HOST)",
+  "settings.dockerSockHint": "ใช้พาธนี้ตั้งค่า DOCKER_HOST เพื่อเชื่อมต่อเครื่องมือสาย Docker (Testcontainers, Traefik ฯลฯ) เข้ากับ Coral โดยตรง",
   "settings.browseBin": "เลือกไฟล์",
   "settings.browseDir": "เลือกโฟลเดอร์",
   "settings.btnSaveAdv": "บันทึกการตั้งค่า",

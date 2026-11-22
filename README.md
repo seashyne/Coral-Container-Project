@@ -2,27 +2,155 @@
   <img src="docs/assets/coral-icon.png" alt="Coral Container Project Logo" width="88" />
 </p>
 
-<h1 align="center">Coral Container Project (<code>v2.3.0</code>)</h1>
+<h1 align="center">Coral Container Project (<code>v2.4.0</code>)</h1>
 
-**Coral** is a next-generation, memory-safe container runtime written in **Rust (Edition 2024)** — uniting a rootless-first **OCI v1.0.2** Linux container engine, **Kubernetes CRI v1 gRPC** daemon (TCP + `unix://` Unix Domain Socket + CNI plugin chain & streaming), **WASI Serverless HTTP WebAssembly** runtime (`coral-wasm`), pure-Rust Linux **`/dev/kvm` Separate-Kernel MicroVM with VirtIO-Blk & VirtIO-Net** (`coral-vmm`, Zero QEMU/Firecracker), **Prometheus `/metrics`**, **Ed25519 Image Signing + SPDX 2.3 SBOM**, multi-arch **x86_64 & ARM64**, and the redesigned **Coral Desktop** GUI (Linux / Windows / macOS `.dmg`).
+**Coral** is a next-generation, memory-safe container runtime written in **Rust (Edition 2024)** — uniting a rootless-first **OCI v1.0.2** Linux container engine (with Multi-UID `subuid`/`subgid`, `--device`, and `--gpus`), **Kubernetes CRI v1 gRPC** daemon + **Docker Engine REST API (`docker.sock`) compatibility shim**, **Embedded UDP DNS**, **BuildKit-style Dockerfile** (`RUN <<EOF`, `--mount=type=cache|secret`), **Shared Content-Addressable Layer Cache + Parallel Pull**, **WASI Serverless HTTP WebAssembly** runtime (`coral-wasm`), pure-Rust Linux **`/dev/kvm` Separate-Kernel MicroVM with VirtIO-Blk & VirtIO-Net** (`coral-vmm`, Zero QEMU/Firecracker), **Prometheus `/metrics`**, **Ed25519 Image Signing + SPDX 2.3 SBOM**, multi-arch **x86_64 & ARM64**, and the redesigned **Coral Desktop** GUI (Linux / Windows / macOS `.dmg`).
 
-> **Online Docs & Visual Guides:** https://seashyne.github.io/Coral-Container-Project/  
-> **v2.3.0 Evaluation & Docker Benchmark Report:** [REPORT_v2.3.md](coral_repo/docs/REPORT_v2.3.md) · [BENCHMARK.md](coral_repo/docs/BENCHMARK.md)  
+> **Online Docs & Visual Guides:** https://seashyne.github.io/Coral-Container-Project/
+>
+> **Evaluation & Docker Benchmark Report:** [REPORT_v2.3.md](coral_repo/docs/REPORT_v2.3.md) · [BENCHMARK.md](coral_repo/docs/BENCHMARK.md)
+>
 > **GitHub Releases (`.deb`, `.tar.gz`, Desktop installers):** https://github.com/seashyne/Coral-Container-Project/releases
 
-![Coral v2.3.0 Visual Quick Guide](docs/assets/coral-usage-guide.png)
+![Coral Visual Quick Guide](docs/assets/coral-usage-guide.png)
 
 ---
 
-## Highlights (`v2.3.0`)
+## Highlights (`v2.4.0`)
 
-- **Docker-Compatible `coral run` Ergonomics**: Run positional images & commands without boilerplate (`coral run -d -p 25565:25565 -m 4G -v mc-data:/data -e EULA=TRUE -e TYPE=PAPER itzg/minecraft-server`), human-friendly memory units (`-m 4G`, `512m`), `--pull missing|always|never` auto-pull, and `-d` auto-daemon routing.
-- **Redesigned Coral Desktop GUI**: Crisp Design-Token CSS UI with Topbar **Theme Popover** (`System`/`Light`/`Dark`, 5 palettes: **Coral**, **Ocean**, **Emerald**, **Indigo**, **Amber**, Compact/Comfortable density, EN/ไทย switching), **Run Quick Fill** presets, inline **Discover & Quick Pull**, and automatic `~/.local/bin` discovery for desktop menu launches.
-- **17.9×–26.8× Faster Startup than Docker on the Same Host**: `coral run --image alpine:3.20` starts rootlessly with OverlayFS CoW + DNS + Seccomp-BPF + Cap Drop in **8.88 ms P50** vs Docker Engine **159.32–237.56 ms P50**, with `coral-daemon` idle RAM at **8.4 MB**. Measured over 5 rounds × 30 runs as median-of-medians with the page cache and CPU load pinned, across alpine, busybox and debian.
-- **Real-World OCI & Kubernetes CRI v1**: Inherits full `ENTRYPOINT`/`CMD`/`ENV`/`WORKDIR`/`USER`, single-UID non-root remapping, UDS + CNI v1.0.0 chain + streaming `Exec`/`Attach`/`PortForward`, Prometheus `/metrics`, log rotation, Auto-GC, and `coral completion`.
+- **Docker Engine Compatibility (`docker.sock`) & Parallel Shared Layer Cache**: Built-in HTTP REST API v1.45 shim at `~/.local/state/coral/daemon/docker.sock` (`DOCKER_HOST=unix://...`) for Testcontainers/Traefik/Docker REST tools, paired with content-addressable `.layer-cache/sha256` deduplication and 4-stream parallel layer downloads.
+- **BuildKit Dockerfile Extensions & Embedded Service DNS**: Supports `RUN <<EOF` heredocs, `RUN --mount=type=cache|secret|tmpfs`, persisted `EXPOSE`/`VOLUME`/`SHELL`/`HEALTHCHECK`/`ONBUILD` image metadata, Multi-Stage `COPY --from`, plus an embedded UDP DNS responder (`<name>.coral.local`), `--network-alias`, and live bidirectional `/etc/hosts` updates.
+- **GPU/Device Passthrough & Pluggable Log Drivers**: Pass hardware devices (`--device /dev/dri:/dev/dri`) and GPUs (`--gpus all` for NVIDIA `/dev/nvidia*`, AMD `/dev/kfd`, DRM `/dev/dri`), and switch container logs between `raw`, Docker-compatible `json-file`, `syslog`, and `journald` via CLI, Compose, or Coral Desktop.
+- **Docker-Compatible `coral run` Ergonomics & Coral Desktop GUI**: Positional images & commands (`coral run -d -p 25565:25565 -m 4G -v mc-data:/data -e EULA=TRUE -e TYPE=PAPER itzg/minecraft-server`), 5-palette **Coral Desktop v2.4.0** (EN/ไทย, Quick Fill presets, GPU/Device/Log Driver controls, `docker.sock` path display, inline Discover & Quick Pull).
+- **17.9×–26.8× Faster Startup than Docker on the Same Host**: `coral run --image alpine:3.20` starts rootlessly with OverlayFS CoW + DNS + Seccomp-BPF + Cap Drop in **8.88 ms P50** vs Docker Engine **159.32–237.56 ms P50**, with `coral-daemon` idle RAM at **8.4 MB** (measured over 5 rounds × 30 runs pinned on the same host).
 - **WASI WebAssembly & Pure-Rust `/dev/kvm` MicroVM**: Execute WASI modules in **329 µs** (`coral-wasm`) and 64-bit `/dev/kvm` self-test in **963 µs** (`coral-vmm`) with persistent VirtIO-Blk + VirtIO-Net, Ed25519 signing, and SPDX 2.3 SBOM.
 
+> The five platform features above are documented in detail in [New in v2.4.0](#new-in-v240--platform-integration-features).
+
 ![Coral v2.3.0 vs Docker Benchmark Chart](docs/assets/coral-vs-docker-benchmark.png)
+
+---
+
+## New in `v2.4.0` — Platform Integration Features
+
+Five new capabilities ship on top of the OCI/CRI/Wasm/KVM core. Each one is implemented in
+pure Rust with no external daemon and is covered by the E2E suite.
+
+### 1. Content-Addressable Layer Cache
+
+`coral pull` no longer re-downloads layers it already has. Verified blobs are stored
+content-addressably by their OCI digest under `<images_dir>/.layer-cache/sha256/<hex>.blob`
+and reused by every later image that references the same layer.
+
+- **SHA-256 verified twice** — on download, and again on every cache lookup. A blob whose
+  digest no longer matches is deleted automatically instead of being served.
+- **Atomic promotion** — a freshly verified layer is `rename`d into the cache (with a `copy`
+  fallback), so a partially written blob is never visible to a concurrent pull.
+- **Parallel downloads** — up to **4 layers** download concurrently, then are reassembled in
+  manifest order regardless of which finished first.
+
+```bash
+coral pull alpine:3.20          # first pull populates the cache
+coral pull busybox:musl         # shared base layers are reused, not re-fetched
+ls ~/.local/state/coral/images/.layer-cache/sha256/
+```
+
+### 2. Embedded DNS Service Discovery
+
+The daemon runs its own **RFC 1035 UDP DNS responder** in-process (`coral-net`) on an
+ephemeral loopback port. Container names, Compose service names and `--network-alias` values
+are registered automatically, so containers on a user-defined network resolve each other by
+name without any external DNS server.
+
+- Every registered name also resolves as `<name>.coral.local`.
+- `A` and `ANY` queries are answered; `AAAA` returns NODATA; unknown names return NXDOMAIN.
+- Sibling names and aliases are additionally written into `/etc/hosts`, and **already-running
+  siblings are updated in place** so resolution stays bidirectional.
+
+```bash
+coral network create app-net
+coral run -d --network app-net --network-alias db --name postgres postgres:16
+coral run --network app-net alpine:3.20 sh -c 'nslookup db'
+```
+
+### 3. BuildKit Dockerfile Extensions
+
+`coral build` now understands the Dockerfile subset that modern Dockerfiles rely on.
+
+- **Heredocs** — `RUN <<EOF`, `RUN <<-EOF` and `RUN --mount=... <<'EOF'`. The heredoc body is
+  folded into a single command chain before the build runs.
+- **`RUN --mount=type=cache`** — a persistent, host-side cache directory bind-mounted
+  read-write into the build step, reused across builds (e.g. package manager caches).
+- **`RUN --mount=type=secret`** — a file from the build context mounted **read-only** at
+  `/run/secrets/<id>` (or an explicit `target=`). Secret sources are resolved inside the
+  build context only, never from arbitrary host paths.
+- **`RUN --mount=type=tmpfs`** — a `nosuid,nodev,mode=1777` tmpfs at the given target.
+- **Image metadata instructions** — `EXPOSE`, `VOLUME`, `SHELL`, `HEALTHCHECK`
+  (`--interval=`, `--retries=`, `CMD ...`, and `NONE` to clear) and `ONBUILD` are applied to
+  the resulting OCI image config.
+- **Multi-stage builds** — `COPY --from=<stage|index|image>` copies from an earlier build
+  stage, a stage index, or another image, and referencing the stage currently being built is
+  rejected.
+
+```dockerfile
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --no-cache-dir -r requirements.txt
+RUN --mount=type=secret,id=npmrc,target=/root/.npmrc \
+    npm ci --production
+```
+
+### 4. `docker.sock` — Docker Engine API Compatibility
+
+`coral-daemon` exposes a **Docker Engine REST API shim** (`/v1.24`..`/v1.47`) over a Unix
+socket (default `<state_dir>/docker.sock`, mode `0660` — `~/.local/state/coral/daemon/docker.sock`
+when run from the packaged systemd unit) and optionally over TCP. Existing Docker tooling can
+drive Coral without modification.
+
+- Supported endpoints: `/_ping`, `/version`, `/info`, `/images/json`, `/containers/json`,
+  `/containers/create`, `/containers/{id}/json`, `/containers/{id}/logs`,
+  `/containers/{id}/{start,stop,kill,restart,wait}`, `DELETE /containers/{id}`.
+- `POST /containers/create` understands `Image`, `name`, `Hostname`, `Cmd`, `Env`,
+  `Entrypoint`, `User`, `HostConfig.Binds`, `HostConfig.NetworkMode` and
+  `HostConfig.Memory`.
+- Point any Docker client at it with `DOCKER_HOST=unix://…/docker.sock` — Docker CLI,
+  Testcontainers, Traefik and Portainer all work against Coral this way.
+
+```bash
+coral-daemon --docker-socket /run/coral/docker.sock
+DOCKER_HOST=unix:///run/coral/docker.sock docker ps
+```
+
+### 5. GPU & Device Passthrough
+
+Containers can be given direct access to host hardware.
+
+- **`--device HOST_DEV[:CTR_DEV[:PERMS]]`** — Docker-compatible device mapping. Paths must be
+  absolute and the host device must exist; `r` without `w` produces a read-only mount.
+- **`--gpus all` / `--gpus <index>` / `--gpus device=<index>`** — automatic GPU discovery for
+  **NVIDIA** (`nvidiactl`, `nvidia-uvm`, `nvidia-modeset`, `nvidia-caps`, `nvidia0..15`),
+  **AMD ROCm** (`/dev/kfd`) and **DRM** (`/dev/dri`). The matching `NVIDIA_VISIBLE_DEVICES`,
+  `NVIDIA_DRIVER_CAPABILITIES` and `ROCR_VISIBLE_DEVICES` variables are injected.
+- **`--network-alias`** (alias `--alias`) — repeatable, network-scoped service alias.
+- **`--log-driver`** — `raw` (default), `json-file`, `syslog` or `journald`.
+
+```bash
+coral run --gpus all --device /dev/video0:/dev/video0:ro nvcr.io/nvidia/cuda:12.4.0-base-ubuntu22.04 nvidia-smi
+```
+
+All of the above are also available in Compose files:
+
+```yaml
+services:
+  trainer:
+    image: nvcr.io/nvidia/cuda:12.4.0-base-ubuntu22.04
+    gpus: all
+    devices: ["/dev/video0:/dev/video0:ro"]
+    log_driver: json-file
+    aliases: [trainer-alias]
+```
+
+> Full command reference: [`coral_repo/docs/MANUAL.md`](coral_repo/docs/MANUAL.md) ·
+> architecture notes: [`coral_repo/docs/ROADMAP.md`](coral_repo/docs/ROADMAP.md)
 
 ---
 
@@ -44,12 +172,12 @@ curl -fsSL https://seashyne.github.io/Coral-Container-Project/install.sh | bash
 
 ### Debian / Ubuntu `.deb`
 
-Download the package matching your architecture — `coral-runtime_2.3.0_amd64.deb` (x86_64) or
-`coral-runtime_2.3.0_arm64.deb` (arm64) — and the `Coral Desktop` installer from
+Download the package matching your architecture — `coral-runtime_2.4.0_amd64.deb` (x86_64) or
+`coral-runtime_2.4.0_arm64.deb` (arm64) — and the `Coral Desktop` installer from
 [Releases](https://github.com/seashyne/Coral-Container-Project/releases/latest), then run:
 
 ```bash
-sudo dpkg -i coral-runtime_2.3.0_amd64.deb    # or ..._arm64.deb
+sudo dpkg -i coral-runtime_2.4.0_amd64.deb    # or ..._arm64.deb
 systemctl --user enable --now coral-daemon.service
 coral version
 ```
@@ -60,7 +188,7 @@ coral version
 git clone https://github.com/seashyne/Coral-Container-Project.git
 cd Coral-Container-Project/coral_repo
 ./install.sh        # builds --release, installs to ~/.local/bin, enables coral-daemon.service
-./verify.sh         # runs full 60-test OCI + CRI + Wasm + KVM E2E suite + strict Clippy
+./verify.sh         # runs full 130-test OCI + CRI + Wasm + KVM E2E suite + strict Clippy
 ```
 
 ---

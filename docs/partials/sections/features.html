@@ -1,0 +1,89 @@
+      <!-- 5. Platform Integration Features (v2.4) -->
+      <section id="features" class="doc-section" tabindex="-1">
+        <h2 data-i18n="feat2.title">ฟีเจอร์เชิงแพลตฟอร์มระหว่างระบบ (v2.4.0)</h2>
+        <p class="section-lead" data-i18n="feat2.lead"></p>
+
+        <div class="cards-grid">
+          <article class="card">
+            <span class="card-tag">coral-daemon · layer cache</span>
+            <h3 data-i18n="feat2.cache.title"></h3>
+            <p data-i18n="feat2.cache.desc"></p>
+          </article>
+
+          <article class="card">
+            <span class="card-tag">coral-net · RFC 1035</span>
+            <h3 data-i18n="feat2.dns.title"></h3>
+            <p data-i18n="feat2.dns.desc"></p>
+          </article>
+
+          <article class="card">
+            <span class="card-tag">coral-daemon · BuildKit</span>
+            <h3 data-i18n="feat2.buildkit.title"></h3>
+            <p data-i18n="feat2.buildkit.desc"></p>
+          </article>
+
+          <article class="card">
+            <span class="card-tag">coral-daemon · docker.sock</span>
+            <h3 data-i18n="feat2.dockersock.title"></h3>
+            <p data-i18n="feat2.dockersock.desc"></p>
+          </article>
+
+          <article class="card">
+            <span class="card-tag">coral-runtime · GPU passthrough</span>
+            <h3 data-i18n="feat2.gpu.title"></h3>
+            <p data-i18n="feat2.gpu.desc"></p>
+          </article>
+        </div>
+
+        <h3 data-i18n="feat2.usageTitle"></h3>
+        <p class="section-lead" data-i18n="feat2.usageLead"></p>
+
+        <div tabindex="0" role="region" aria-labelledby="feat2-caption" class="table-wrapper">
+          <table class="data-table" id="feat2-table">
+            <caption id="feat2-caption" data-i18n="feat2.caption"></caption>
+            <thead>
+              <tr>
+                <th scope="col" data-i18n="feat2.colCapability">ความสามารถ</th>
+                <th scope="col" data-i18n="feat2.colUsage">วิธีใช้</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row" data-i18n="feat2.rowCache">แคช layer ตาม digest</th>
+                <td><code class="inline">coral pull alpine:3.20</code> — layer ที่เคยดึงแล้วถูกใช้ซ้ำจาก <code class="inline">.layer-cache/sha256/</code></td>
+              </tr>
+              <tr>
+                <th scope="row" data-i18n="feat2.rowDns">ค้นหาชื่อบริการในเครือข่าย</th>
+                <td><code class="inline">coral run --network app-net --network-alias db ...</code> — resolve ได้ทั้ง <code class="inline">db</code> และ <code class="inline">db.coral.local</code></td>
+              </tr>
+              <tr>
+                <th scope="row" data-i18n="feat2.rowBuildkit">BuildKit heredoc &amp; mount</th>
+                <td><code class="inline">RUN --mount=type=cache,target=/root/.cache/pip ...</code> — รองรับ <code class="inline">type=cache</code>, <code class="inline">type=secret</code> และ <code class="inline">type=tmpfs</code></td>
+              </tr>
+              <tr>
+                <th scope="row" data-i18n="feat2.rowDocker">Docker Engine API</th>
+                <td><code class="inline">DOCKER_HOST=unix:///run/coral/docker.sock docker ps</code> — ใช้กับ Docker CLI, Testcontainers, Traefik และ Portainer ได้</td>
+              </tr>
+              <tr>
+                <th scope="row" data-i18n="feat2.rowGpu">GPU และอุปกรณ์</th>
+                <td><code class="inline">coral run --gpus all --device /dev/video0:/dev/video0:ro ...</code> — รองรับ NVIDIA, AMD ROCm และ DRM</td>
+              </tr>
+              <tr>
+                <th scope="row" data-i18n="feat2.rowAlias">Alias และ log driver</th>
+                <td><code class="inline">--network-alias</code> และ <code class="inline">--log-driver</code> — รองรับ <code class="inline">raw</code>, <code class="inline">json-file</code>, <code class="inline">syslog</code> และ <code class="inline">journald</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="section-lead" data-i18n="feat2.composeLead"></p>
+        <div class="code-block">
+          <pre id="code-feat2-compose"><code>services:
+  trainer:
+    image: nvcr.io/nvidia/cuda:12.4.0-base-ubuntu22.04
+    gpus: all
+    devices: ["/dev/video0:/dev/video0:ro"]
+    log_driver: json-file
+    aliases: [trainer-alias]</code></pre>
+        </div>
+      </section>

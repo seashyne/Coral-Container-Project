@@ -161,6 +161,10 @@ function openRunModal(preset = null) {
     $("run-cpu").value = "0";
     $("run-pids").value = "0";
     if ($("run-health-cmd")) $("run-health-cmd").value = "";
+    if ($("run-network-aliases")) $("run-network-aliases").value = "";
+    if ($("run-gpus")) $("run-gpus").value = "";
+    if ($("run-devices")) $("run-devices").value = "";
+    if ($("run-log-driver")) $("run-log-driver").value = "raw";
     if ($("run-keep-alive")) $("run-keep-alive").checked = false;
     syncRunMemoryPills();
     syncRunPresetChips("");

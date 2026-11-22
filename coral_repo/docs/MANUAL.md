@@ -1,6 +1,6 @@
-# คู่มือการใช้งานและพัฒนา Coral Container Runtime (`v2.3.0` Manual)
+# คู่มือการใช้งานและพัฒนา Coral Container Runtime (`v2.4.0` Manual)
 
-คู่มือนี้อธิบายขั้นตอนการติดตั้ง, การเตรียม Alpine Rootfs, การใช้งาน CLI (`coral`), การรันคอนเทนเนอร์สไตล์เดียวกับ Docker (`coral run`), การใช้ **Coral Desktop v2.3.0**, CRI gRPC Daemon (`coral-daemon`), และ Quality Gates
+คู่มือนี้อธิบายขั้นตอนการติดตั้ง, การเตรียม Alpine Rootfs, การใช้งาน CLI (`coral`), การรันคอนเทนเนอร์สไตล์เดียวกับ Docker (`coral run`), การใช้ **Coral Desktop v2.4.0**, CRI gRPC Daemon + `docker.sock` (`coral-daemon`), และ Quality Gates
 
 ![Visual Quick Guide — Coral v2.3.0](../../docs/assets/coral-usage-guide.png)
 
@@ -309,11 +309,36 @@ curl -s http://127.0.0.1:9108/metrics | grep coral_
 coral completion bash | sudo tee /etc/bash_completion.d/coral >/dev/null
 ```
 
+### 5.6 ฟีเจอร์ Docker-Parity ขั้นสูง (`v2.4.0`)
+```bash
+# 1. เชื่อมต่อเครื่องมือสาย Docker ผ่าน docker.sock (Testcontainers, Traefik, curl)
+export DOCKER_HOST="unix://$HOME/.local/state/coral/daemon/docker.sock"
+curl -s --unix-socket "$HOME/.local/state/coral/daemon/docker.sock" http://localhost/v1.45/version
+
+# 2. ส่งต่อ GPU / อุปกรณ์เครื่องหลัก + Network Alias + Docker json-file / syslog log driver
+coral run -d --name ai-worker --network app-net --network-alias inference \
+  --gpus all --device /dev/dri:/dev/dri --log-driver json-file alpine:3.20 sleep 3600
+
+# 3. สร้างอิมเมจด้วย BuildKit Heredoc และ RUN --mount=type=cache / secret
+cat <<'DOCKERFILE' > Dockerfile
+FROM alpine:3.20
+EXPOSE 8080/tcp
+HEALTHCHECK --interval=5s --retries=3 CMD test -f /app/ready
+RUN --mount=type=cache,id=apk,target=/var/cache/apk --mount=type=secret,id=token,src=secret.txt <<EOF
+mkdir -p /app
+touch /app/ready
+EOF
+DOCKERFILE
+coral build -t demo:v2.4 .
+```
+
+> ดูรายละเอียดเชิงลึกของแต่ละฟีเจอร์ (พฤติกรรม, ข้อจำกัด, ตัวเลือกทั้งหมด) ได้ที่ [หัวข้อ 7](#7-ฟีเจอร์เชิงแพลตฟอร์มระหว่างระบบ--รายละเอียดเชิงลึก-v240)
+
 ---
 
-## 6. การใช้งาน Coral Desktop (`v2.3.0` GUI)
+## 6. การใช้งาน Coral Desktop (`v2.4.0` GUI)
 
-เปิดแอปผ่านเมนูแอปพลิเคชัน (**Coral Desktop**) หรือรัน `~/.local/bin/coral-desktop` โดยจุดเด่นของ `v2.3.0` ได้แก่:
+เปิดแอปผ่านเมนูแอปพลิเคชัน (**Coral Desktop**) หรือรัน `coral-desktop` โดยจุดเด่นของ `v2.4.0` ได้แก่:
 
 1. **Topbar Theme Popover (`ปุ่ม Theme` ด้านขวาบน):**
    - คลิกที่ปุ่ม **Theme** เพื่อปรับได้ทันทีจากทุกหน้าจอโดยไม่ต้องสลับไปหน้า Settings:
@@ -328,3 +353,109 @@ coral completion bash | sudo tee /etc/bash_completion.d/coral >/dev/null
    - พิมพ์ชื่ออิมเมจใดก็ได้ (เช่น `itzg/minecraft-server`, `postgres:16-alpine`, `ghcr.io/org/app:v1`) ในช่อง **Quick Pull Any OCI Image** ด้านบนสุด แล้วกด Pull ได้ในขั้นตอนเดียว
 4. **Live Terminal (PTY), Logs & OverlayFS Diff:**
    - คลิกที่แถวคอนเทนเนอร์เพื่อเปิด Drawer ดู Logs แบบ Auto-scroll, เปิด Live PTY Terminal, ดูกราฟ CPU/RAM, และตรวจสอบไฟล์ OverlayFS diff พร้อม Commit เป็น Image ใหม่ได้ทันที
+
+---
+
+## 7. ฟีเจอร์เชิงแพลตฟอร์มระหว่างระบบ — รายละเอียดเชิงลึก (`v2.4.0`)
+
+ฟีเจอร์ชุดนี้เพิ่มเข้ามาใน `v2.3.0` ทั้งหมดเขียนด้วย Rust ล้วน ไม่ต้องติดตั้ง daemon ภายนอกเพิ่ม และมี E2E test ครอบคลุม
+
+### 7.1 Content-Addressable Layer Cache (แคชชั้นข้อมูลตาม digest)
+
+`coral pull` จะไม่ดาวน์โหลด layer ที่เคยมีอยู่แล้วอีก — blob ที่ผ่านการตรวจสอบจะถูกเก็บแบบ content-addressable ตาม OCI digest ที่ `<images_dir>/.layer-cache/sha256/<hex>.blob` และถูกใช้ซ้ำโดย image อื่นที่อ้างอิง layer เดียวกัน
+
+- **ตรวจสอบ SHA-256 สองครั้ง** — ตอนดาวน์โหลด และอีกครั้งทุกครั้งที่อ่านจากแคช หาก digest ไม่ตรงกัน ไฟล์นั้นจะถูกลบทิ้งอัตโนมัติแทนที่จะถูกนำไปใช้
+- **ย้ายเข้าแคชแบบ atomic** — layer ที่ตรวจผ่านจะถูก `rename` เข้าแคช (มี `copy` เป็นทางสำรอง) ไฟล์ที่เขียนค้างไม่ครบจึงไม่มีทางถูกมองเห็นจากการ pull พร้อมกัน
+- **ดาวน์โหลดขนาน** — ดาวน์โหลด layer ได้พร้อมกันสูงสุด **4 ชั้น** แล้วประกอบกลับเข้าตามลำดับของ manifest เสมอ
+
+```bash
+# ครั้งแรกจะเติมแคช
+coral pull alpine:3.20
+
+# ครั้งต่อไป layer ฐานที่ซ้ำกันจะถูกใช้ซ้ำ ไม่ดึงใหม่
+coral pull busybox:musl
+
+# ดูไฟล์ในแคช
+ls ~/.local/state/coral/images/.layer-cache/sha256/
+```
+
+### 7.2 Embedded DNS Server (เซิร์ฟเวอร์ DNS ฝังในตัว)
+
+daemon รัน **เซิร์ฟเวอร์ DNS ตามมาตรฐาน RFC 1035 บน UDP** ไว้ภายในตัวเอง (`coral-net`) บนพอร์ต loopback ชั่วคราว ชื่อคอนเทนเนอร์ ชื่อ service ของ Compose และค่า `--network-alias` จะถูกลงทะเบียนให้อัตโนมัติ คอนเทนเนอร์บนเครือข่ายที่ผู้ใช้สร้างจึงเรียกหากันด้วยชื่อได้โดยไม่ต้องมี DNS server ภายนอก
+
+- ทุกชื่อที่ลงทะเบียนจะ resolve ได้ทั้งแบบ `ชื่อ` และ `ชื่อ.coral.local`
+- คำถามชนิด `A` และ `ANY` จะได้คำตอบ, `AAAA` จะได้ NODATA, ชื่อที่ไม่รู้จักจะได้ NXDOMAIN
+- ชื่อและ alias ของคอนเทนเนอร์พี่น้องถูกเขียนลง `/etc/hosts` เพิ่มด้วย และ **คอนเทนเนอร์ที่กำลังรันอยู่จะถูกอัปเดต `/etc/hosts` แบบ in-place** เพื่อให้ resolve กันได้ทั้งสองทาง
+
+```bash
+coral network create app-net
+
+coral run -d --network app-net --network-alias db --name postgres postgres:16
+
+# ภายในคอนเทนเนอร์อีกตัวบนเครือข่ายเดียวกัน จะ resolve "db" ได้
+coral run --network app-net alpine:3.20 sh -c 'nslookup db'
+```
+
+### 7.3 BuildKit Dockerfile Extensions (ส่วนขยาย Dockerfile สไตล์ BuildKit)
+
+`coral build` รองรับชุดคำสั่ง Dockerfile ที่ Dockerfile สมัยใหม่ใช้เป็นประจำ
+
+- **Heredoc** — `RUN <<EOF`, `RUN <<-EOF` และ `RUN --mount=... <<'EOF'` เนื้อหา heredoc จะถูกยุบเป็นคำสั่งเดียวก่อนเริ่ม build
+- **`RUN --mount=type=cache`** — โฟลเดอร์ cache ฝั่ง host ที่คงอยู่ข้ามการ build ถูก mount แบบ read-write เข้าไปในขั้นตอน build (เช่น cache ของ package manager)
+- **`RUN --mount=type=secret`** — ไฟล์จาก build context ถูก mount แบบ **read-only** ที่ `/run/secrets/<id>` (หรือ `target=` ที่ระบุเอง) แหล่งที่มาของ secret อยู่ภายใน build context เท่านั้น ห้ามอ้างถึงพาธใด ๆ บน host
+- **`RUN --mount=type=tmpfs`** — tmpfs ที่ mount ด้วย `nosuid,nodev,mode=1777` ที่ target ที่ระบุ
+- **คำสั่ง metadata ของ image** — `EXPOSE`, `VOLUME`, `SHELL`, `HEALTHCHECK` (รองรับ `--interval=`, `--retries=`, `CMD ...` และ `NONE` เพื่อล้างค่า) และ `ONBUILD` ถูกนำไปใส่ใน OCI image config ที่ได้
+- **Multi-stage build** — `COPY --from=<stage|index|image>` คัดลอกไฟล์จาก stage ก่อนหน้า, จากเลข index ของ stage หรือจาก image อื่น และจะปฏิเสธเมื่ออ้างถึง stage ที่กำลัง build อยู่
+
+```dockerfile
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --no-cache-dir -r requirements.txt
+
+RUN --mount=type=secret,id=npmrc,target=/root/.npmrc \
+    npm ci --production
+```
+
+### 7.4 `docker.sock` — ส่วนต่อ Docker Engine API
+
+`coral-daemon` เปิดให้บริการ **Docker Engine REST API** (`/v1.24`..`/v1.47`) บน Unix socket (ค่าเริ่มต้น `<state_dir>/docker.sock` โหมด `0660` — เมื่อรันผ่าน systemd unit ของแพ็กเกจจะอยู่ที่ `~/.local/state/coral/daemon/docker.sock`) และเปิดบน TCP ได้ด้วย เครื่องมือ Docker ที่มีอยู่แล้วจึงสั่งงาน Coral ได้โดยไม่ต้องแก้โค้ด
+
+- endpoint ที่รองรับ: `/_ping`, `/version`, `/info`, `/images/json`, `/containers/json`, `/containers/create`, `/containers/{id}/json`, `/containers/{id}/logs`, `/containers/{id}/{start,stop,kill,restart,wait}`, `DELETE /containers/{id}`
+- `POST /containers/create` รองรับ `Image`, `name`, `Hostname`, `Cmd`, `Env`, `Entrypoint`, `User`, `HostConfig.Binds`, `HostConfig.NetworkMode` และ `HostConfig.Memory`
+- ชี้ Docker client ที่ใดก็ได้ด้วย `DOCKER_HOST=unix://…/docker.sock` — Docker CLI, Testcontainers, Traefik และ Portainer ใช้งาน Coral ผ่านทางนี้ได้ทั้งหมด
+
+```bash
+# เปิด socket ที่ตำแหน่งที่ต้องการ
+coral-daemon --docker-socket /run/coral/docker.sock
+
+# ใช้ Docker CLI คุยกับ Coral
+DOCKER_HOST=unix:///run/coral/docker.sock docker ps
+
+# ปิดใช้งาน shim ทั้งหมด
+coral-daemon --no-docker-socket
+```
+
+### 7.5 GPU & Device Passthrough (ส่งผ่านอุปกรณ์และ GPU)
+
+คอนเทนเนอร์สามารถเข้าถึงฮาร์ดแวร์ของ host ได้โดยตรง
+
+- **`--device HOST_DEV[:CTR_DEV[:PERMS]]`** — รูปแบบเดียวกับ Docker พาธต้องเป็น absolute และอุปกรณ์บน host ต้องมีอยู่จริง ถ้าสิทธิ์มี `r` แต่ไม่มี `w` จะ mount แบบ read-only
+- **`--gpus all` / `--gpus <index>` / `--gpus device=<index>`** — ค้นพบ GPU อัตโนมัติสำหรับ **NVIDIA** (`nvidiactl`, `nvidia-uvm`, `nvidia-modeset`, `nvidia-caps`, `nvidia0..15`), **AMD ROCm** (`/dev/kfd`) และ **DRM** (`/dev/dri`) พร้อม inject ตัวแปร `NVIDIA_VISIBLE_DEVICES`, `NVIDIA_DRIVER_CAPABILITIES` และ `ROCR_VISIBLE_DEVICES` ให้ตรงกัน
+- **`--network-alias`** (alias `--alias`) — ชื่อ service แบบ scoped กับเครือข่าย ใส่ซ้ำได้หลายค่า
+- **`--log-driver`** — `raw` (ค่าเริ่มต้น), `json-file`, `syslog` หรือ `journald`
+
+```bash
+coral run --gpus all --device /dev/video0:/dev/video0:ro \
+  nvcr.io/nvidia/cuda:12.4.0-base-ubuntu22.04 nvidia-smi
+```
+
+ใช้งานผ่าน Compose file ได้เช่นกัน:
+
+```yaml
+services:
+  trainer:
+    image: nvcr.io/nvidia/cuda:12.4.0-base-ubuntu22.04
+    gpus: all
+    devices: ["/dev/video0:/dev/video0:ro"]
+    log_driver: json-file
+    aliases: [trainer-alias]
+```
