@@ -186,7 +186,28 @@ Object.assign(window.CORAL_DESKTOP_LOCALES.en, {
   "nextgen.btnSign": "Sign Image",
   "nextgen.btnVerify": "Verify Signature",
   "nextgen.btnSbom": "Generate SBOM",
+  "nextgen.btnScan": "Scan CVEs (OSV.dev)",
   "nextgen.secOutPlaceholder": "(output will appear here)",
+
+  // Container v2.8 Management Modals
+  "containers.menuPause": "Pause (Freeze)",
+  "containers.menuUnpause": "Resume (Unpause)",
+  "containers.menuRename": "Rename",
+  "containers.menuUpdate": "Update Limits",
+  "containers.menuTop": "Processes (Top)",
+  "containers.renameTitle": "Rename Container",
+  "containers.renameLabel": "New Container Name",
+  "containers.btnRename": "Rename",
+  "containers.updateTitle": "Update Resource Limits Live",
+  "containers.updateMem": "Memory (MB)",
+  "containers.updateCpu": "CPU % (100 = 1 core)",
+  "containers.updatePids": "PIDs Limit (optional)",
+  "containers.btnApplyLimits": "Apply Limits",
+  "containers.topTitle": "Container Processes (Top)",
+  "containers.toastPaused": "Container paused (frozen)",
+  "containers.toastResumed": "Container resumed",
+  "containers.toastRenamed": "Renamed container to {name}",
+  "containers.toastUpdated": "Updated resource limits live",
 
   // Pods View
   "pods.title": "Pods",

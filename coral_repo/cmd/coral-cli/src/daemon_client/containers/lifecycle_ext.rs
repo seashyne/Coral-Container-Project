@@ -99,3 +99,52 @@ pub async fn cmd_update(
     println!("{cid}");
     Ok(())
 }
+
+pub async fn cmd_top(addr: &str, id: &str, json_out: bool) -> Result<()> {
+    let raw = invoke_container_action(
+        addr,
+        "container_top",
+        HashMap::from([("coral.container.id".into(), id.to_string())]),
+    )
+    .await?;
+    if json_out {
+        println!("{raw}");
+        return Ok(());
+    }
+    let procs: Vec<serde_json::Value> = serde_json::from_str(&raw).unwrap_or_default();
+    println!("{:<8} {:<8} {:<12} {:<10} CMD", "PID", "PPID", "STATE", "RSS");
+    for p in procs {
+        println!(
+            "{:<8} {:<8} {:<12} {:<10} {}",
+            p["pid"],
+            p["ppid"],
+            p["state"].as_str().unwrap_or("?"),
+            format!("{} KiB", p["rssKb"].as_u64().unwrap_or(0)),
+            p["cmd"].as_str().unwrap_or("")
+        );
+    }
+    Ok(())
+}
+
+pub async fn cmd_wait(addr: &str, id: &str) -> Result<i32> {
+    let ch = connect_channel(addr, 5).await?;
+    let mut rt = RuntimeServiceClient::new(ch);
+    loop {
+        let resp = rt
+            .container_status(coral_api::ContainerStatusRequest {
+                container_id: id.to_string(),
+                verbose: false,
+            })
+            .await
+            .with_context(|| format!("wait for container '{id}'"))?
+            .into_inner();
+        let Some(st) = resp.status else {
+            anyhow::bail!("container '{id}' status missing");
+        };
+        if st.state == coral_api::ContainerState::ContainerExited as i32 {
+            println!("{}", st.exit_code);
+            return Ok(st.exit_code);
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(80)).await;
+    }
+}

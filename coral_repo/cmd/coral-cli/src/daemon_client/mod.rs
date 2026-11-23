@@ -13,7 +13,8 @@ pub use compose::{
 };
 pub use containers::{
     DaemonRunOptions, cmd_diff_via_daemon, cmd_exec, cmd_logs, cmd_pause, cmd_ps, cmd_rename,
-    cmd_rm, cmd_run_via_daemon, cmd_stats, cmd_stop, cmd_unpause, cmd_update,
+    cmd_rm, cmd_run_via_daemon, cmd_stats, cmd_stats_all, cmd_stop, cmd_top, cmd_unpause,
+    cmd_update, cmd_wait,
 };
 pub use images::{
     ProgressMode, cmd_build_with_options, cmd_catalog, cmd_commit_via_daemon, cmd_images,

@@ -206,4 +206,98 @@ impl CoralDaemonService {
         self.persist_state(&store);
         Ok(id)
     }
+
+    /// Lists live processes running inside a container's PID namespace (`coral top` / `/containers/{id}/top`).
+    pub(crate) async fn container_top(&self, query: &str) -> Result<String, Status> {
+        let id = {
+            let store = self.store.read().await;
+            store
+                .resolve_container_id(query)
+                .ok_or_else(|| Status::not_found(format!("container '{query}' not found")))?
+        };
+        let state = StateStore::new(self.runtime_root())
+            .load(&id)
+            .map_err(|_| Status::failed_precondition(format!("container '{id}' is not running")))?;
+        let Some(root_pid) = state.pid else {
+            return Err(Status::failed_precondition(format!(
+                "container '{id}' has no active PID"
+            )));
+        };
+        let procs = collect_pidns_processes(root_pid);
+        serde_json::to_string(&procs)
+            .map_err(|e| Status::internal(format!("serialize container top: {e}")))
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct TopProcEntry {
+    pid: i32,
+    ppid: i32,
+    state: String,
+    rss_kb: u64,
+    cmd: String,
+}
+
+fn collect_pidns_processes(root_pid: i32) -> Vec<TopProcEntry> {
+    let target_ns = std::fs::read_link(format!("/proc/{root_pid}/ns/pid")).ok();
+    let mut out = Vec::new();
+    let Ok(entries) = std::fs::read_dir("/proc") else {
+        return out;
+    };
+    for entry in entries.flatten() {
+        let Ok(name) = entry.file_name().into_string() else {
+            continue;
+        };
+        let Ok(pid) = name.parse::<i32>() else {
+            continue;
+        };
+        let matches = if let Some(ref ns) = target_ns {
+            std::fs::read_link(format!("/proc/{pid}/ns/pid")).ok().as_ref() == Some(ns)
+        } else {
+            pid == root_pid
+        };
+        if !matches {
+            continue;
+        }
+        let status = std::fs::read_to_string(format!("/proc/{pid}/status")).unwrap_or_default();
+        let mut ppid = 0i32;
+        let mut proc_state = String::from("?");
+        let mut rss_kb = 0u64;
+        for line in status.lines() {
+            if let Some(v) = line.strip_prefix("PPid:") {
+                ppid = v.trim().parse().unwrap_or(0);
+            } else if let Some(v) = line.strip_prefix("State:") {
+                proc_state = v.trim().to_string();
+            } else if let Some(v) = line.strip_prefix("VmRSS:") {
+                rss_kb = v
+                    .split_whitespace()
+                    .next()
+                    .and_then(|n| n.parse().ok())
+                    .unwrap_or(0);
+            }
+        }
+        let cmdline_raw = std::fs::read(format!("/proc/{pid}/cmdline")).unwrap_or_default();
+        let cmd = if !cmdline_raw.is_empty() {
+            cmdline_raw
+                .split(|&b| b == 0)
+                .filter(|s| !s.is_empty())
+                .map(|s| String::from_utf8_lossy(s).into_owned())
+                .collect::<Vec<_>>()
+                .join(" ")
+        } else {
+            std::fs::read_to_string(format!("/proc/{pid}/comm"))
+                .map(|s| s.trim().to_string())
+                .unwrap_or_else(|_| "<unknown>".into())
+        };
+        out.push(TopProcEntry {
+            pid,
+            ppid,
+            state: proc_state,
+            rss_kb,
+            cmd,
+        });
+    }
+    out.sort_by_key(|p| p.pid);
+    out
 }

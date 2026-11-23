@@ -179,13 +179,18 @@ async function runImageSecurityAction(action) {
     toast("Enter an image tag first", true);
     return;
   }
-  const btns = ["sec-sign-btn", "sec-verify-btn", "sec-sbom-btn"];
+  const btns = ["sec-sign-btn", "sec-verify-btn", "sec-sbom-btn", "sec-scan-btn"];
   btns.forEach((id) => {
     if ($(id)) $(id).disabled = true;
   });
   try {
     await guard(async () => {
-      const cmdMap = { sign: "image_sign", verify: "image_verify", sbom: "image_sbom" };
+      const cmdMap = {
+        sign: "image_sign",
+        verify: "image_verify",
+        sbom: "image_sbom",
+        scan: "image_scan",
+      };
       const res = await invoke(cmdMap[action], { image });
       if (action === "sign") {
         $("sec-stats").textContent = `Signed (${res.algorithm || "Ed25519"})`;
@@ -193,6 +198,11 @@ async function runImageSecurityAction(action) {
       } else if (action === "verify") {
         $("sec-stats").textContent = res.verified ? "Signature VERIFIED" : "Signature INVALID";
         toast(t(res.verified ? "toast.sigValid" : "toast.sigInvalid"), !res.verified);
+      } else if (action === "scan") {
+        const s = res.summary || {};
+        $("sec-stats").textContent =
+          `CVEs: ${s.total || 0} (C:${s.critical || 0} H:${s.high || 0} M:${s.medium || 0}) • ${res.packagesScanned || 0} pkgs`;
+        toast(`Scanned ${res.packagesScanned || 0} packages (${s.total || 0} findings)`, (s.critical || 0) + (s.high || 0) > 0);
       } else {
         const count = Array.isArray(res.packages) ? res.packages.length : 0;
         $("sec-stats").textContent = `SPDX 2.3 • ${count} packages`;

@@ -20,6 +20,7 @@ $("vm-boot-form").addEventListener("submit", submitVmBoot);
 $("sec-sign-btn").addEventListener("click", () => runImageSecurityAction("sign"));
 $("sec-verify-btn").addEventListener("click", () => runImageSecurityAction("verify"));
 $("sec-sbom-btn").addEventListener("click", () => runImageSecurityAction("sbom"));
+$("sec-scan-btn")?.addEventListener("click", () => runImageSecurityAction("scan"));
 $("wasm-serve-target").addEventListener("input", updateWasmServePreview);
 $("wasm-serve-addr").addEventListener("input", updateWasmServePreview);
 $("wasm-serve-copy-btn").addEventListener("click", copyWasmServeCmd);

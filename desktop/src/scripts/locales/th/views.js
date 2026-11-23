@@ -186,7 +186,28 @@ Object.assign(window.CORAL_DESKTOP_LOCALES.th, {
   "nextgen.btnSign": "ลงนามอิมเมจ",
   "nextgen.btnVerify": "ตรวจสอบลายเซ็น",
   "nextgen.btnSbom": "สร้าง SBOM",
+  "nextgen.btnScan": "สแกนช่องโหว่ CVE (OSV.dev)",
   "nextgen.secOutPlaceholder": "(ผลลัพธ์จะแสดงที่นี่)",
+
+  // Container v2.8 Management Modals
+  "containers.menuPause": "หยุดชั่วคราว (Pause)",
+  "containers.menuUnpause": "ทำงานต่อ (Resume)",
+  "containers.menuRename": "เปลี่ยนชื่อ",
+  "containers.menuUpdate": "ปรับลิมิตทรัพยากร",
+  "containers.menuTop": "โปรเซสภายใน (Top)",
+  "containers.renameTitle": "เปลี่ยนชื่อคอนเทนเนอร์",
+  "containers.renameLabel": "ชื่อคอนเทนเนอร์ใหม่",
+  "containers.btnRename": "เปลี่ยนชื่อ",
+  "containers.updateTitle": "ปรับลิมิตทรัพยากรแบบ Live",
+  "containers.updateMem": "หน่วยความจำ RAM (MB)",
+  "containers.updateCpu": "CPU % (100 = 1 คอร์)",
+  "containers.updatePids": "ลิมิตจำนวน PIDs (ไม่บังคับ)",
+  "containers.btnApplyLimits": "บันทึกลิมิต",
+  "containers.topTitle": "รายการโปรเซสในคอนเทนเนอร์ (Top)",
+  "containers.toastPaused": "หยุดชั่วคราว (Freeze) คอนเทนเนอร์แล้ว",
+  "containers.toastResumed": "คืนการทำงานคอนเทนเนอร์แล้ว",
+  "containers.toastRenamed": "เปลี่ยนชื่อคอนเทนเนอร์เป็น {name} แล้ว",
+  "containers.toastUpdated": "อัปเดตลิมิตทรัพยากรแบบ Live เรียบร้อย",
 
   // Pods View
   "pods.title": "พ็อด (Pods)",

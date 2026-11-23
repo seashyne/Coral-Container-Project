@@ -1,0 +1,65 @@
+  <!-- 5. Container Rename, Live Resource Update & Top Processes Dialogs -->
+  <dialog id="rename-dialog" class="modal-dialog" closedby="any" aria-labelledby="rename-dialog-title">
+    <div class="dialog-box dialog-small">
+      <div class="modal-head">
+        <h3 id="rename-dialog-title" data-i18n="containers.renameTitle">Rename Container</h3>
+        <button type="button" class="sb" data-close-dialog="rename-dialog" aria-label="Close dialog" data-i18n-aria="common.close" data-close-icon></button>
+      </div>
+      <form id="rename-form">
+        <input id="rename-cid" type="hidden" />
+        <div class="field-group">
+          <label for="rename-input" data-i18n="containers.renameLabel">New Container Name</label>
+          <input id="rename-input" class="field mono" type="text" placeholder="my-service" required />
+        </div>
+        <div class="form-row right mt-md">
+          <button type="button" class="btn" data-close-dialog="rename-dialog" data-i18n="common.cancel">Cancel</button>
+          <button id="rename-submit" type="submit" class="btn primary" data-i18n="containers.btnRename">Rename</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog id="update-limits-dialog" class="modal-dialog" closedby="any" aria-labelledby="update-dialog-title">
+    <div class="dialog-box dialog-small">
+      <div class="modal-head">
+        <h3 id="update-dialog-title" data-i18n="containers.updateTitle">Update Resource Limits Live</h3>
+        <button type="button" class="sb" data-close-dialog="update-limits-dialog" aria-label="Close dialog" data-i18n-aria="common.close" data-close-icon></button>
+      </div>
+      <form id="update-limits-form">
+        <input id="upd-cid" type="hidden" />
+        <div class="form-grid">
+          <div class="field-group">
+            <label for="upd-mem" data-i18n="containers.updateMem">Memory (MB)</label>
+            <input id="upd-mem" class="field mono" type="number" min="0" placeholder="512" />
+          </div>
+          <div class="field-group">
+            <label for="upd-cpu" data-i18n="containers.updateCpu">CPU % (100 = 1 core)</label>
+            <input id="upd-cpu" class="field mono" type="number" min="0" placeholder="100" />
+          </div>
+          <div class="field-group col-span-full">
+            <label for="upd-pids" data-i18n="containers.updatePids">PIDs Limit (optional)</label>
+            <input id="upd-pids" class="field mono" type="number" min="0" placeholder="256" />
+          </div>
+        </div>
+        <div class="form-row right mt-md">
+          <button type="button" class="btn" data-close-dialog="update-limits-dialog" data-i18n="common.cancel">Cancel</button>
+          <button id="upd-submit" type="submit" class="btn primary" data-i18n="containers.btnApplyLimits">Apply Limits</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog id="top-dialog" class="modal-dialog" closedby="any" aria-labelledby="top-dialog-title">
+    <div class="dialog-box dialog-medium">
+      <div class="modal-head">
+        <h3 id="top-dialog-title" data-i18n="containers.topTitle">Container Processes (Top)</h3>
+        <button type="button" class="sb" data-close-dialog="top-dialog" aria-label="Close dialog" data-i18n-aria="common.close" data-close-icon></button>
+      </div>
+      <input id="top-cid" type="hidden" />
+      <pre id="top-output" class="console medium"></pre>
+      <div class="form-row right mt-md">
+        <button id="top-refresh-btn" type="button" class="btn" data-i18n="common.refresh">Refresh</button>
+        <button type="button" class="btn primary" data-close-dialog="top-dialog" data-i18n="common.close">Close</button>
+      </div>
+    </div>
+  </dialog>

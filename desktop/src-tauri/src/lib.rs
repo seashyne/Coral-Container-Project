@@ -24,6 +24,7 @@ pub fn run() {
             cri::unpause_container,
             cri::rename_container,
             cri::update_container,
+            cri::container_top,
             cri::remove_container,
             cri::container_detail,
             cri::exec_container,
@@ -63,6 +64,7 @@ pub fn run() {
             cri::image_sign,
             cri::image_verify,
             cri::image_sbom,
+            cri::image_scan,
             cri::vm_setup_kernel,
             cri::vm_boot,
         ])

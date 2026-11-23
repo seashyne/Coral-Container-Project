@@ -372,3 +372,17 @@ pub async fn update_container(
     }
     run_container_system_action(&state, "container_update", map).await
 }
+
+#[tauri::command]
+pub async fn container_top(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<serde_json::Value, String> {
+    let raw = run_container_system_action(
+        &state,
+        "container_top",
+        HashMap::from([("coral.container.id".into(), id)]),
+    )
+    .await?;
+    serde_json::from_str(&raw).map_err(err)
+}

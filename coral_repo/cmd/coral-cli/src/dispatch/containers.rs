@@ -4,7 +4,7 @@
 use super::{Ctx, run_async};
 use crate::args::{
     CommitArgs, CpArgs, DiffArgs, ExecArgs, InspectArgs, LogsArgs, PauseArgs, RenameArgs, RmArgs,
-    StatsArgs, StopArgs, UnpauseArgs, UpdateArgs,
+    StatsArgs, StopArgs, TopArgs, UnpauseArgs, UpdateArgs, WaitArgs,
 };
 use crate::cp;
 use crate::daemon_client;
@@ -185,17 +185,33 @@ pub(crate) fn rm(ctx: &Ctx, args: RmArgs) -> Result<ExitCode> {
 pub(crate) fn stats(ctx: &Ctx, args: StatsArgs) -> Result<ExitCode> {
     let StatsArgs {
         id,
+        all,
         watch,
         interval,
     } = args;
-    if run_async(daemon_client::cmd_stats(&ctx.addr, &id, watch, interval))? {
+    if all || id.is_none() {
+        run_async(daemon_client::cmd_stats_all(&ctx.addr, watch, interval))?;
+        return Ok(ExitCode::SUCCESS);
+    }
+    let cid = id.unwrap();
+    if run_async(daemon_client::cmd_stats(&ctx.addr, &cid, watch, interval))? {
         return Ok(ExitCode::SUCCESS);
     }
     let stats = ctx
         .mgr
         .cgroups()
-        .read_stats(&id)
-        .with_context(|| format!("read cgroup stats for '{id}'"))?;
+        .read_stats(&cid)
+        .with_context(|| format!("read cgroup stats for '{cid}'"))?;
     println!("{}", serde_json::to_string_pretty(&stats)?);
+    Ok(ExitCode::SUCCESS)
+}
+
+pub(crate) fn top(ctx: &Ctx, args: TopArgs) -> Result<ExitCode> {
+    run_async(daemon_client::cmd_top(&ctx.addr, &args.id, args.json))?;
+    Ok(ExitCode::SUCCESS)
+}
+
+pub(crate) fn wait(ctx: &Ctx, args: WaitArgs) -> Result<ExitCode> {
+    run_async(daemon_client::cmd_wait(&ctx.addr, &args.id))?;
     Ok(ExitCode::SUCCESS)
 }

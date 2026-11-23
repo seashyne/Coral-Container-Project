@@ -9,6 +9,7 @@ mod digest;
 mod keys;
 mod model;
 mod sbom;
+pub mod scan;
 mod sign;
 #[cfg(test)]
 mod tests;
@@ -18,4 +19,7 @@ pub use digest::compute_image_tree_digest;
 pub use keys::{default_key_paths, generate_keypair};
 pub use model::{ImageSignatureEnvelope, KeypairReport, VerifyReport};
 pub use sbom::generate_spdx_sbom;
+pub use scan::{
+    ImageScanReport, SeveritySummary, VulnerabilityFinding, scan_image_vulnerabilities,
+};
 pub use sign::{sign_image, verify_image};

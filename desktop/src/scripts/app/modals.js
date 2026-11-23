@@ -28,6 +28,12 @@ $("compose-template-select")?.addEventListener("change", (e) => {
 });
 $("compose-up-btn").addEventListener("click", submitComposeUp);
 $("compose-down-btn").addEventListener("click", submitComposeDown);
+$("rename-form")?.addEventListener("submit", submitRenameContainer);
+$("update-limits-form")?.addEventListener("submit", submitUpdateLimits);
+$("top-refresh-btn")?.addEventListener("click", () => {
+  const id = $("top-cid")?.value;
+  if (id) openContainerTop(id);
+});
 
 $("commit-btn").addEventListener("click", commitContainer);
 $("detail-close").addEventListener("click", closeDetail);

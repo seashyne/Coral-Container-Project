@@ -172,6 +172,7 @@ impl CoralDaemonService {
             "image_sign" => self.handle_image_sign(annotations).await,
             "image_verify" => self.handle_image_verify(annotations).await,
             "image_sbom" => self.handle_image_sbom(annotations).await,
+            "image_scan" => self.handle_image_scan(annotations).await,
             "vm_setup_kernel" => self.handle_vm_setup_kernel().await,
             "vm_boot" => self.handle_vm_boot(annotations).await,
             "container_pause" => {
@@ -218,6 +219,13 @@ impl CoralDaemonService {
                     .and_then(|v| v.parse::<i64>().ok());
                 self.update_container_resources(cid, mem, quota, period, pids)
                     .await
+            }
+            "container_top" => {
+                let cid = annotations
+                    .get("coral.container.id")
+                    .map(String::as_str)
+                    .unwrap_or("");
+                self.container_top(cid).await
             }
             "auto_gc" => {
                 let report = self.run_auto_gc_once().await;

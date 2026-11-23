@@ -129,7 +129,7 @@ impl CoralDaemonService {
                 })
                 .unwrap_or(Ipv4Addr::LOCALHOST);
             for name in collect_service_names(config) {
-                dns.register_host(&name, target_ip);
+                dns.add_host_ip(&name, target_ip);
             }
         }
 

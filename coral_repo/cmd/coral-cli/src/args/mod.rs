@@ -19,13 +19,15 @@ mod wasm;
 pub use compose::{ComposeAction, ComposeArgs};
 pub use container::{
     CommitArgs, CpArgs, DiffArgs, ExecArgs, InspectArgs, LogsArgs, PauseArgs, RenameArgs, RmArgs,
-    StatsArgs, StopArgs, UnpauseArgs, UpdateArgs,
+    StatsArgs, StopArgs, TopArgs, UnpauseArgs, UpdateArgs, WaitArgs,
 };
 pub use images::{
     BuildArgs, CatalogArgs, ImagesArgs, LoadArgs, PullArgs, PushArgs, RmiArgs, SaveArgs, TagArgs,
 };
 pub use machine::{MachineAction, MachineArgs};
-pub use misc::{CompletionArgs, CriStatusArgs, KeygenArgs, SbomArgs, SignArgs, VerifyArgs};
+pub use misc::{
+    CompletionArgs, CriStatusArgs, KeygenArgs, SbomArgs, ScanArgs, SignArgs, VerifyArgs,
+};
 pub use network::{NetworkAction, NetworkArgs};
 pub use oci::{CniConfigArgs, CreateArgs, DeleteArgs, KillArgs, SpecArgs, StartArgs, StateArgs};
 pub use pod::{PodAction, PodsArgs};
@@ -204,6 +206,12 @@ pub enum Commands {
     /// Read live resource metrics (Cgroups v2 or rootless `/proc/<pid>`) for a container
     Stats(StatsArgs),
 
+    /// Display running processes inside a container (`coral top <container>`)
+    Top(TopArgs),
+
+    /// Block until a container exits and print its exit code (`coral wait <container>`)
+    Wait(WaitArgs),
+
     /// Generate Coral's default CNI v1.0.0 bridge network configuration
     CniConfig(CniConfigArgs),
 
@@ -218,6 +226,9 @@ pub enum Commands {
 
     /// Generate a standards-compliant SPDX 2.3 JSON Software Bill of Materials (SBOM) for an image
     Sbom(SbomArgs),
+
+    /// Scan an installed OCI image for known OS package CVEs via OSV.dev (`coral scan alpine:3.20`)
+    Scan(ScanArgs),
 
     /// Query Kubernetes CRI v1 RuntimeService Status (`RuntimeReady`, `NetworkReady`, verbose info)
     CriStatus(CriStatusArgs),

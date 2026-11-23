@@ -19,7 +19,7 @@ OUTPUT="$(./target/debug/coral run --bundle . verify-live-box)"
 echo "${OUTPUT}"
 
 if [[ "${OUTPUT}" == *"hostname=coral-container"* && "${OUTPUT}" == *"pid=1"* ]]; then
-    echo "All Coral v2.7.0 verifications PASSED!"
+    echo "All Coral v2.8.0 verifications PASSED!"
 else
     echo "Verification failed: unexpected container output"
     exit 1

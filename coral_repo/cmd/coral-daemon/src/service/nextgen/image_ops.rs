@@ -74,6 +74,27 @@ impl CoralDaemonService {
         serde_json::to_string(&sbom)
             .map_err(|e| Status::internal(format!("serialize SBOM: {e}")))
     }
+
+    #[allow(clippy::result_large_err)]
+    pub(crate) async fn handle_image_scan(
+        &self,
+        annotations: &HashMap<String, String>,
+    ) -> Result<String, Status> {
+        let image_ref = require_image_ref(annotations)?;
+        let offline = annotations
+            .get("coral.scan.offline")
+            .is_some_and(|v| v == "true" || v == "1");
+        let report = images::security::scan_image_vulnerabilities(
+            &self.images_dir,
+            &image_ref,
+            offline,
+            None,
+        )
+        .await
+        .map_err(|e| Status::internal(format!("scan image '{image_ref}': {e:#}")))?;
+        serde_json::to_string(&report)
+            .map_err(|e| Status::internal(format!("serialize scan report: {e}")))
+    }
 }
 
 #[allow(clippy::result_large_err)]

@@ -164,3 +164,44 @@ pub(crate) fn sbom(ctx: &Ctx, args: SbomArgs) -> Result<ExitCode> {
     nextgen::cmd_sbom(&ctx.images_dir, &image, output)?;
     Ok(ExitCode::SUCCESS)
 }
+
+pub(crate) fn scan(ctx: &Ctx, args: crate::args::ScanArgs) -> Result<ExitCode> {
+    let report = super::run_async(coral_daemon::images::scan_image_vulnerabilities(
+        &ctx.images_dir,
+        &args.image,
+        args.offline,
+        None,
+    ))?;
+    if args.json {
+        println!("{}", serde_json::to_string_pretty(&report)?);
+    } else {
+        println!(
+            "Scan: {} ({}) — {} package(s) scanned via {}",
+            report.image, report.os_ecosystem, report.packages_scanned, report.source
+        );
+        println!(
+            "Summary: {} total (CRITICAL: {}, HIGH: {}, MEDIUM: {}, LOW: {}, UNKNOWN: {})",
+            report.summary.total,
+            report.summary.critical,
+            report.summary.high,
+            report.summary.medium,
+            report.summary.low,
+            report.summary.unknown
+        );
+        if !report.findings.is_empty() {
+            println!("{:<22} {:<10} {:<20} {:<18} SUMMARY", "CVE / ID", "SEVERITY", "PACKAGE", "VERSION");
+            for f in &report.findings {
+                println!(
+                    "{:<22} {:<10} {:<20} {:<18} {}",
+                    f.id, f.severity, f.package, f.version, f.summary
+                );
+            }
+        }
+    }
+    if let Some(ref threshold) = args.fail_on
+        && report.exceeds_threshold(threshold)
+    {
+        return Ok(ExitCode::from(1));
+    }
+    Ok(ExitCode::SUCCESS)
+}

@@ -66,6 +66,25 @@ pub struct SbomArgs {
     pub output: Option<PathBuf>,
 }
 
+/// Arguments for `coral scan` (OSV.dev CVE vulnerability scanner).
+#[derive(Debug, Args)]
+pub struct ScanArgs {
+    /// Image tag or ID (e.g. `alpine:3.20`)
+    pub image: String,
+
+    /// Output structured JSON report
+    #[arg(long)]
+    pub json: bool,
+
+    /// Inventory packages offline without calling OSV.dev
+    #[arg(long)]
+    pub offline: bool,
+
+    /// Exit with non-zero code if vulnerabilities meet or exceed severity (`critical|high|medium|low`)
+    #[arg(long = "fail-on")]
+    pub fail_on: Option<String>,
+}
+
 /// Arguments for `coral cri-status`.
 #[derive(Debug, Args)]
 pub struct CriStatusArgs {

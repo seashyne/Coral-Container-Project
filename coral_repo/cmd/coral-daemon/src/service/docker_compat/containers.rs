@@ -348,6 +348,28 @@ pub(super) async fn handle_container_action(
         }
         ("GET", "json") => handle_inspect_container(svc, id).await,
         ("GET", "logs") => handle_container_logs(svc, id).await,
+        ("GET", "top") => match svc.container_top(id).await {
+            Ok(json_str) => {
+                let rows: Vec<Value> = serde_json::from_str::<Vec<Value>>(&json_str)
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|p| {
+                        json!([
+                            p["pid"].to_string(),
+                            p["ppid"].to_string(),
+                            p["state"].as_str().unwrap_or("?"),
+                            format!("{}kB", p["rssKb"].as_u64().unwrap_or(0)),
+                            p["cmd"].as_str().unwrap_or(""),
+                        ])
+                    })
+                    .collect();
+                HttpResponse::json(
+                    "200 OK",
+                    &json!({ "Titles": ["PID", "PPID", "STAT", "RSS", "CMD"], "Processes": rows }),
+                )
+            }
+            Err(e) => HttpResponse::json("404 Not Found", &json!({ "message": e.message() })),
+        },
         _ => HttpResponse::json(
             "404 Not Found",
             &json!({ "message": format!("unsupported container endpoint: {method} /containers/{subpath}") }),

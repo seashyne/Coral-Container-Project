@@ -21,33 +21,25 @@ async function containerAction(act, id) {
   } else if (act === "pause" || act === "unpause") {
     await guard(async () => {
       await invoke(act === "pause" ? "pause_container" : "unpause_container", { id });
-      toast(act === "pause" ? "Container paused" : "Container resumed");
+      toast(t(act === "pause" ? "containers.toastPaused" : "containers.toastResumed"));
       await loadContainers(false);
       updateChrome();
     });
   } else if (act === "rename") {
     const cur = state.containers.find((r) => r.id === id)?.name || "";
-    const newName = window.prompt("New container name:", cur);
-    if (!newName || !newName.trim() || newName.trim() === cur) return;
-    await guard(async () => {
-      await invoke("rename_container", { id, newName: newName.trim() });
-      toast(`Renamed container to ${newName.trim()}`);
-      await loadContainers(false);
-      updateChrome();
-    });
+    $("rename-cid").value = id;
+    $("rename-input").value = cur;
+    openDialog("rename-dialog");
+    $("rename-input").focus();
   } else if (act === "update") {
-    const memRaw = window.prompt("New Memory limit in MB (leave blank to keep):", "");
-    if (memRaw === null) return;
-    const cpuRaw = window.prompt("New CPU % limit (e.g. 50 = 0.5 cores, leave blank to keep):", "");
-    if (cpuRaw === null) return;
-    const memoryMb = Number(memRaw) > 0 ? Math.round(Number(memRaw)) : null;
-    const cpuPercent = Number(cpuRaw) > 0 ? Math.round(Number(cpuRaw)) : null;
-    if (!memoryMb && !cpuPercent) return;
-    await guard(async () => {
-      await invoke("update_container", { id, memoryMb, cpuPercent, pidsLimit: null });
-      toast("Updated container resource limits live");
-      await loadContainers(false);
-    });
+    $("upd-cid").value = id;
+    $("upd-mem").value = "";
+    $("upd-cpu").value = "";
+    $("upd-pids").value = "";
+    openDialog("update-limits-dialog");
+    $("upd-mem").focus();
+  } else if (act === "top") {
+    await openContainerTop(id);
   } else if (act === "remove") {
     await guard(async () => {
       await invoke("remove_container", { id });
@@ -122,14 +114,15 @@ function openRowMenu(btn, id) {
       c.state === "running"
         ? `${
             c.paused
-              ? `<button type="button" data-menu-act="unpause">${ICONS.play}<span>Resume (Unpause)</span></button>`
-              : `<button type="button" data-menu-act="pause">${ICONS.sliders}<span>Pause (Freeze)</span></button>`
+              ? `<button type="button" data-menu-act="unpause">${ICONS.play}<span>${esc(t("containers.menuUnpause"))}</span></button>`
+              : `<button type="button" data-menu-act="pause">${ICONS.sliders}<span>${esc(t("containers.menuPause"))}</span></button>`
           }
+          <button type="button" data-menu-act="top">${ICONS.terminal}<span>${esc(t("containers.menuTop"))}</span></button>
           <button type="button" data-menu-act="stop">${ICONS.square}<span>${esc(t("containers.stopContainer"))}</span></button>`
         : `<button type="button" data-menu-act="start">${ICONS.play}<span>${esc(t("containers.startContainer"))}</span></button>`
     }
-    <button type="button" data-menu-act="rename">${ICONS.sliders}<span>Rename</span></button>
-    <button type="button" data-menu-act="update">${ICONS.sliders}<span>Update Limits</span></button>
+    <button type="button" data-menu-act="rename">${ICONS.sliders}<span>${esc(t("containers.menuRename"))}</span></button>
+    <button type="button" data-menu-act="update">${ICONS.sliders}<span>${esc(t("containers.menuUpdate"))}</span></button>
     <div class="sep"></div>
     <button type="button" class="danger" data-menu-act="remove">${ICONS.trash}<span>${esc(t("containers.removeContainer"))}</span></button>`;
   menu.classList.remove("hidden");
@@ -214,5 +207,63 @@ async function ensureImageInstalled(imageRef) {
   if (existing) return true;
   await pullOciImage(imageRef);
   return true;
+}
+
+async function openContainerTop(id) {
+  $("top-cid").value = id;
+  $("top-output").textContent = "Loading processes…";
+  openDialog("top-dialog");
+  await guard(async () => {
+    const procs = await invoke("container_top", { id });
+    if (!Array.isArray(procs) || !procs.length) {
+      $("top-output").textContent = "(no active processes)";
+      return;
+    }
+    const header = "PID      PPID     STATE        RSS        CMD";
+    const lines = procs.map(
+      (p) =>
+        `${String(p.pid).padEnd(9)}${String(p.ppid).padEnd(9)}${String(p.state).padEnd(13)}${`${p.rssKb || 0} KiB`.padEnd(11)}${p.cmd || ""}`,
+    );
+    $("top-output").textContent = [header, ...lines].join("\n");
+  });
+}
+
+async function submitRenameContainer(e) {
+  e.preventDefault();
+  const id = $("rename-cid").value;
+  const newName = $("rename-input").value.trim();
+  if (!id || !newName) return;
+  $("rename-submit").disabled = true;
+  try {
+    await guard(async () => {
+      await invoke("rename_container", { id, newName });
+      toast(t("containers.toastRenamed", { name: newName }));
+      closeDialog("rename-dialog");
+      await loadContainers(false);
+      updateChrome();
+    });
+  } finally {
+    $("rename-submit").disabled = false;
+  }
+}
+
+async function submitUpdateLimits(e) {
+  e.preventDefault();
+  const id = $("upd-cid").value;
+  const memoryMb = Number($("upd-mem").value) > 0 ? Math.round(Number($("upd-mem").value)) : null;
+  const cpuPercent = Number($("upd-cpu").value) > 0 ? Math.round(Number($("upd-cpu").value)) : null;
+  const pidsLimit = Number($("upd-pids").value) > 0 ? Math.round(Number($("upd-pids").value)) : null;
+  if (!id || (!memoryMb && !cpuPercent && !pidsLimit)) return;
+  $("upd-submit").disabled = true;
+  try {
+    await guard(async () => {
+      await invoke("update_container", { id, memoryMb, cpuPercent, pidsLimit });
+      toast(t("containers.toastUpdated"));
+      closeDialog("update-limits-dialog");
+      await loadContainers(false);
+    });
+  } finally {
+    $("upd-submit").disabled = false;
+  }
 }
 

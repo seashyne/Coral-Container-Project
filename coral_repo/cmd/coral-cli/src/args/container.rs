@@ -124,8 +124,12 @@ pub struct RmArgs {
 /// Arguments for `coral stats`.
 #[derive(Debug, Args)]
 pub struct StatsArgs {
-    /// Container ID
-    pub id: String,
+    /// Container ID or name (omit with `--all` to show all running containers)
+    pub id: Option<String>,
+
+    /// Show live metrics for all running containers simultaneously
+    #[arg(short = 'a', long)]
+    pub all: bool,
 
     /// Continuously watch live CPU, Memory, PIDs, and Health metrics
     #[arg(short = 'w', long)]
@@ -134,6 +138,24 @@ pub struct StatsArgs {
     /// Polling interval in milliseconds when `--watch` is enabled
     #[arg(long, default_value_t = 1000)]
     pub interval: u64,
+}
+
+/// Arguments for `coral top`.
+#[derive(Debug, Args)]
+pub struct TopArgs {
+    /// Container ID or name
+    pub id: String,
+
+    /// Output process list as JSON
+    #[arg(long)]
+    pub json: bool,
+}
+
+/// Arguments for `coral wait`.
+#[derive(Debug, Args)]
+pub struct WaitArgs {
+    /// Container ID or name to wait for exit
+    pub id: String,
 }
 
 /// Arguments for `coral pause`.

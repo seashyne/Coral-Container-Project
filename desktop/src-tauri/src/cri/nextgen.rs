@@ -141,6 +141,22 @@ pub async fn image_sbom(
 }
 
 #[tauri::command]
+pub async fn image_scan(
+    state: State<'_, AppState>,
+    image: String,
+    offline: Option<bool>,
+) -> Result<serde_json::Value, String> {
+    let mut ann = HashMap::from([
+        ("coral.system.action".into(), "image_scan".into()),
+        ("coral.image.ref".into(), image),
+    ]);
+    if offline.unwrap_or(false) {
+        ann.insert("coral.scan.offline".into(), "true".into());
+    }
+    invoke_nextgen(&state, ann).await
+}
+
+#[tauri::command]
 pub async fn vm_setup_kernel(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
     invoke_nextgen(
         &state,

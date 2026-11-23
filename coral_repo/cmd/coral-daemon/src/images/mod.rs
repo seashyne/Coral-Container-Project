@@ -25,8 +25,9 @@ pub use registry::{
     pull_image_for_platform, push_oci_image_index,
 };
 pub use security::{
-    ImageSignatureEnvelope, KeypairReport, VerifyReport, compute_image_tree_digest,
-    default_key_paths, generate_keypair, generate_spdx_sbom, sign_image, verify_image,
+    ImageScanReport, ImageSignatureEnvelope, KeypairReport, SeveritySummary, VerifyReport,
+    VulnerabilityFinding, compute_image_tree_digest, default_key_paths, generate_keypair,
+    generate_spdx_sbom, scan_image_vulnerabilities, sign_image, verify_image,
 };
 
 use anyhow::{Context, Result, bail};
