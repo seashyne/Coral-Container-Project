@@ -102,6 +102,9 @@
     }
     syncTableLabels();
     hydrateSponsorCards();
+    if (typeof window.coralSyncNavbar === "function") {
+      window.coralSyncNavbar();
+    }
   }
 
   if (langBtn) {

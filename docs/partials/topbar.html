@@ -1,15 +1,47 @@
 <body>
-  <header class="topbar">
-    <div class="topbar-inner">
+  <div class="announce-bar">
+    <div class="announce-inner">
+      <span class="announce-pill" data-i18n="announce.pill">NEW</span>
+      <span data-i18n="announce.text">Coral v2.8.1 — Built-in CVE Scanner (OSV.dev), Rootless L3 Virtual Switch &amp; 17.9× Faster Startup</span>
+      <a class="announce-link" href="#install" data-i18n="announce.cta">ติดตั้งเลย →</a>
+    </div>
+  </div>
+
+  <header class="site-header" id="site-header">
+    <div class="header-inner" id="header-inner">
       <a class="brand-link" href="#overview">
-        <img class="brand-icon" src="assets/coral-icon.png" alt="Coral Logo" width="32" height="32">
-        <span>Coral Runtime</span>
-        <span class="version-pill" id="topbar-version">v2.8.0</span>
+        <img class="brand-icon" src="assets/coral-icon.png" alt="Coral Logo" width="34" height="34">
+        <span>Coral</span>
+        <span class="version-pill" id="topbar-version">v2.8.1</span>
       </a>
 
+      <nav class="site-nav" aria-label="Primary">
+        <button
+          class="menu-button"
+          type="button"
+          popovertarget="site-menu"
+          popovertargetaction="toggle"
+          aria-controls="site-menu"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+          <span data-i18n="topbar.menu">เมนู</span>
+        </button>
+
+        <ul id="site-menu" class="site-menu" popover="auto">
+          <li><a href="#features" data-i18n="top.features">ฟีเจอร์</a></li>
+          <li><a href="#quickstart" data-i18n="top.cli">คำสั่ง CLI</a></li>
+          <li><a href="#nextgen" data-i18n="top.nextgen">Wasm &amp; KVM</a></li>
+          <li><a href="#desktop" data-i18n="top.desktop">Desktop</a></li>
+          <li><a href="#benchmarks" data-i18n="top.benchmarks">ผลทดสอบ</a></li>
+          <li><a href="#architecture" data-i18n="top.arch">สถาปัตยกรรม</a></li>
+        </ul>
+      </nav>
+
       <div class="topbar-actions">
-        <a class="nav-pill" href="https://github.com/seashyne/Coral-Container-Project/releases" target="_blank" rel="noopener" data-i18n="topbar.releases">Releases</a>
-        <a class="nav-pill" href="https://github.com/seashyne/Coral-Container-Project" target="_blank" rel="noopener">GitHub</a>
+        <a class="nav-pill nav-gh" href="https://github.com/seashyne/Coral-Container-Project" target="_blank" rel="noopener">GitHub</a>
+        <a class="nav-pill nav-cta" href="#install" data-i18n="topbar.download">ดาวน์โหลด</a>
 
         <button type="button" id="lang-toggle" class="icon-btn" aria-label="Switch language">
           <span id="lang-label">EN</span>

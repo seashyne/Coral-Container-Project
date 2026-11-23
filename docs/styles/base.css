@@ -1,7 +1,7 @@
 /* ==========================================================================
-   Coral Container Project v2.0 — Documentation Stylesheet
+   Coral Container Project v2.8.1 — Docker-Inspired Design System
    Modern CSS: color-scheme + light-dark() w/ fallbacks, scroll-target-group,
-   @container responsive tables, scroll-driven tab fades, native <dialog>.
+   @container responsive tables, scroll-driven animations, native popover/dialog.
    ========================================================================== */
 
 @property --fade-start {
@@ -17,36 +17,50 @@
 }
 
 :root {
-  /* Raw light / dark color palette tokens */
-  --bg-light: #f8fafc;
-  --bg-dark: #090e1a;
+  /* Palette tokens — Docker Electric Blue + Coral Signature + Deep Ocean Slate */
+  --bg-light: #ffffff;
+  --bg-dark: #070d1b;
+  --band-light: #f4f7fc;
+  --band-dark: #0c1426;
   --surface-light: #ffffff;
-  --surface-dark: #111827;
-  --surface-2-light: #f1f5f9;
-  --surface-2-dark: #182234;
-  --border-light: #e2e8f0;
-  --border-dark: #25334a;
-  --text-light: #0f172a;
-  --text-dark: #f1f5f9;
-  --muted-light: #475569;
-  --muted-dark: #94a3b8;
-  --brand-light: #d94638;
-  --brand-dark: #ff6b57;
-  --brand-hover-light: #b93629;
-  --brand-hover-dark: #ff8573;
-  --brand-soft-light: #fff1ef;
-  --brand-soft-dark: #2b181b;
-  --teal-light: #0f766e;
+  --surface-dark: #111c33;
+  --surface-2-light: #eef3fa;
+  --surface-2-dark: #182642;
+  --border-light: #dce5f2;
+  --border-dark: #223456;
+  --text-light: #0b1633;
+  --text-dark: #f1f5fb;
+  --muted-light: #4b5d7a;
+  --muted-dark: #9fb0cc;
+
+  /* Primary Docker-grade Blue */
+  --brand-light: #1d63ed;
+  --brand-dark: #4f8eff;
+  --brand-hover-light: #154ec2;
+  --brand-hover-dark: #74a7ff;
+  --brand-soft-light: #eaf1ff;
+  --brand-soft-dark: #122449;
+
+  /* Signature Coral Accent */
+  --coral-light: #e04636;
+  --coral-dark: #ff6b57;
+  --coral-soft-light: #fff1ef;
+  --coral-soft-dark: #33191d;
+
+  /* Reef Teal Accent */
+  --teal-light: #0d7a71;
   --teal-dark: #2dd4bf;
-  --teal-soft-light: #f0fdfa;
-  --teal-soft-dark: #102a2a;
-  --scroll-track-light: #e2e8f0;
-  --scroll-track-dark: #131c2e;
-  --scroll-thumb-light: #94a3b8;
-  --scroll-thumb-dark: #475569;
+  --teal-soft-light: #ecfdf9;
+  --teal-soft-dark: #102e2e;
+
+  --scroll-track-light: #e6edf7;
+  --scroll-track-dark: #10192b;
+  --scroll-thumb-light: #9bb0ce;
+  --scroll-thumb-dark: #3f5578;
 
   /* Default (light) semantic tokens — fallback for browsers without light-dark() */
   --bg: var(--bg-light);
+  --band: var(--band-light);
   --surface: var(--surface-light);
   --surface-2: var(--surface-2-light);
   --border: var(--border-light);
@@ -55,6 +69,8 @@
   --brand: var(--brand-light);
   --brand-hover: var(--brand-hover-light);
   --brand-soft: var(--brand-soft-light);
+  --coral: var(--coral-light);
+  --coral-soft: var(--coral-soft-light);
   --teal: var(--teal-light);
   --teal-soft: var(--teal-soft-light);
   --scroll-track: var(--scroll-track-light);
@@ -62,6 +78,7 @@
 
   @media (prefers-color-scheme: dark) {
     --bg: var(--bg-dark);
+    --band: var(--band-dark);
     --surface: var(--surface-dark);
     --surface-2: var(--surface-2-dark);
     --border: var(--border-dark);
@@ -70,18 +87,20 @@
     --brand: var(--brand-dark);
     --brand-hover: var(--brand-hover-dark);
     --brand-soft: var(--brand-soft-dark);
+    --coral: var(--coral-dark);
+    --coral-soft: var(--coral-soft-dark);
     --teal: var(--teal-dark);
     --teal-soft: var(--teal-soft-dark);
     --scroll-track: var(--scroll-track-dark);
     --scroll-thumb: var(--scroll-thumb-dark);
   }
 
-  /* Mirror manual <meta name="color-scheme"> override for both light-dark() & fallback */
   color-scheme: light dark;
 
   &:has(> head > meta[name="color-scheme"][content="dark"]) {
     color-scheme: dark;
     --bg: var(--bg-dark);
+    --band: var(--band-dark);
     --surface: var(--surface-dark);
     --surface-2: var(--surface-2-dark);
     --border: var(--border-dark);
@@ -90,6 +109,8 @@
     --brand: var(--brand-dark);
     --brand-hover: var(--brand-hover-dark);
     --brand-soft: var(--brand-soft-dark);
+    --coral: var(--coral-dark);
+    --coral-soft: var(--coral-soft-dark);
     --teal: var(--teal-dark);
     --teal-soft: var(--teal-soft-dark);
     --scroll-track: var(--scroll-track-dark);
@@ -99,6 +120,7 @@
   &:has(> head > meta[name="color-scheme"][content="light"]) {
     color-scheme: light;
     --bg: var(--bg-light);
+    --band: var(--band-light);
     --surface: var(--surface-light);
     --surface-2: var(--surface-2-light);
     --border: var(--border-light);
@@ -107,6 +129,8 @@
     --brand: var(--brand-light);
     --brand-hover: var(--brand-hover-light);
     --brand-soft: var(--brand-soft-light);
+    --coral: var(--coral-light);
+    --coral-soft: var(--coral-soft-light);
     --teal: var(--teal-light);
     --teal-soft: var(--teal-soft-light);
     --scroll-track: var(--scroll-track-light);
@@ -115,6 +139,7 @@
 
   @supports (color: light-dark(white, black)) {
     --bg: light-dark(var(--bg-light), var(--bg-dark));
+    --band: light-dark(var(--band-light), var(--band-dark));
     --surface: light-dark(var(--surface-light), var(--surface-dark));
     --surface-2: light-dark(var(--surface-2-light), var(--surface-2-dark));
     --border: light-dark(var(--border-light), var(--border-dark));
@@ -123,6 +148,8 @@
     --brand: light-dark(var(--brand-light), var(--brand-dark));
     --brand-hover: light-dark(var(--brand-hover-light), var(--brand-hover-dark));
     --brand-soft: light-dark(var(--brand-soft-light), var(--brand-soft-dark));
+    --coral: light-dark(var(--coral-light), var(--coral-dark));
+    --coral-soft: light-dark(var(--coral-soft-light), var(--coral-soft-dark));
     --teal: light-dark(var(--teal-light), var(--teal-dark));
     --teal-soft: light-dark(var(--teal-soft-light), var(--teal-soft-dark));
     --scroll-track: light-dark(var(--scroll-track-light), var(--scroll-track-dark));
@@ -132,14 +159,16 @@
   accent-color: var(--brand);
   scrollbar-color: var(--scroll-thumb) var(--scroll-track);
 
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Thai", "Noto Sans", sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Monaco, Consolas, monospace;
-  --radius: 12px;
-  --radius-sm: 8px;
-  --header-h: 64px;
-  --code-bg: #0d1322;
-  --code-fg: #e2e8f0;
-  --code-border: #1e293b;
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Thai", "Noto Sans", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --radius: 14px;
+  --radius-sm: 9px;
+  --header-h: 66px;
+  --jumpbar-h: 48px;
+  --container-w: 1220px;
+  --code-bg: #0b1224;
+  --code-fg: #e2ecf8;
+  --code-border: #1e2f50;
 }
 
 *,
@@ -150,7 +179,7 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: calc(var(--header-h) + 24px);
+  scroll-padding-top: calc(var(--header-h) + var(--jumpbar-h) + 20px);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -166,6 +195,7 @@ body {
   color: var(--text);
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
 }
 
 a {
@@ -193,4 +223,3 @@ a:hover {
   white-space: nowrap;
   border: 0;
 }
-

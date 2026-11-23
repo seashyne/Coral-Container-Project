@@ -1,73 +1,178 @@
-      <!-- 1. Overview / Hero -->
+      <!-- 1. Overview / Docker-Inspired Full-Bleed Hero + Workflow Pillars -->
       <section id="overview" class="doc-section" tabindex="-1">
-        <div class="hero">
-          <div class="hero-top">
-            <img class="hero-logo" src="assets/coral-icon.png" alt="Coral Container Project Logo" width="56" height="56" fetchpriority="high">
-            <div class="hero-badge" data-i18n="hero.badge">Release v2.8.0 · Rust Edition 2024 · Apache-2.0</div>
-          </div>
-          <h1 data-i18n="hero.title">Container Runtime ยุคใหม่ด้วย Rust</h1>
-          <p class="hero-subtitle" data-i18n="hero.subtitle">
-            รันคอนเทนเนอร์ OCI แบบ Rootless, จัดการผ่าน Kubernetes CRI v1 gRPC + docker.sock, รัน WebAssembly ระดับไมโครวินาที (coral-wasm) และแยกเคอร์เนลด้วย KVM 64-bit MicroVM &amp; AI Agent Sandbox (coral-vmm) ครบจบในชุดเดียว
-          </p>
+        <div class="hero-band">
+          <div class="hero-inner">
+            <div class="hero-grid">
+              <div>
+                <div class="hero-top">
+                  <img class="hero-logo" src="assets/coral-icon.png" alt="Coral Container Project Logo" width="48" height="48" fetchpriority="high">
+                  <div class="hero-badge" data-i18n="hero.badge">Release v2.8.1 · Rust Edition 2024 · x86_64 &amp; ARM64 · Apache-2.0</div>
+                </div>
+                <h1 data-i18n="hero.title">พัฒนาไวขึ้น รันได้ทุกที่ ด้วย Rust Container Engine</h1>
+                <p class="hero-subtitle" data-i18n="hero.subtitle">
+                  คำสั่งสไตล์ Docker + Streaming docker.sock API, Rootless L2/L3 Virtual Switch, BuildKit Multi-Arch, สแกน CVE ในตัว, WASI WebAssembly, KVM MicroVM และ Coral Desktop
+                </p>
 
-          <div class="hero-actions">
-            <a class="btn btn-primary" href="#install" data-i18n="hero.ctaInstall">ดาวน์โหลด &amp; ติดตั้ง v2.8.0</a>
-            <a class="btn btn-secondary" href="#benchmarks" data-i18n="hero.ctaBench">ผลเทียบกับ Docker &amp; รายงาน</a>
-            <a class="btn btn-secondary" href="https://github.com/seashyne/Coral-Container-Project" target="_blank" rel="noopener" data-i18n="hero.ctaGithub">ดูซอร์สโค้ดบน GitHub</a>
-            <a class="btn btn-teal" href="#support" data-i18n="hero.ctaSupport">สนับสนุนโปรเจกต์</a>
-          </div>
+                <div class="hero-install-bar">
+                  <span class="hero-install-prompt" aria-hidden="true">$</span>
+                  <code id="hero-install-cmd">curl -fsSL https://seashyne.github.io/Coral-Container-Project/install.sh | bash</code>
+                  <button type="button" class="copy-btn" data-copy-target="hero-install-cmd" data-i18n="copy.btn">คัดลอก</button>
+                </div>
 
-          <div class="metrics-grid">
-            <div class="metric-card">
-              <div class="metric-value">23.2 ms</div>
-              <div class="metric-label" data-i18n="metric.startLabel">OCI Container P50 Startup</div>
-              <div class="metric-sub" data-i18n="metric.startSub">เร็วกว่า Docker 7.3×–11.2× บนเครื่องเดียวกัน</div>
+                <div class="hero-actions">
+                  <a class="btn btn-primary" href="#install" data-i18n="hero.ctaInstall">ดาวน์โหลด &amp; ติดตั้ง v2.8.1</a>
+                  <a class="btn btn-secondary" href="#benchmarks" data-i18n="hero.ctaBench">ผลเทียบกับ Docker &amp; รายงาน</a>
+                  <a class="btn btn-teal" href="#support" data-i18n="hero.ctaSupport">สนับสนุนโปรเจกต์</a>
+                </div>
+              </div>
+
+              <div class="hero-terminal" aria-label="Interactive Coral CLI Preview">
+                <div class="term-chrome">
+                  <div class="term-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+                  <span class="term-title">coral v2.8.1 — rootless oci · wasm · kvm</span>
+                </div>
+                <div class="tabs">
+                  <div class="tablist" role="tablist" focusgroup="tablist nomemory" aria-label="Hero CLI scenarios">
+                    <button type="button" role="tab" id="ht-run" aria-selected="true" focusgroupstart>Run &amp; Scan</button>
+                    <button type="button" role="tab" id="ht-build" aria-selected="false" tabindex="-1">Buildx</button>
+                    <button type="button" role="tab" id="ht-net" aria-selected="false" tabindex="-1">vSwitch &amp; Compose</button>
+                    <button type="button" role="tab" id="ht-next" aria-selected="false" tabindex="-1">Wasm / KVM</button>
+                  </div>
+                  <div class="tab-panels">
+                    <div role="tabpanel" aria-labelledby="ht-run" tabindex="0">
+                      <div class="tab-panel-body">
+                        <pre class="term-pre"><span class="t-cmd">$ coral run -d --name web -p 8080:80 nginx:alpine</span>
+<span class="t-ok">✓ Started web (rootless OCI) in 8.88 ms · 10.89.1.2</span>
+
+<span class="t-cmd">$ coral scan nginx:alpine --fail-on high</span>
+<span class="t-muted">Scanning 19 SPDX packages against OSV.dev batch API...</span>
+<span class="t-ok">✓ PASS · 0 CRITICAL · 0 HIGH · 0 MEDIUM</span>
+
+<span class="t-cmd">$ coral top web &amp;&amp; coral stats --all</span>
+<span class="t-accent">PID  PPID  CMD                CPU%   MEM</span>
+1    0     nginx: master      0.04%  3.2 MiB</pre>
+                      </div>
+                    </div>
+                    <div role="tabpanel" aria-labelledby="ht-build" hidden="until-found">
+                      <div class="tab-panel-body">
+                        <pre class="term-pre"><span class="t-cmd">$ coral build -t ghcr.io/me/api:v2 \</span>
+<span class="t-cmd">    --platform linux/amd64,linux/arm64 --push .</span>
+<span class="t-muted">[DAG wave 1] builder-ui + builder-api running in parallel</span>
+<span class="t-muted">[.dockerignore] skipped 142 files · cache hit 4/5 steps</span>
+<span class="t-ok">✓ Pushed multi-arch OCI Image Index (amd64 + arm64)</span></pre>
+                      </div>
+                    </div>
+                    <div role="tabpanel" aria-labelledby="ht-net" hidden="until-found">
+                      <div class="tab-panel-body">
+                        <pre class="term-pre"><span class="t-cmd">$ coral compose up -d --scale web=3</span>
+<span class="t-muted">[vswitch] Rootless L2/L3 subnet 10.89.4.0/24 · gw 10.89.4.1</span>
+<span class="t-ok">✓ web-1 (10.89.4.2), web-2 (10.89.4.3), web-3 (10.89.4.4)</span>
+<span class="t-muted">[dns 10.89.4.1:53] round-robin web + upstream forwarding</span>
+<span class="t-cmd">$ DOCKER_HOST=unix://~/.local/state/coral/daemon/docker.sock docker ps</span></pre>
+                      </div>
+                    </div>
+                    <div role="tabpanel" aria-labelledby="ht-next" hidden="until-found">
+                      <div class="tab-panel-body">
+                        <pre class="term-pre"><span class="t-cmd">$ coral wasm run --fuel 500000 --memory-mb 16 handler.wasm</span>
+<span class="t-ok">✓ WASI Preview 1 completed in 329 µs (exit 0)</span>
+
+<span class="t-cmd">$ coral vm sandbox --timeout 10 -- python3 agent.py</span>
+<span class="t-ok">✓ Pure-Rust /dev/kvm 64-bit boot in 963 µs · net=none · RO</span></pre>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="metric-card">
-              <div class="metric-value">329 µs</div>
-              <div class="metric-label" data-i18n="metric.wasmLabel">WASI WebAssembly Execution</div>
-              <div class="metric-sub" data-i18n="metric.wasmSub">coral-wasm · wasmi 2.0 (Fuel + RAM cap)</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-value">963 µs</div>
-              <div class="metric-label" data-i18n="metric.kvmLabel">Native /dev/kvm 64-bit Boot</div>
-              <div class="metric-sub" data-i18n="metric.kvmSub">coral-vmm · Pure-Rust Long Mode Self-Test</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-value">9.1 MB</div>
-              <div class="metric-label" data-i18n="metric.memLabel">coral-daemon Idle RAM</div>
-              <div class="metric-sub" data-i18n="metric.memSub">0 Clippy warnings · 10 Rust Crates</div>
+
+            <div class="metrics-grid">
+              <div class="metric-card">
+                <div class="metric-value">8.88 ms</div>
+                <div class="metric-label" data-i18n="metric.startLabel">OCI Container P50 Startup</div>
+                <div class="metric-sub" data-i18n="metric.startSub">เร็วกว่า Docker 17.9×–26.8× บนเครื่องเดียวกัน</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-value">329 µs</div>
+                <div class="metric-label" data-i18n="metric.wasmLabel">WASI WebAssembly Execution</div>
+                <div class="metric-sub" data-i18n="metric.wasmSub">coral-wasm · wasmi 2.0 (Fuel + RAM cap)</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-value">963 µs</div>
+                <div class="metric-label" data-i18n="metric.kvmLabel">Native /dev/kvm 64-bit Boot</div>
+                <div class="metric-sub" data-i18n="metric.kvmSub">coral-vmm · Pure-Rust Long Mode Self-Test</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-value">8.4 MB</div>
+                <div class="metric-label" data-i18n="metric.memLabel">coral-daemon Idle RAM</div>
+                <div class="metric-sub" data-i18n="metric.memSub">0 Clippy warnings · 10 Rust Crates · 150+ Tests</div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div style="margin-top: 32px;">
-          <h2 data-i18n="overview.title">ทำไมต้อง Coral?</h2>
-          <p class="section-lead" data-i18n="overview.lead">
-            Coral ออกแบบมาเพื่อแก้ปัญหาความช้าของ Runtime แบบเก่า ลดช่องโหว่ด้านหน่วยความจำด้วย Rust และเพิ่มความสามารถระดับ Next-Gen สำหรับยุค AI Agent และ Serverless WebAssembly
-          </p>
-          <div class="cards-grid">
-            <article class="card">
-              <span class="card-tag">coral-runtime · coral-oci</span>
-              <h3 data-i18n="feat.oci.title">OCI v1.0.2 &amp; Rootless by Default</h3>
-              <p data-i18n="feat.oci.desc"></p>
-            </article>
-            <article class="card">
-              <span class="card-tag">coral-daemon · coral-cli</span>
-              <h3 data-i18n="feat.dev.title">Workflow ครบเทียบชั้น Docker/Podman</h3>
-              <p data-i18n="feat.dev.desc"></p>
-            </article>
-            <article class="card">
-              <span class="card-tag">coral-wasm · WASI Preview 1</span>
-              <h3 data-i18n="feat.wasm.title">WebAssembly Runtime (coral-wasm)</h3>
-              <p data-i18n="feat.wasm.desc"></p>
-            </article>
-            <article class="card">
-              <span class="card-tag">coral-vmm · /dev/kvm</span>
-              <h3 data-i18n="feat.vmm.title">KVM MicroVM &amp; AI Sandbox (coral-vmm)</h3>
-              <p data-i18n="feat.vmm.desc"></p>
-            </article>
+        <div class="pillars-band">
+          <div class="pillars-inner">
+            <h2 data-i18n="pillars.title">ครบทั้งวงจร Build · Share · Run · Verify</h2>
+            <p class="section-lead" data-i18n="pillars.lead">
+              ออกแบบเวิร์กโฟลว์ให้คุ้นมือเหมือน Docker ทุกขั้นตอน แต่เบากว่า ปลอดภัยกว่าด้วย Rust และพร้อมสำหรับ Wasm + KVM MicroVM
+            </p>
+            <div class="pillar-grid">
+              <article class="pillar-card">
+                <span class="pillar-icon" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                </span>
+                <h3 data-i18n="pillar.buildTitle">Build</h3>
+                <p data-i18n="pillar.buildDesc"></p>
+              </article>
+              <article class="pillar-card accent-teal">
+                <span class="pillar-icon" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg>
+                </span>
+                <h3 data-i18n="pillar.shareTitle">Share</h3>
+                <p data-i18n="pillar.shareDesc"></p>
+              </article>
+              <article class="pillar-card">
+                <span class="pillar-icon" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                </span>
+                <h3 data-i18n="pillar.runTitle">Run</h3>
+                <p data-i18n="pillar.runDesc"></p>
+              </article>
+              <article class="pillar-card accent-coral">
+                <span class="pillar-icon" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+                </span>
+                <h3 data-i18n="pillar.verifyTitle">Verify</h3>
+                <p data-i18n="pillar.verifyDesc"></p>
+              </article>
+            </div>
+
+            <h2 data-i18n="overview.title">ทำไมต้อง Coral?</h2>
+            <p class="section-lead" data-i18n="overview.lead">
+              Coral ออกแบบมาเพื่อแก้ปัญหาความช้าของ Runtime แบบเก่า ลดช่องโหว่ด้านหน่วยความจำด้วย Rust และเพิ่มความสามารถระดับ Next-Gen สำหรับยุค AI Agent และ Serverless WebAssembly
+            </p>
+            <div class="cards-grid">
+              <article class="card">
+                <span class="card-tag">coral-runtime · coral-oci</span>
+                <h3 data-i18n="feat.oci.title">OCI v1.0.2 &amp; Rootless by Default</h3>
+                <p data-i18n="feat.oci.desc"></p>
+              </article>
+              <article class="card">
+                <span class="card-tag">coral-daemon · coral-cli</span>
+                <h3 data-i18n="feat.dev.title">Workflow ครบเทียบชั้น Docker/Podman</h3>
+                <p data-i18n="feat.dev.desc"></p>
+              </article>
+              <article class="card">
+                <span class="card-tag">coral-wasm · WASI Preview 1</span>
+                <h3 data-i18n="feat.wasm.title">WebAssembly Runtime (coral-wasm)</h3>
+                <p data-i18n="feat.wasm.desc"></p>
+              </article>
+              <article class="card">
+                <span class="card-tag">coral-vmm · /dev/kvm</span>
+                <h3 data-i18n="feat.vmm.title">KVM MicroVM &amp; AI Sandbox (coral-vmm)</h3>
+                <p data-i18n="feat.vmm.desc"></p>
+              </article>
+            </div>
           </div>
         </div>
       </section>
-

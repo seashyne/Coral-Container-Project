@@ -1,35 +1,70 @@
-/* ---------- Mobile / Tablet Responsiveness ---------- */
-@media (max-width: 960px) {
-  .page-shell {
+/* ---------- Responsive Refinements ---------- */
+@media (max-width: 980px) {
+  .hero-grid {
     grid-template-columns: 1fr;
-    gap: 20px;
   }
 
-  .sidebar {
-    position: static;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px;
+  .footer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .header-inner {
+    padding: 0 12px;
+    gap: 8px;
   }
 
-  .toc-nav {
-    flex-direction: row;
-    flex-wrap: wrap;
-    border-inline-start: 0;
+  .topbar-actions {
     gap: 6px;
   }
 
-  .toc-nav a {
-    margin-inline-start: 0;
-    border-inline-start: 0;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 5px 12px;
-    font-size: 0.82rem;
+  .icon-btn,
+  .menu-button {
+    padding: 0 9px;
   }
 
+  .nav-cta,
+  .nav-gh {
+    display: none;
+  }
+
+  .hero-inner {
+    padding: 28px 16px 32px;
+  }
+
+  .hero-install-bar {
+    flex-wrap: wrap;
+    padding: 10px 12px;
+  }
+
+  .hero-install-bar code {
+    font-size: 0.74rem;
+  }
+
+  .hero-install-bar .copy-btn {
+    width: 100%;
+  }
+
+  .footer-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .version-pill {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
   .toc-nav a:is(:target-current, .target-current) {
-    border-color: var(--brand);
+    border: 2px solid Highlight;
+  }
+
+  .pillar-card,
+  .card,
+  .hero-terminal {
+    border: 1px solid CanvasText;
   }
 }

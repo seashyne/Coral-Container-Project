@@ -1,0 +1,281 @@
+/* ---------- Announcement Ribbon (Docker-style slim top bar) ---------- */
+.announce-bar {
+  color-scheme: only dark;
+  background: linear-gradient(90deg, #0b2466 0%, #1d63ed 55%, #c93b2d 100%);
+  color: #f8fafc;
+  accent-color: var(--brand-dark);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.announce-inner {
+  max-width: var(--container-w);
+  margin: 0 auto;
+  padding: 8px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+  text-align: center;
+}
+
+.announce-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.18);
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.announce-link {
+  color: #ffffff;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.announce-link:hover {
+  color: #dbeafe;
+}
+
+/* ---------- Site Header & Responsive Popover Navbar ---------- */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  block-size: var(--header-h);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+}
+
+.site-header.is-measuring * {
+  transition: none !important;
+}
+
+.header-inner {
+  max-width: var(--container-w);
+  block-size: 100%;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.header-inner > * {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-weight: 800;
+  font-size: 1.12rem;
+  letter-spacing: -0.025em;
+}
+
+.brand-link:hover {
+  text-decoration: none;
+}
+
+.brand-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: block;
+}
+
+.version-pill {
+  font-size: 0.72rem;
+  font-weight: 750;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  border: 1px solid color-mix(in srgb, var(--brand) 28%, transparent);
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+}
+
+.menu-button {
+  anchor-name: --menu-button;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.menu-button:hover {
+  background: var(--surface-2);
+  border-color: var(--brand);
+}
+
+.site-menu {
+  list-style: none;
+  margin: 0;
+  padding: 10px;
+  position: fixed;
+  inset: auto;
+  /* Fallback offset before anchor() for browsers without CSS Anchor Positioning */
+  inset-block-start: 4.75rem;
+  inset-block-start: anchor(--menu-button bottom);
+  inset-inline-end: 1rem;
+  inline-size: min(84dvw, 19rem);
+  max-inline-size: calc(100dvw - 2rem);
+  block-size: fit-content;
+  max-block-size: calc(100dvh - 6rem);
+  margin-block-start: 0.5rem;
+  overflow: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 18px 44px rgb(6 14 36 / 0.24);
+}
+
+.site-menu[popover]:is(:popover-open, .\:popover-open) {
+  display: grid;
+  gap: 4px;
+}
+
+.site-menu a {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.site-menu a:hover {
+  color: var(--text);
+  background: var(--surface-2);
+  text-decoration: none;
+}
+
+.site-header.is-wide .menu-button {
+  display: none;
+}
+
+.site-header.is-wide .site-menu {
+  position: static;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  inline-size: auto;
+  max-inline-size: none;
+  block-size: auto;
+  max-block-size: none;
+  overflow: visible;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.site-header.is-wide .site-menu::backdrop {
+  display: none;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-btn,
+.nav-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.icon-btn:hover,
+.nav-pill:hover {
+  background: var(--surface-2);
+  border-color: var(--brand);
+  text-decoration: none;
+}
+
+.nav-cta {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #ffffff;
+  padding: 0 15px;
+}
+
+.nav-cta:hover {
+  background: var(--brand-hover);
+  border-color: var(--brand-hover);
+  color: #ffffff;
+}
+
+/* Theme toggle icons controlled purely via CSS */
+.theme-toggle .state-to-light {
+  display: none;
+}
+.theme-toggle .state-to-dark {
+  display: inline-flex;
+  align-items: center;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not(:has(> head > meta[name="color-scheme"][content="light"])) .theme-toggle .state-to-dark {
+    display: none;
+  }
+  :root:not(:has(> head > meta[name="color-scheme"][content="light"])) .theme-toggle .state-to-light {
+    display: inline-flex;
+    align-items: center;
+  }
+}
+:root:has(> head > meta[name="color-scheme"][content="dark"]) .theme-toggle .state-to-dark {
+  display: none;
+}
+:root:has(> head > meta[name="color-scheme"][content="dark"]) .theme-toggle .state-to-light {
+  display: inline-flex;
+  align-items: center;
+}
+:root:has(> head > meta[name="color-scheme"][content="light"]) .theme-toggle .state-to-light {
+  display: none;
+}
+:root:has(> head > meta[name="color-scheme"][content="light"]) .theme-toggle .state-to-dark {
+  display: inline-flex;
+  align-items: center;
+}

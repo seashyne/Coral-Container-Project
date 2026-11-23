@@ -16,11 +16,11 @@ window.CORAL_I18N_EN = {
   "topbar.releases": "Releases",
   "topbar.themeDark": "Switch to dark theme",
   "topbar.themeLight": "Switch to light theme",
-  "hero.badge": "Release v2.8.0 · Rust Edition 2024 · x86_64 & ARM64 · Apache-2.0",
-  "hero.title": "Next-Gen Container Runtime in Rust",
+  "hero.badge": "Release v2.8.1 · Rust Edition 2024 · x86_64 & ARM64 · Apache-2.0",
+  "hero.title": "Develop faster. Run anywhere — in Rust.",
   "hero.subtitle":
-    "Docker-compatible CLI & docker.sock REST shim, parallel shared layer cache, BuildKit heredoc/cache/secret mounts, embedded DNS, GPU/device passthrough, rootless Multi-UID OCI, Kubernetes CRI v1, WASI HTTP (coral-wasm), /dev/kvm MicroVMs, and Coral Desktop v2.8.0.",
-  "hero.ctaInstall": "Download & Install v2.8.0",
+    "Docker-compatible CLI & docker.sock REST shim, parallel shared layer cache, BuildKit heredoc/cache/secret mounts, embedded DNS, GPU/device passthrough, rootless Multi-UID OCI, Kubernetes CRI v1, WASI HTTP (coral-wasm), /dev/kvm MicroVMs, and Coral Desktop v2.8.1.",
+  "hero.ctaInstall": "Download & Install v2.8.1",
   "hero.ctaBench": "Docker Comparison & Report",
   "hero.ctaGithub": "View on GitHub",
   "hero.ctaSupport": "Support the Project",
@@ -59,14 +59,14 @@ window.CORAL_I18N_EN = {
   "install.onelinerVerify": "Verify installation:",
   "install.debDesc":
     "Recommended for Ubuntu 22.04+ and Debian 12+. Installs binaries into /usr/bin and registers the systemd user unit:",
-  "install.downloadDeb": "Download coral-runtime_2.8.0_amd64.deb",
-  "install.downloadTar": "Download coral-v2.8.0-linux-x86_64.tar.gz",
+  "install.downloadDeb": "Download coral-runtime_2.8.1_amd64.deb",
+  "install.downloadTar": "Download coral-v2.8.1-linux-x86_64.tar.gz",
   "install.allReleases": "Browse all assets on GitHub Releases",
   "install.desktopDesc":
-    "Manage containers, pods, images, volumes, networks, GPU/device passthrough, live streaming PTY terminals, and Next-Gen (Wasm & KVM) playgrounds in Coral Desktop v2.8.0:",
+    "Manage containers, pods, images, volumes, networks, GPU/device passthrough, live streaming PTY terminals, and Next-Gen (Wasm & KVM) playgrounds in Coral Desktop v2.8.1:",
   "install.desktopLinuxTitle": "Linux (Ubuntu / Fedora / AppImage)",
   "install.desktopLinuxStep":
-    "Download Coral Desktop_2.8.0_amd64.deb or .rpm from GitHub Releases or build from source into ~/.local/bin with automatic daemon discovery.",
+    "Download Coral Desktop_2.8.1_amd64.deb or .rpm from GitHub Releases or build from source into ~/.local/bin with automatic daemon discovery.",
   "install.desktopWinTitle": "Windows 10 / 11 (WSL2)",
   "install.desktopWinStep":
     "Install Coral Runtime inside your WSL2 Linux distro using the One-Liner above, install Coral Desktop (.msi / .exe) on Windows, and select WSL2 mode in Settings.",
@@ -78,12 +78,12 @@ window.CORAL_I18N_EN = {
   "cli.title": "CLI Cookbook & Quick Examples",
   "cli.lead":
     "Docker-compatible commands (no --image or -- boilerplate required) paired with Next-Gen WebAssembly, KVM MicroVM, and AI Sandbox tools.",
-  "cli.guideCaption": "Visual quick guide covering installation, Docker-style CLI commands, Coral Desktop v2.8.0 theme/run workflow, and Wasm/KVM.",
+  "cli.guideCaption": "Visual quick guide covering installation, Docker-style CLI commands, Coral Desktop v2.8.1 theme/run workflow, and Wasm/KVM.",
   "cli.tabContainers": "Containers & Exec",
   "cli.tabBuild": "Build, Compose & Push",
   "cli.tabWasm": "WebAssembly (Wasm)",
   "cli.tabVmm": "KVM MicroVM & Sandbox",
-  "nextgen.title": "Inside v2.8.0 Next-Gen Engines",
+  "nextgen.title": "Inside v2.8.1 Next-Gen Engines",
   "nextgen.lead":
     "Two purpose-built engines that set Coral apart — engineered for untrusted AI code execution and microsecond serverless compute.",
   "nextgen.wasmCardTitle": "coral-wasm — Microsecond WASI Preview 1 Engine",
@@ -178,7 +178,7 @@ window.CORAL_I18N_EN = {
   "dialog.close": "Close",
   "copy.btn": "Copy",
   "copy.done": "Copied!",
-  "footer.copy": "Coral Container Project v2.8.0 · Open-Source under Apache License 2.0",
+  "footer.copy": "Coral Container Project v2.8.1 · Open-Source under Apache License 2.0",
   "footer.reportLink": "Full Report (REPORT_v2.3.md)",
   "footer.docsLink": "Full Manual (MANUAL.md)",
   "footer.roadmapLink": "Roadmap",
@@ -275,4 +275,36 @@ window.CORAL_I18N_EN = {
   "report.stDone": "Fixed in this round",
   "report.reportBtn": "Read Full Engineering Report (REPORT_v2.3.md)",
   "report.rawBtn": "View Raw Benchmark Data (BENCHMARK.md)",
+  "announce.pill": "NEW",
+  "announce.text":
+    "Coral v2.8.1 — Built-in CVE Scanner (OSV.dev), Rootless L3 Virtual Switch, Multi-Arch Buildx & 17.9× Faster Startup",
+  "announce.cta": "Install now →",
+  "topbar.menu": "Menu",
+  "topbar.download": "Download",
+  "top.features": "Features",
+  "top.cli": "CLI",
+  "top.nextgen": "Wasm & KVM",
+  "top.desktop": "Desktop",
+  "top.benchmarks": "Benchmarks",
+  "top.arch": "Architecture",
+  "pillars.title": "Build · Share · Run · Verify — One Rust Engine",
+  "pillars.lead":
+    "The familiar Docker developer workflow you already love, engineered from scratch in Rust with microsecond Wasm and native KVM MicroVMs built in.",
+  "pillar.buildTitle": "Build",
+  "pillar.buildDesc":
+    "Modern BuildKit Dockerfiles with .dockerignore, parallel multi-stage DAG, cache/secret/bind/ssh mounts, and multi-arch OCI Image Index publishing.",
+  "pillar.shareTitle": "Share",
+  "pillar.shareDesc":
+    "4-stream parallel pulls with double SHA-256 verification, zero-copy hardlink shared layers, multi-lowerdir OverlayFS, and instant registry push.",
+  "pillar.runTitle": "Run",
+  "pillar.runDesc":
+    "8.88 ms rootless OCI startup, 10.89.x.Y virtual switch with round-robin DNS & NAT, streaming docker.sock, NVIDIA CDI, WASI Wasm, and /dev/kvm MicroVMs.",
+  "pillar.verifyTitle": "Verify",
+  "pillar.verifyDesc":
+    "Built-in coral scan CVE auditing (SPDX SBOM + OSV.dev + --fail-on CI gates), Ed25519 image signing, and live coral top / wait / stats --all observability.",
+  "footer.tagline":
+    "Memory-safe Rust OCI container runtime, streaming docker.sock Engine API, WASI WebAssembly, /dev/kvm MicroVMs, and Coral Desktop.",
+  "footer.colProducts": "Products",
+  "footer.colDocs": "Documentation",
+  "footer.colCommunity": "Community",
 };

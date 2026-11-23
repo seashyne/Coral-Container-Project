@@ -1,8 +1,8 @@
 /* ---------- Support / Donation Section ---------- */
 .support-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 18px;
 }
 
 .support-card {
@@ -13,7 +13,13 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 22px;
+  padding: 24px;
+  transition: transform 0.16s ease, border-color 0.16s ease;
+}
+
+.support-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--brand) 50%, var(--border));
 }
 
 .support-header {
@@ -26,13 +32,13 @@
 
 .support-card h3 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1.06rem;
 }
 
 .status-badge {
   font-size: 0.7rem;
   font-weight: 700;
-  padding: 2px 8px;
+  padding: 3px 9px;
   border-radius: 999px;
   background: var(--surface-2);
   color: var(--muted);
@@ -132,23 +138,80 @@ dialog.qr-dialog::backdrop {
   font-size: 0.78rem;
 }
 
-/* ---------- Footer ---------- */
+/* ---------- Docker-Style Multi-Column Dark Footer ---------- */
 .site-footer {
-  border-top: 1px solid var(--border);
-  background: var(--surface);
-  padding: 28px 20px;
+  color-scheme: only dark;
+  background: #060c1d;
+  color: #cbd5e1;
+  accent-color: var(--brand-dark);
+  border-top: 1px solid rgb(138 178 255 / 0.14);
+  padding: 52px 20px 28px;
 }
 
-.footer-inner {
-  max-width: 1280px;
+.footer-grid {
+  max-width: var(--container-w);
+  margin: 0 auto 36px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr));
+  gap: 32px;
+}
+
+.footer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 1.08rem;
+  margin-bottom: 12px;
+}
+
+.footer-tagline {
+  margin: 0;
+  color: #94a9cc;
+  font-size: 0.88rem;
+  max-width: 38ch;
+}
+
+.footer-col h3 {
+  margin: 0 0 12px;
+  font-size: 0.8rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffffff;
+}
+
+.footer-col ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.footer-col a {
+  color: #9cb2d6;
+  font-size: 0.88rem;
+}
+
+.footer-col a:hover {
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.footer-bottom {
+  max-width: var(--container-w);
   margin: 0 auto;
+  padding-top: 20px;
+  border-top: 1px solid rgb(138 178 255 / 0.14);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  font-size: 0.88rem;
-  color: var(--muted);
+  gap: 12px;
+  font-size: 0.82rem;
+  color: #8299be;
 }
 
 .footer-links {
@@ -157,3 +220,10 @@ dialog.qr-dialog::backdrop {
   gap: 18px;
 }
 
+.footer-links a {
+  color: #9cb2d6;
+}
+
+.footer-links a:hover {
+  color: #ffffff;
+}

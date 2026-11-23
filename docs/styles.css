@@ -1,12 +1,13 @@
 /* ==========================================================================
    Coral Container Project — Documentation Stylesheet (entry point)
-   The stylesheet is split by section into ./styles/*.css. Import order below
-   preserves the original cascade of the former single-file stylesheet.
+   Split by section into ./styles/*.css to keep every file modular and concise.
    ========================================================================== */
 
 @import url("styles/base.css");
+@import url("styles/navbar.css");
 @import url("styles/layout.css");
 @import url("styles/hero-cards.css");
+@import url("styles/cards.css");
 @import url("styles/components.css");
 @import url("styles/support.css");
 @import url("styles/responsive.css");

@@ -1,6 +1,6 @@
       <!-- 5. Platform Integration Features (v2.4) -->
       <section id="features" class="doc-section" tabindex="-1">
-        <h2 data-i18n="feat2.title">ฟีเจอร์เชิงแพลตฟอร์มระหว่างระบบ (v2.8.0)</h2>
+        <h2 data-i18n="feat2.title">ฟีเจอร์เชิงแพลตฟอร์มระหว่างระบบ (v2.8.1)</h2>
         <p class="section-lead" data-i18n="feat2.lead"></p>
 
         <div class="cards-grid">
@@ -50,27 +50,27 @@
             <tbody>
               <tr>
                 <th scope="row" data-i18n="feat2.rowCache">Zero-copy shared layer store</th>
-                <td><code class="inline">coral pull --platform linux/arm64 alpine:3.20</code> — แชร์ inode จาก <code class="inline">.layers/sha256/</code> และส่ง multi-lowerdir OverlayFS อัตโนมัติ</td>
+                <td><code class="inline">coral pull --platform linux/arm64 alpine:3.20</code> — <span data-i18n="feat2.descCache">แชร์ inode จาก .layers/sha256/ และส่ง multi-lowerdir OverlayFS อัตโนมัติ</span></td>
               </tr>
               <tr>
                 <th scope="row" data-i18n="feat2.rowDns">Rootless L2/L3 vswitch &amp; DNS</th>
-                <td><code class="inline">coral network create app-net &amp;&amp; coral run --network app-net --network-alias db ...</code> — แจก IP <code class="inline">10.89.x.Y</code> + Gateway DNS <code class="inline">10.89.x.1:53</code> (Round-Robin + Upstream) &amp; NAT</td>
+                <td><code class="inline">coral network create app-net &amp;&amp; coral run --network app-net --network-alias db ...</code> — <span data-i18n="feat2.descDns">แจก IP 10.89.x.Y + Gateway DNS 10.89.x.1:53 (Round-Robin + Upstream) &amp; NAT</span></td>
               </tr>
               <tr>
                 <th scope="row" data-i18n="feat2.rowBuildkit">Multi-arch Buildx &amp; .dockerignore</th>
-                <td><code class="inline">coral build -t ghcr.io/me/app:v1 --platform linux/amd64,linux/arm64 --push .</code> — Parallel DAG + <code class="inline">.dockerignore</code> + <code class="inline">--mount=type=cache|secret|bind|ssh</code></td>
+                <td><code class="inline">coral build -t ghcr.io/me/app:v1 --platform linux/amd64,linux/arm64 --push .</code> — <span data-i18n="feat2.descBuildkit">Parallel DAG + .dockerignore + --mount=type=cache|secret|bind|ssh</span></td>
               </tr>
               <tr>
                 <th scope="row" data-i18n="feat2.rowDocker">Streaming Docker Engine API</th>
-                <td><code class="inline">DOCKER_HOST=unix://~/.local/state/coral/daemon/docker.sock docker ps</code> — รองรับ <code class="inline">Upgrade: tcp</code>, chunked logs/events, <code class="inline">/archive</code>, <code class="inline">/build</code>, <code class="inline">/top</code></td>
+                <td><code class="inline">DOCKER_HOST=unix://~/.local/state/coral/daemon/docker.sock docker ps</code> — <span data-i18n="feat2.descDocker">รองรับ Upgrade: tcp, chunked logs/events, /archive, /build, /top</span></td>
               </tr>
               <tr>
                 <th scope="row" data-i18n="feat2.rowGpu">NVIDIA CDI / .so และอุปกรณ์</th>
-                <td><code class="inline">coral run --gpus nvidia.com/gpu=all --device /dev/video0:/dev/video0:ro ...</code> — CNCF CDI + ฉีด <code class="inline">libcuda.so*</code> / <code class="inline">nvidia-smi</code> อัตโนมัติ</td>
+                <td><code class="inline">coral run --gpus nvidia.com/gpu=all --device /dev/video0:/dev/video0:ro ...</code> — <span data-i18n="feat2.descGpu">CNCF CDI + ฉีด libcuda.so* / nvidia-smi แบบ read-only อัตโนมัติ</span></td>
               </tr>
               <tr>
                 <th scope="row" data-i18n="feat2.rowAlias">CVE Scan, Observability &amp; Compose v2</th>
-                <td><code class="inline">coral scan alpine:3.20 --fail-on high</code>, <code class="inline">coral top/wait/stats --all</code>, <code class="inline">coral pause/rename/update</code>, <code class="inline">coral compose up --scale web=3</code></td>
+                <td><code class="inline">coral scan alpine:3.20 --fail-on high</code> — <span data-i18n="feat2.descAlias">สแกน CVE (OSV.dev), coral top/wait/stats --all, pause/rename/update และ compose --scale</span></td>
               </tr>
             </tbody>
           </table>

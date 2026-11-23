@@ -1,184 +1,66 @@
-/* ---------- Topbar ---------- */
-.topbar {
+/* ---------- Sticky Section Jump Bar (Scrollspy) ---------- */
+.jumpbar {
   position: sticky;
-  top: 0;
-  z-index: 40;
-  height: var(--header-h);
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
-  backdrop-filter: blur(12px);
+  top: var(--header-h);
+  z-index: 35;
+  background: color-mix(in srgb, var(--band) 92%, transparent);
+  backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
 }
 
-.topbar-inner {
-  max-width: 1280px;
-  height: 100%;
-  margin: 0 auto;
-  padding: 0 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.brand-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text);
-  font-weight: 750;
-  font-size: 1.05rem;
-  letter-spacing: -0.02em;
-}
-
-.brand-link:hover {
-  text-decoration: none;
-}
-
-.brand-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  display: block;
-}
-
-.version-pill {
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--brand-soft);
-  color: var(--brand);
-  border: 1px solid color-mix(in srgb, var(--brand) 30%, transparent);
-}
-
-.topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.icon-btn,
-.nav-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 36px;
-  padding: 0 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
-}
-
-.icon-btn:hover,
-.nav-pill:hover {
-  background: var(--surface-2);
-  border-color: var(--brand);
-  text-decoration: none;
-}
-
-/* Theme toggle icons controlled purely by CSS (:root:has + prefers-color-scheme)
-   so inactive state is removed from AT via display: none without needing JS */
-.theme-toggle .state-to-light {
-  display: none;
-}
-.theme-toggle .state-to-dark {
-  display: inline-flex;
-  align-items: center;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not(:has(> head > meta[name="color-scheme"][content="light"])) .theme-toggle .state-to-dark {
-    display: none;
-  }
-  :root:not(:has(> head > meta[name="color-scheme"][content="light"])) .theme-toggle .state-to-light {
-    display: inline-flex;
-    align-items: center;
-  }
-}
-
-:root:has(> head > meta[name="color-scheme"][content="dark"]) .theme-toggle .state-to-dark {
-  display: none;
-}
-:root:has(> head > meta[name="color-scheme"][content="dark"]) .theme-toggle .state-to-light {
-  display: inline-flex;
-  align-items: center;
-}
-:root:has(> head > meta[name="color-scheme"][content="light"]) .theme-toggle .state-to-light {
-  display: none;
-}
-:root:has(> head > meta[name="color-scheme"][content="light"]) .theme-toggle .state-to-dark {
-  display: inline-flex;
-  align-items: center;
-}
-
-/* ---------- Page Layout & Scrollspy Sidebar ---------- */
-.page-shell {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 28px 20px 80px;
-  display: grid;
-  grid-template-columns: 230px minmax(0, 1fr);
-  gap: 36px;
-  align-items: start;
-}
-
-.sidebar {
-  position: sticky;
-  top: calc(var(--header-h) + 24px);
-}
-
-.toc-heading {
-  margin: 0 0 10px;
-  padding-inline-start: 12px;
-  font-size: 0.74rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--muted);
-}
-
-/* MANDATORY scrollspy pattern: scroll-target-group: auto on nav container */
 .toc-nav {
   scroll-target-group: auto;
+  max-width: var(--container-w);
+  margin: 0 auto;
+  padding: 6px 20px;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  border-inline-start: 2px solid var(--border);
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  --fade-size: 2rem;
+  --fade-dir: right;
+  --fade-start-pos: 0;
+  --fade-end-pos: 100%;
+  mask:
+    linear-gradient(black, black) no-clip subtract,
+    linear-gradient(to var(--fade-dir), black, transparent) var(--fade-start-pos) 0 / var(--fade-start) 100% no-repeat no-clip,
+    linear-gradient(to var(--fade-dir), transparent, black) var(--fade-end-pos) 0 / var(--fade-end) 100% no-repeat no-clip;
+  animation: reveal-fade-start linear both, hide-fade-end linear both;
+  animation-timeline: scroll(self inline);
+  animation-range: 0 var(--fade-size), calc(100% - var(--fade-size)) 100%;
+}
+
+.toc-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .toc-nav a {
-  display: flex;
+  position: relative;
+  flex: none;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 12px;
-  margin-inline-start: -2px;
-  border-inline-start: 3px solid transparent;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 999px;
   color: var(--muted);
-  font-size: 0.88rem;
-  font-weight: 500;
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  transition: color 0.15s ease, background-color 0.15s ease;
+  font-size: 0.79rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .toc-nav a:hover {
   color: var(--text);
-  background: var(--surface-2);
+  background: var(--surface);
   text-decoration: none;
 }
 
-/* Combine native :target-current and fallback .target-current via :is() so
-   unsupported browsers don't invalidate the entire rule */
 .toc-nav a:is(:target-current, .target-current) {
   color: var(--brand);
-  border-inline-start-color: var(--brand);
-  background: var(--brand-soft);
+  background: var(--surface);
+  border-color: color-mix(in srgb, var(--brand) 38%, transparent);
   font-weight: 700;
 }
 
@@ -188,19 +70,37 @@
   height: 6px;
   border-radius: 50%;
   background: currentColor;
-  flex: none;
 }
 
-/* ---------- Main Content & Sections ---------- */
+/* ---------- Full-Width Alternating Sections ---------- */
+.page-shell {
+  width: 100%;
+}
+
 .doc-main {
-  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 64px;
 }
 
 .doc-section {
-  scroll-margin-top: calc(var(--header-h) + 24px);
+  scroll-margin-top: calc(var(--header-h) + var(--jumpbar-h) + 16px);
+  padding: clamp(48px, 6vw, 78px) 20px;
+  background: var(--bg);
+}
+
+.doc-section:nth-of-type(even) {
+  background: var(--band);
+  border-block: 1px solid var(--border);
+}
+
+.doc-section#overview {
+  padding: 0;
+  background: transparent;
+}
+
+.doc-section:not(#overview) > * {
+  max-width: var(--container-w);
+  margin-inline: auto;
 }
 
 .doc-section:focus {
@@ -208,16 +108,39 @@
 }
 
 .doc-section h2 {
-  margin: 0 0 8px;
-  font-size: clamp(1.5rem, 2.5vw, 1.95rem);
-  letter-spacing: -0.025em;
-  line-height: 1.25;
+  margin: 0 0 10px;
+  font-size: clamp(1.65rem, 2.8vw, 2.25rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
 }
 
 .section-lead {
-  margin: 0 0 24px;
+  margin: 0 0 28px;
   color: var(--muted);
-  font-size: 1rem;
+  font-size: 1.04rem;
   max-width: 72ch;
 }
 
+/* Progressive scroll-entry reveal (compositor-only, reduced-motion safe) */
+@media (prefers-reduced-motion: no-preference) {
+  @supports ((animation-timeline: view()) and (animation-range: entry)) {
+    @keyframes card-reveal {
+      from {
+        opacity: 0.25;
+        transform: translateY(16px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .cards-grid > .card,
+    .pillar-grid > .pillar-card {
+      animation: card-reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 28%;
+    }
+  }
+}

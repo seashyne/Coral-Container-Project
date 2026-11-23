@@ -16,11 +16,11 @@ window.CORAL_I18N_TH = {
   "topbar.releases": "Releases",
   "topbar.themeDark": "เปลี่ยนเป็นธีมมืด",
   "topbar.themeLight": "เปลี่ยนเป็นธีมสว่าง",
-  "hero.badge": "Release v2.8.0 · Rust Edition 2024 · x86_64 & ARM64 · Apache-2.0",
-  "hero.title": "Container Runtime ยุคใหม่ด้วย Rust",
+  "hero.badge": "Release v2.8.1 · Rust Edition 2024 · x86_64 & ARM64 · Apache-2.0",
+  "hero.title": "พัฒนาไวขึ้น รันได้ทุกที่ ด้วย Rust Container Engine",
   "hero.subtitle":
-    "คำสั่งสไตล์ Docker + docker.sock REST API, Shared Layer Cache + Parallel Pull, BuildKit heredoc/cache/secret mount, Embedded DNS, ส่งต่อ GPU/Device, Rootless Multi-UID OCI, Kubernetes CRI v1, WASI HTTP, KVM MicroVM และ Coral Desktop v2.8.0",
-  "hero.ctaInstall": "ดาวน์โหลด & ติดตั้ง v2.8.0",
+    "คำสั่งสไตล์ Docker + docker.sock REST API, Shared Layer Cache + Parallel Pull, BuildKit heredoc/cache/secret mount, Embedded DNS, ส่งต่อ GPU/Device, Rootless Multi-UID OCI, Kubernetes CRI v1, WASI HTTP, KVM MicroVM และ Coral Desktop v2.8.1",
+  "hero.ctaInstall": "ดาวน์โหลด & ติดตั้ง v2.8.1",
   "hero.ctaBench": "ผลเทียบกับ Docker & รายงาน",
   "hero.ctaGithub": "ดูซอร์สโค้ดบน GitHub",
   "hero.ctaSupport": "สนับสนุนโปรเจกต์",
@@ -59,14 +59,14 @@ window.CORAL_I18N_TH = {
   "install.onelinerVerify": "ตรวจสอบหลังติดตั้ง:",
   "install.debDesc":
     "เหมาะสำหรับ Ubuntu 22.04+ / Debian 12+ ติดตั้งไฟล์ไบนารีเข้า /usr/bin และยูนิต systemd โดยตรง:",
-  "install.downloadDeb": "ดาวน์โหลด coral-runtime_2.8.0_amd64.deb",
-  "install.downloadTar": "ดาวน์โหลด coral-v2.8.0-linux-x86_64.tar.gz",
+  "install.downloadDeb": "ดาวน์โหลด coral-runtime_2.8.1_amd64.deb",
+  "install.downloadTar": "ดาวน์โหลด coral-v2.8.1-linux-x86_64.tar.gz",
   "install.allReleases": "ดูไฟล์ทั้งหมดบน GitHub Releases",
   "install.desktopDesc":
-    "จัดการคอนเทนเนอร์, Pods, Images, Volumes, Networks, GPU/Device Passthrough, Full-Duplex PTY Terminal และแท็บ Next-Gen (Wasm & KVM) ผ่านแอป Desktop (Tauri v2.8.0):",
+    "จัดการคอนเทนเนอร์, Pods, Images, Volumes, Networks, GPU/Device Passthrough, Full-Duplex PTY Terminal และแท็บ Next-Gen (Wasm & KVM) ผ่านแอป Desktop (Tauri v2.8.1):",
   "install.desktopLinuxTitle": "Linux (Ubuntu / Fedora / AppImage)",
   "install.desktopLinuxStep":
-    "ดาวน์โหลด Coral Desktop_2.8.0_amd64.deb หรือ .rpm จาก GitHub Releases หรือติดตั้งจากซอร์สลง ~/.local/bin เพื่อเชื่อมต่อกับ coral-daemon อัตโนมัติ",
+    "ดาวน์โหลด Coral Desktop_2.8.1_amd64.deb หรือ .rpm จาก GitHub Releases หรือติดตั้งจากซอร์สลง ~/.local/bin เพื่อเชื่อมต่อกับ coral-daemon อัตโนมัติ",
   "install.desktopWinTitle": "Windows 10 / 11 (WSL2)",
   "install.desktopWinStep":
     "ติดตั้ง Coral Runtime ภายใน WSL2 Linux distro ด้วยคำสั่ง One-Liner จากนั้นติดตั้ง Coral Desktop (.msi / .exe) บน Windows แล้วเลือกโหมด WSL2 ในหน้า Settings",
@@ -78,12 +78,12 @@ window.CORAL_I18N_TH = {
   "cli.title": "คู่มือและตัวอย่างคำสั่ง CLI",
   "cli.lead":
     "คำสั่งคุ้นมือสไตล์ Docker (ไม่ต้องพิมพ์ --image หรือ --) พร้อมคำสั่ง Next-Gen สำหรับ WebAssembly, KVM MicroVM และ AI Agent Sandbox",
-  "cli.guideCaption": "รูปคู่มือสรุปขั้นตอนการติดตั้งและใช้งาน Coral CLI + Coral Desktop v2.8.0 ในภาพเดียว",
+  "cli.guideCaption": "รูปคู่มือสรุปขั้นตอนการติดตั้งและใช้งาน Coral CLI + Coral Desktop v2.8.1 ในภาพเดียว",
   "cli.tabContainers": "Containers & Exec",
   "cli.tabBuild": "Build, Compose & Push",
   "cli.tabWasm": "WebAssembly (Wasm)",
   "cli.tabVmm": "KVM MicroVM & Sandbox",
-  "nextgen.title": "เจาะลึกฟีเจอร์ Next-Gen (v2.8.0)",
+  "nextgen.title": "เจาะลึกฟีเจอร์ Next-Gen (v2.8.1)",
   "nextgen.lead":
     "สองเอนจินใหม่ที่ทำให้ Coral แตกต่างจาก Container Runtime ทั่วไป — สร้างมาเพื่อ AI Agent Sandboxing และ Microsecond Serverless",
   "nextgen.wasmCardTitle": "coral-wasm — Microsecond WASI Preview 1 Engine",
@@ -178,7 +178,7 @@ window.CORAL_I18N_TH = {
   "dialog.close": "ปิดหน้าต่าง",
   "copy.btn": "คัดลอก",
   "copy.done": "คัดลอกแล้ว!",
-  "footer.copy": "Coral Container Project v2.8.0 · Open-Source ภายใต้ Apache License 2.0",
+  "footer.copy": "Coral Container Project v2.8.1 · Open-Source ภายใต้ Apache License 2.0",
   "footer.reportLink": "รายงานสรุป (REPORT_v2.3.md)",
   "footer.docsLink": "คู่มือฉบับเต็ม (MANUAL.md)",
   "footer.roadmapLink": "Roadmap",
@@ -275,4 +275,36 @@ window.CORAL_I18N_TH = {
   "report.stDone": "แก้แล้วในรอบนี้",
   "report.reportBtn": "อ่านรายงานสรุปฉบับเต็ม (REPORT_v2.3.md)",
   "report.rawBtn": "ดูข้อมูล Benchmark ละเอียด (BENCHMARK.md)",
+  "announce.pill": "NEW",
+  "announce.text":
+    "Coral v2.8.1 — สแกน CVE ในตัว (OSV.dev), Rootless L3 Virtual Switch, Multi-Arch Buildx และเร็วกว่า Docker 17.9×",
+  "announce.cta": "ติดตั้งเลย →",
+  "topbar.menu": "เมนู",
+  "topbar.download": "ดาวน์โหลด",
+  "top.features": "ฟีเจอร์",
+  "top.cli": "คำสั่ง CLI",
+  "top.nextgen": "Wasm & KVM",
+  "top.desktop": "Desktop",
+  "top.benchmarks": "ผลทดสอบ",
+  "top.arch": "สถาปัตยกรรม",
+  "pillars.title": "ครบทั้งวงจร Build · Share · Run · Verify",
+  "pillars.lead":
+    "ออกแบบเวิร์กโฟลว์ให้คุ้นมือเหมือน Docker ทุกขั้นตอน แต่เบากว่า ปลอดภัยกว่าด้วย Rust และพร้อมสำหรับ Wasm + KVM MicroVM",
+  "pillar.buildTitle": "Build",
+  "pillar.buildDesc":
+    "BuildKit Dockerfile ครบชุด: .dockerignore, Parallel Multi-Stage DAG, --mount=type=cache|secret|bind|ssh และ Multi-Arch OCI Index (amd64 + arm64)",
+  "pillar.shareTitle": "Share",
+  "pillar.shareDesc":
+    "โหลดขนาน 4 สตรีม ตรวจ SHA-256 สองชั้น แชร์เลเยอร์แบบ zero-copy hardlink + Multi-Lowerdir OverlayFS และ push ขึ้น Docker Hub / GHCR ได้ทันที",
+  "pillar.runTitle": "Run",
+  "pillar.runDesc":
+    "รัน Rootless OCI ใน 8.88 ms, Virtual Switch แจก IP 10.89.x.Y + DNS + NAT, Streaming docker.sock, NVIDIA CDI, WASI Wasm และ /dev/kvm MicroVM",
+  "pillar.verifyTitle": "Verify",
+  "pillar.verifyDesc":
+    "สแกนช่องโหว่ CVE ในตัวด้วย coral scan (SPDX SBOM + OSV.dev + --fail-on CI gate), ลงนาม Ed25519 และดูโปรเซส/สถิติสดด้วย coral top & stats --all",
+  "footer.tagline":
+    "Container Runtime ยุคใหม่ด้วย Rust — Rootless OCI, Streaming docker.sock API, WASI WebAssembly, /dev/kvm MicroVM และ Coral Desktop",
+  "footer.colProducts": "ผลิตภัณฑ์",
+  "footer.colDocs": "เอกสารคู่มือ",
+  "footer.colCommunity": "ชุมชน & ซอร์สโค้ด",
 };
