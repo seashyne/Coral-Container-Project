@@ -42,8 +42,9 @@
       id="lang-btn"
       type="button"
       class="lang-pill"
-      title="Switch language (EN / ไทย)"
-      aria-label="Switch language"
+      popovertarget="lang-popover"
+      title="Select language (8 languages)"
+      aria-label="Select language"
       data-i18n-title="topbar.langTitle"
       data-i18n-aria="topbar.langAria"
     >
@@ -75,6 +76,23 @@
       data-icon="gear"
     ></button>
   </header>
+
+  <!-- Viewport-Aware Language Picker Popover (8 Languages) -->
+  <div id="lang-popover" popover="auto" class="lang-popover" aria-labelledby="lang-pop-title">
+    <div class="pop-head">
+      <strong id="lang-pop-title" data-i18n="settings.language">Language</strong>
+    </div>
+    <div class="lang-grid" role="group" aria-label="Language">
+      <button type="button" class="lang-choice" data-lang-pick="en" aria-pressed="true"><span>English</span><span class="lang-code">EN</span></button>
+      <button type="button" class="lang-choice" data-lang-pick="th" aria-pressed="false"><span>ไทย</span><span class="lang-code">TH</span></button>
+      <button type="button" class="lang-choice" data-lang-pick="zh" aria-pressed="false"><span>简体中文</span><span class="lang-code">ZH</span></button>
+      <button type="button" class="lang-choice" data-lang-pick="ja" aria-pressed="false"><span>日本語</span><span class="lang-code">JA</span></button>
+      <button type="button" class="lang-choice" data-lang-pick="ko" aria-pressed="false"><span>한국어</span><span class="lang-code">KO</span></button>
+      <button type="button" class="lang-choice" data-lang-pick="vi" aria-pressed="false"><span>Tiếng Việt</span><span class="lang-code">VI</span></button>
+      <button type="button" class="lang-choice" data-lang-pick="es" aria-pressed="false"><span>Español</span><span class="lang-code">ES</span></button>
+      <button type="button" class="lang-choice" data-lang-pick="de" aria-pressed="false"><span>Deutsch</span><span class="lang-code">DE</span></button>
+    </div>
+  </div>
 
   <!-- Quick Theme, Palette, Density & Language Popover -->
   <div id="theme-popover" popover="auto" class="theme-popover" aria-labelledby="theme-pop-title">
@@ -128,9 +146,15 @@
 
     <div class="pop-group">
       <span class="pop-label" data-i18n="settings.language">Language</span>
-      <div class="pop-segmented" role="group" aria-label="Language">
-        <button type="button" class="pop-opt" data-lang-pick="en" aria-pressed="true">English</button>
-        <button type="button" class="pop-opt" data-lang-pick="th" aria-pressed="false">ไทย</button>
+      <div class="pop-lang-grid" role="group" aria-label="Language">
+        <button type="button" class="lang-choice" data-lang-pick="en" aria-pressed="true"><span>English</span><span class="lang-code">EN</span></button>
+        <button type="button" class="lang-choice" data-lang-pick="th" aria-pressed="false"><span>ไทย</span><span class="lang-code">TH</span></button>
+        <button type="button" class="lang-choice" data-lang-pick="zh" aria-pressed="false"><span>简体中文</span><span class="lang-code">ZH</span></button>
+        <button type="button" class="lang-choice" data-lang-pick="ja" aria-pressed="false"><span>日本語</span><span class="lang-code">JA</span></button>
+        <button type="button" class="lang-choice" data-lang-pick="ko" aria-pressed="false"><span>한국어</span><span class="lang-code">KO</span></button>
+        <button type="button" class="lang-choice" data-lang-pick="vi" aria-pressed="false"><span>Tiếng Việt</span><span class="lang-code">VI</span></button>
+        <button type="button" class="lang-choice" data-lang-pick="es" aria-pressed="false"><span>Español</span><span class="lang-code">ES</span></button>
+        <button type="button" class="lang-choice" data-lang-pick="de" aria-pressed="false"><span>Deutsch</span><span class="lang-code">DE</span></button>
       </div>
     </div>
   </div>

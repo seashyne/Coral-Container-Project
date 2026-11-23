@@ -1,7 +1,3 @@
-  border: 1px solid color-mix(in oklab, var(--text) 20%, transparent);
-  flex: none;
-}
-
 /* Global Search Input */
 .gfind {
   display: flex;
@@ -16,6 +12,13 @@
   background: var(--panel);
   border: 1px solid var(--line);
   transition: inline-size var(--duration-normal) ease, border-color var(--duration-fast), box-shadow var(--duration-fast);
+}
+
+.gfind .s-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
 }
 
 .search-clear {

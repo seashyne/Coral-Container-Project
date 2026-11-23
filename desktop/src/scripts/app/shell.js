@@ -18,7 +18,6 @@ function openRunModalFromCatalog(baseItem, overrideTag = null) {
 }
 
 $("rail-btn").addEventListener("click", toggleRail);
-$("lang-btn")?.addEventListener("click", toggleLang);
 $("gear-btn").addEventListener("click", () => switchView("settings"));
 $("theme-pop-settings")?.addEventListener("click", () => {
   closeThemePopover();

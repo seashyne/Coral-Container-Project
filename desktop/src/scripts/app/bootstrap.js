@@ -4,6 +4,7 @@
 (async function init() {
   initIcons();
   initDialogs();
+  initLangPopover();
   initThemePopover();
   applyI18nToDom();
   syncThemeControls();

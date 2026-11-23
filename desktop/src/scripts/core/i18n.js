@@ -1,21 +1,51 @@
-// Bilingual Internationalization (i18n) controller for Coral Desktop (EN / TH).
+// Multi-language Internationalization (i18n) controller for Coral Desktop (8 languages).
 
 const LANG_STORAGE_KEY = "coral.lang";
 
+const CORAL_LANGUAGES = [
+  { code: "en", short: "EN", native: "English" },
+  { code: "th", short: "ไทย", native: "ไทย" },
+  { code: "zh", short: "中文", native: "简体中文" },
+  { code: "ja", short: "日本語", native: "日本語" },
+  { code: "ko", short: "한국어", native: "한국어" },
+  { code: "vi", short: "VI", native: "Tiếng Việt" },
+  { code: "es", short: "ES", native: "Español" },
+  { code: "de", short: "DE", native: "Deutsch" },
+];
+
+const SUPPORTED_LANG_CODES = new Set(CORAL_LANGUAGES.map((l) => l.code));
+
+function normalizeLang(raw) {
+  if (!raw || typeof raw !== "string") return null;
+  const base = raw.trim().toLowerCase().split(/[-_]/)[0];
+  return SUPPORTED_LANG_CODES.has(base) ? base : null;
+}
+
 function getInitialLang() {
   try {
-    const saved = localStorage.getItem(LANG_STORAGE_KEY);
-    if (saved === "th" || saved === "en") return saved;
+    const saved = normalizeLang(localStorage.getItem(LANG_STORAGE_KEY));
+    if (saved) return saved;
   } catch {
     // Ignore storage read error
   }
-  return navigator.language && navigator.language.toLowerCase().startsWith("th") ? "th" : "en";
+  const prefs = Array.isArray(navigator.languages) && navigator.languages.length
+    ? navigator.languages
+    : [navigator.language];
+  for (const tag of prefs) {
+    const matched = normalizeLang(tag);
+    if (matched) return matched;
+  }
+  return "en";
 }
 
 let currentLang = getInitialLang();
 
 function getLang() {
   return currentLang;
+}
+
+function getLangMeta(code) {
+  return CORAL_LANGUAGES.find((l) => l.code === code) || CORAL_LANGUAGES[0];
 }
 
 function t(key, vars = null) {
@@ -42,6 +72,41 @@ function tHealth(rawHealth) {
   return t(`health.${h}`) !== `health.${h}` ? t(`health.${h}`) : rawHealth;
 }
 
+function closeLangPopover() {
+  const pop = $("lang-popover");
+  if (!pop) return;
+  if (Object.hasOwn(HTMLElement.prototype, "popover") && typeof pop.hidePopover === "function") {
+    if (pop.matches(":popover-open")) pop.hidePopover();
+  } else {
+    pop.classList.remove("is-open");
+  }
+}
+
+function initLangPopover() {
+  const pop = $("lang-popover");
+  const trigger = $("lang-btn");
+  if (!pop || !trigger) return;
+
+  if (!Object.hasOwn(HTMLElement.prototype, "popover")) {
+    document.documentElement.classList.add("no-popover");
+    trigger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      pop.classList.toggle("is-open");
+    });
+    document.addEventListener("click", (e) => {
+      if (!pop.contains(e.target) && !trigger.contains(e.target)) {
+        pop.classList.remove("is-open");
+      }
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && pop.classList.contains("is-open")) {
+        pop.classList.remove("is-open");
+        trigger.focus();
+      }
+    });
+  }
+}
+
 function applyI18nToDom() {
   document.documentElement.lang = currentLang;
 
@@ -60,7 +125,7 @@ function applyI18nToDom() {
 
   const langLabel = $("lang-label");
   if (langLabel) {
-    langLabel.textContent = currentLang === "th" ? "ไทย" : "EN";
+    langLabel.textContent = getLangMeta(currentLang).short;
   }
   const setLangSel = $("set-lang");
   if (setLangSel) {
@@ -72,13 +137,14 @@ function applyI18nToDom() {
 }
 
 function setLang(lang, rerender = true) {
-  currentLang = lang === "th" ? "th" : "en";
+  currentLang = normalizeLang(lang) || "en";
   try {
     localStorage.setItem(LANG_STORAGE_KEY, currentLang);
   } catch {
     // Ignore storage write error
   }
   applyI18nToDom();
+  closeLangPopover();
   if (rerender) {
     if (typeof syncThemeControls === "function") syncThemeControls();
     if (typeof updateModeHint === "function") updateModeHint();
@@ -97,5 +163,7 @@ function setLang(lang, rerender = true) {
 }
 
 function toggleLang() {
-  setLang(currentLang === "th" ? "en" : "th", true);
+  const idx = CORAL_LANGUAGES.findIndex((l) => l.code === currentLang);
+  const next = CORAL_LANGUAGES[(idx + 1) % CORAL_LANGUAGES.length];
+  setLang(next.code, true);
 }

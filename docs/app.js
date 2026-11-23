@@ -55,18 +55,42 @@
   });
 
   /* -----------------------------------------------------------------------
-     2. Bilingual TH / EN Internationalization + Responsive Table Labels
+     2. 8-Language Internationalization + Responsive Table Labels
      ----------------------------------------------------------------------- */
   const dict = window.CORAL_I18N || { th: {}, en: {} };
-  const langBtn = document.getElementById("lang-toggle");
   const langLabel = document.getElementById("lang-label");
+  const langPopover = document.getElementById("docs-lang-popover");
+  const LANG_SHORT = {
+    en: "EN",
+    th: "ไทย",
+    zh: "中文",
+    ja: "日本語",
+    ko: "한국어",
+    vi: "VI",
+    es: "ES",
+    de: "DE",
+  };
+  const SUPPORTED_LANGS = new Set(Object.keys(LANG_SHORT));
+
+  function normalizeLang(raw) {
+    if (!raw || typeof raw !== "string") return null;
+    const base = raw.trim().toLowerCase().split(/[-_]/)[0];
+    return SUPPORTED_LANGS.has(base) ? base : null;
+  }
 
   function detectInitialLang() {
     try {
-      const saved = localStorage.getItem(STORAGE_LANG);
-      if (saved === "th" || saved === "en") return saved;
+      const saved = normalizeLang(localStorage.getItem(STORAGE_LANG));
+      if (saved) return saved;
     } catch {}
-    return navigator.language && navigator.language.toLowerCase().startsWith("th") ? "th" : "en";
+    const prefs = Array.isArray(navigator.languages) && navigator.languages.length
+      ? navigator.languages
+      : [navigator.language];
+    for (const tag of prefs) {
+      const matched = normalizeLang(tag);
+      if (matched) return matched;
+    }
+    return "en";
   }
 
   let currentLang = detectInitialLang();
@@ -90,7 +114,7 @@
   }
 
   function applyLanguage(lang) {
-    currentLang = lang === "en" ? "en" : "th";
+    currentLang = normalizeLang(lang) || "en";
     document.documentElement.lang = currentLang;
     document.querySelectorAll("[data-i18n]").forEach((el) => {
       const key = el.getAttribute("data-i18n");
@@ -98,8 +122,11 @@
       if (text) el.textContent = text;
     });
     if (langLabel) {
-      langLabel.textContent = currentLang === "th" ? "EN" : "ไทย";
+      langLabel.textContent = LANG_SHORT[currentLang] || "EN";
     }
+    document.querySelectorAll("[data-docs-lang]").forEach((btn) => {
+      btn.setAttribute("aria-pressed", btn.dataset.docsLang === currentLang ? "true" : "false");
+    });
     syncTableLabels();
     hydrateSponsorCards();
     if (typeof window.coralSyncNavbar === "function") {
@@ -107,15 +134,20 @@
     }
   }
 
-  if (langBtn) {
-    langBtn.addEventListener("click", () => {
-      const next = currentLang === "th" ? "en" : "th";
+  document.querySelectorAll("[data-docs-lang]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const next = btn.dataset.docsLang;
       try {
         localStorage.setItem(STORAGE_LANG, next);
       } catch {}
       applyLanguage(next);
+      if (langPopover && typeof langPopover.hidePopover === "function") {
+        try {
+          langPopover.hidePopover();
+        } catch {}
+      }
     });
-  }
+  });
 
   /* -----------------------------------------------------------------------
      3. Accessible Tabs (focusgroup + beforematch + keyboard roving fallback)

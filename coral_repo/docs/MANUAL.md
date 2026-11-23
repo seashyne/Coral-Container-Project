@@ -1,6 +1,6 @@
-# คู่มือการใช้งานและพัฒนา Coral Container Runtime (`v2.8.1` Manual)
+# คู่มือการใช้งานและพัฒนา Coral Container Runtime (`v2.8.2` Manual)
 
-คู่มือนี้อธิบายขั้นตอนการติดตั้ง, การเตรียม Alpine Rootfs, การใช้งาน CLI (`coral`), การรันคอนเทนเนอร์สไตล์เดียวกับ Docker (`coral run`, `scan`, `top`, `wait`, `stats --all`, `pause`/`unpause`/`rename`/`update`), การใช้ **Coral Desktop v2.8.1**, CRI gRPC Daemon + Streaming `docker.sock` (`coral-daemon`), `coral machine`, Multi-Arch BuildKit DAG + `.dockerignore`, Rootless L2/L3 Virtual Switch + Outbound NAT + Upstream/Round-Robin Gateway DNS และ Quality Gates
+คู่มือนี้อธิบายขั้นตอนการติดตั้ง, การเตรียม Alpine Rootfs, การใช้งาน CLI (`coral`), การรันคอนเทนเนอร์สไตล์เดียวกับ Docker (`coral run`, `scan`, `top`, `wait`, `stats --all`, `pause`/`unpause`/`rename`/`update`), การใช้ **Coral Desktop v2.8.2**, CRI gRPC Daemon + Streaming `docker.sock` (`coral-daemon`), `coral machine`, Multi-Arch BuildKit DAG + `.dockerignore`, Rootless L2/L3 Virtual Switch + Outbound NAT + Upstream/Round-Robin Gateway DNS และ Quality Gates
 
 ![Visual Quick Guide — Coral v2.3.0](../../docs/assets/coral-usage-guide.png)
 

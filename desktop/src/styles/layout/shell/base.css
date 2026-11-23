@@ -108,6 +108,7 @@ body.rail {
 }
 
 .lang-pill {
+  anchor-name: --lang-anchor;
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
@@ -188,3 +189,6 @@ body.rail {
   block-size: 9px;
   border-radius: var(--radius-pill);
   background: var(--accent);
+  border: 1px solid color-mix(in oklab, var(--text) 20%, transparent);
+  flex: none;
+}
