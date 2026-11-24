@@ -309,6 +309,9 @@
     if (tarLink) {
       tarLink.href = `https://github.com/${repo}/releases/download/${ver}/coral-${ver}-linux-x86_64.tar.gz`;
     }
+    if (typeof window.coralSyncArchDownloads === "function") {
+      window.coralSyncArchDownloads();
+    }
 
     const pp = cfg.promptpay || {};
     const gh = cfg.githubSponsors || {};

@@ -1,7 +1,7 @@
 {
   "name": "coral-desktop",
   "private": true,
-  "version": "2.8.3",
+  "version": "2.8.4",
   "description": "Coral Desktop — cross-platform GUI for the Coral Container Runtime",
   "scripts": {
     "build:html": "node build-html.mjs",

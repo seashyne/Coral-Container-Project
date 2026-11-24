@@ -1,13 +1,13 @@
 /**
  * Coral Container Project — English (en) dictionary, part 2
- * * * Platform integration & deep Docker-parity features through v2.8.3.
+ * * * Platform integration & deep Docker-parity features through v2.8.4.
  * * * Loaded before i18n.js, which merges this into window.CORAL_I18N.
  */
 window.CORAL_I18N_EN_FEATURES = {
   "nav.features": "Platform Features",
-  "feat2.title": "Platform & Deep Docker-Parity Features (v2.8.3)",
+  "feat2.title": "Platform & Deep Docker-Parity Features (v2.8.4)",
   "feat2.lead":
-    "Pure-Rust platform capabilities shipped through v2.8.3 — zero external daemon required and backed by automated unit & E2E suites.",
+    "Pure-Rust platform capabilities shipped through v2.8.4 — zero external daemon required and backed by automated unit & E2E suites.",
   "feat2.cache.title": "Zero-Copy Shared Layer Store & Cache",
   "feat2.cache.desc":
     "coral pull deduplicates compressed blobs in .layer-cache/sha256/ (4-stream parallel download with double SHA-256 verification) and extracts each layer once into .layers/sha256/, materializing image rootfs via zero-copy hardlinks and multi-lowerdir OverlayFS.",
@@ -24,8 +24,8 @@ window.CORAL_I18N_EN_FEATURES = {
   "feat2.gpu.desc":
     "Built-in coral scan (SPDX SBOM + OSV.dev batch API with --fail-on CI gates), coral top / wait / stats --all, CNCF CDI JSON + host NVIDIA .so/nvidia-smi mounts, Compose v2 (secrets, configs, include, --scale, watch), live pause/rename/update, and coral machine (Linux/Lima VirtioFS/WSL2).",
   "feat2.usageTitle": "How to use them",
-  "feat2.usageLead": "Key CLI commands for each v2.8.3 capability",
-  "feat2.caption": "Example commands for the v2.8.3 platform features",
+  "feat2.usageLead": "Key CLI commands for each v2.8.4 capability",
+  "feat2.caption": "Example commands for the v2.8.4 platform features",
   "feat2.colCapability": "Capability",
   "feat2.colUsage": "Usage",
   "feat2.rowCache": "Zero-copy shared layer store",

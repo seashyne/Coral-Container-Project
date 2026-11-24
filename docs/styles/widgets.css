@@ -237,3 +237,142 @@ dialog.cmd-dialog::backdrop {
     display: none;
   }
 }
+
+/* ---------- 7. CPU Architecture Selector (x86_64 / ARM64) ---------- */
+.os-arch-sep {
+  width: 1px;
+  height: 18px;
+  align-self: center;
+  background: rgb(138 178 255 / 0.25);
+  margin-inline: 2px;
+}
+
+.arch-pill[aria-pressed="true"] {
+  background: rgb(45 212 191 / 0.24);
+  border-color: #2dd4bf;
+  color: #ccfbf1;
+}
+
+.arch-picker-bar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  margin-bottom: 18px;
+}
+
+.arch-picker-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 14px;
+  margin-bottom: 12px;
+}
+
+.arch-picker-label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.arch-caps {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: var(--teal);
+  background: var(--teal-soft);
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--teal) 30%, transparent);
+}
+
+.arch-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.arch-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.arch-btn:hover {
+  border-color: var(--brand);
+}
+
+.arch-btn[aria-pressed="true"] {
+  background: var(--brand-soft);
+  border-color: var(--brand);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand) 30%, transparent);
+}
+
+.arch-btn-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  color: var(--brand);
+  border: 1px solid var(--border);
+}
+
+.arch-btn-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.arch-btn-text strong {
+  font-size: 0.94rem;
+  font-weight: 800;
+}
+
+.arch-btn-text small {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.arch-pkg-tag {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.arch-btn[aria-pressed="true"] .arch-pkg-tag {
+  color: var(--brand);
+  border-color: color-mix(in srgb, var(--brand) 35%, transparent);
+}
+
+@media (max-width: 760px) {
+  .arch-picker-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .arch-pkg-tag {
+    display: none;
+  }
+}

@@ -2,8 +2,38 @@
       <section id="install" class="doc-section" tabindex="-1">
         <h2 data-i18n="install.title">ดาวน์โหลด &amp; วิธีติดตั้ง</h2>
         <p class="section-lead" data-i18n="install.lead">
-          เลือกวิธีติดตั้งที่เหมาะกับระบบของคุณ — รองรับ Linux x86_64 (Rootless-first) และ Windows ผ่าน WSL2 + Coral Desktop
+          เลือกวิธีติดตั้งและสถาปัตยกรรม CPU ที่ตรงกับเครื่องของคุณ — รองรับทั้ง Linux x86_64 &amp; ARM64 (Rootless-first), Windows WSL2 และ macOS
         </p>
+
+        <div class="arch-picker-bar" role="region" aria-label="CPU architecture selector">
+          <div class="arch-picker-head">
+            <span class="arch-picker-label" data-i18n="arch.pickLabel">เลือกสถาปัตยกรรม CPU</span>
+            <span class="arch-caps" id="arch-caps-summary">✓ OCI Rootless · ✓ WASI Wasm · ✓ /dev/kvm MicroVM · ✓ NVIDIA CDI</span>
+          </div>
+          <div class="arch-picker-grid" role="group" aria-label="CPU architecture">
+            <button type="button" class="arch-btn" data-cpu-arch="amd64" aria-pressed="true">
+              <span class="arch-btn-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/></svg>
+              </span>
+              <span class="arch-btn-text">
+                <strong>x86_64 / amd64</strong>
+                <small data-i18n="arch.x86Sub">Intel / AMD 64-bit · Linux PC, Server &amp; WSL2</small>
+              </span>
+              <span class="arch-pkg-tag">.deb (amd64) · .tar.gz</span>
+            </button>
+
+            <button type="button" class="arch-btn" data-cpu-arch="arm64" aria-pressed="false">
+              <span class="arch-btn-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/></svg>
+              </span>
+              <span class="arch-btn-text">
+                <strong>ARM64 / aarch64</strong>
+                <small data-i18n="arch.armSub">Apple Silicon (Lima), Raspberry Pi 4/5 &amp; AWS Graviton</small>
+              </span>
+              <span class="arch-pkg-tag">.deb (arm64) · .tar.gz</span>
+            </button>
+          </div>
+        </div>
 
         <div class="tabs" data-tabs="install">
           <div class="tablist" role="tablist" focusgroup="tablist nomemory" aria-label="Installation methods">
@@ -35,13 +65,13 @@ coral run alpine:3.20 /bin/sh -c 'echo "Hello from Coral PID=$$"'</code></pre>
               <div class="tab-panel-body">
                 <p data-i18n="install.debDesc"></p>
                 <div class="download-bar">
-                  <a class="btn btn-primary" id="dl-deb-link" href="https://github.com/seashyne/Coral-Container-Project/releases/download/v2.8.3/coral-runtime_2.8.3_amd64.deb" target="_blank" rel="noopener" data-i18n="install.downloadDeb">ดาวน์โหลด coral-runtime_2.8.3_amd64.deb</a>
-                  <a class="btn btn-secondary" id="dl-tar-link" href="https://github.com/seashyne/Coral-Container-Project/releases/download/v2.8.3/coral-v2.8.3-linux-x86_64.tar.gz" target="_blank" rel="noopener" data-i18n="install.downloadTar">ดาวน์โหลด coral-v2.8.3-linux-x86_64.tar.gz</a>
+                  <a class="btn btn-primary" id="dl-deb-link" href="https://github.com/seashyne/Coral-Container-Project/releases/download/v2.8.4/coral-runtime_2.8.4_amd64.deb" target="_blank" rel="noopener" data-i18n="install.downloadDeb">ดาวน์โหลด coral-runtime_2.8.4_amd64.deb</a>
+                  <a class="btn btn-secondary" id="dl-tar-link" href="https://github.com/seashyne/Coral-Container-Project/releases/download/v2.8.4/coral-v2.8.4-linux-x86_64.tar.gz" target="_blank" rel="noopener" data-i18n="install.downloadTar">ดาวน์โหลด coral-v2.8.4-linux-x86_64.tar.gz</a>
                 </div>
                 <div class="code-block">
                   <button type="button" class="copy-btn" data-copy-target="code-deb" data-i18n="copy.btn">คัดลอก</button>
-                  <pre id="code-deb"><code>curl -fsSLO https://github.com/seashyne/Coral-Container-Project/releases/download/v2.8.3/coral-runtime_2.8.3_amd64.deb
-sudo dpkg -i coral-runtime_2.8.3_amd64.deb
+                  <pre id="code-deb"><code>curl -fsSLO https://github.com/seashyne/Coral-Container-Project/releases/download/v2.8.4/coral-runtime_2.8.4_amd64.deb
+sudo dpkg -i coral-runtime_2.8.4_amd64.deb
 systemctl --user enable --now coral-daemon.service
 coral version</code></pre>
                 </div>

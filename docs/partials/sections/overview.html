@@ -6,18 +6,21 @@
               <div>
                 <div class="hero-top">
                   <img class="hero-logo" src="assets/coral-icon.png" alt="Coral Container Project Logo" width="48" height="48" fetchpriority="high">
-                  <div class="hero-badge" data-i18n="hero.badge">Release v2.8.3 · Rust Edition 2024 · x86_64 &amp; ARM64 · Apache-2.0</div>
+                  <div class="hero-badge" data-i18n="hero.badge">Release v2.8.4 · Rust Edition 2024 · x86_64 &amp; ARM64 · Apache-2.0</div>
                 </div>
                 <h1 data-i18n="hero.title">พัฒนาไวขึ้น รันได้ทุกที่ ด้วย Rust Container Engine</h1>
                 <p class="hero-subtitle" data-i18n="hero.subtitle">
                   คำสั่งสไตล์ Docker + Streaming docker.sock API, Rootless L2/L3 Virtual Switch, BuildKit Multi-Arch, สแกน CVE ในตัว, WASI WebAssembly, KVM MicroVM และ Coral Desktop
                 </p>
 
-                <div class="install-os-tabs" role="group" aria-label="Install platform">
+                <div class="install-os-tabs" role="group" aria-label="Install platform and CPU architecture">
                   <button type="button" class="os-pill" data-os-cmd="linux" aria-pressed="true">Linux</button>
                   <button type="button" class="os-pill" data-os-cmd="deb" aria-pressed="false">Ubuntu / Debian (.deb)</button>
                   <button type="button" class="os-pill" data-os-cmd="wsl" aria-pressed="false">Windows WSL2</button>
                   <button type="button" class="os-pill" data-os-cmd="mac" aria-pressed="false">macOS (Lima)</button>
+                  <span class="os-arch-sep" aria-hidden="true"></span>
+                  <button type="button" class="os-pill arch-pill" data-cpu-arch="amd64" aria-pressed="true">x86_64</button>
+                  <button type="button" class="os-pill arch-pill" data-cpu-arch="arm64" aria-pressed="false">ARM64</button>
                 </div>
 
                 <div class="hero-install-bar">
@@ -27,7 +30,7 @@
                 </div>
 
                 <div class="hero-actions">
-                  <a class="btn btn-primary" href="#install" data-i18n="hero.ctaInstall">ดาวน์โหลด &amp; ติดตั้ง v2.8.3</a>
+                  <a class="btn btn-primary" href="#install" data-i18n="hero.ctaInstall">ดาวน์โหลด &amp; ติดตั้ง v2.8.4</a>
                   <a class="btn btn-secondary" href="#benchmarks" data-i18n="hero.ctaBench">ผลเทียบกับ Docker &amp; รายงาน</a>
                   <a class="btn btn-teal" href="#support" data-i18n="hero.ctaSupport">สนับสนุนโปรเจกต์</a>
                 </div>
@@ -36,7 +39,7 @@
               <div class="hero-terminal" aria-label="Interactive Coral CLI Preview">
                 <div class="term-chrome">
                   <div class="term-dots" aria-hidden="true"><span></span><span></span><span></span></div>
-                  <span class="term-title">coral v2.8.3 — rootless oci · wasm · kvm</span>
+                  <span class="term-title">coral v2.8.4 — rootless oci · wasm · kvm</span>
                   <button type="button" id="hero-term-copy" class="term-copy-btn" data-i18n="copy.btn">คัดลอก</button>
                 </div>
                 <div class="tabs">

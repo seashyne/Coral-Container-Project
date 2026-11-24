@@ -17,23 +17,107 @@
     updateScroll();
   }
 
-  /* 2. Hero OS Quick-Install Command Switcher */
-  const OS_COMMANDS = {
-    linux: "curl -fsSL https://seashyne.github.io/Coral-Container-Project/install.sh | bash",
-    deb: "curl -fsSLO https://github.com/seashyne/Coral-Container-Project/releases/download/v2.8.3/coral-runtime_2.8.3_amd64.deb && sudo dpkg -i coral-runtime_2.8.3_amd64.deb",
-    wsl: "wsl --install -d Ubuntu && wsl bash -c 'curl -fsSL https://seashyne.github.io/Coral-Container-Project/install.sh | bash'",
-    mac: "coral machine init --vm lima --cpus 4 --memory 4096 && coral machine start",
-  };
+  /* 2. Hero OS + CPU Architecture (x86_64 / ARM64) Download Switcher */
+  let activeOs = "linux";
+  let activeArch = "amd64";
   const heroCmdEl = document.getElementById("hero-install-cmd");
+
+  function getReleaseMeta() {
+    const cfg = window.CORAL_SPONSOR_CONFIG || {};
+    const ver = cfg.releaseVersion || "v2.8.4";
+    const num = ver.replace(/^v/, "");
+    const repo = cfg.repoSlug || "seashyne/Coral-Container-Project";
+    return { ver, num, repo };
+  }
+
+  function archStrings(arch) {
+    const isArm = arch === "arm64";
+    return {
+      debArch: isArm ? "arm64" : "amd64",
+      tarArch: isArm ? "aarch64" : "x86_64",
+      caps: isArm
+        ? "✓ OCI Rootless · ✓ WASI Wasm · ✓ Multi-Arch Buildx · ✓ Native ARM64 CI"
+        : "✓ OCI Rootless · ✓ WASI Wasm · ✓ /dev/kvm MicroVM · ✓ NVIDIA CDI",
+    };
+  }
+
+  function syncArchDownloads() {
+    const { ver, num, repo } = getReleaseMeta();
+    const { debArch, tarArch, caps } = archStrings(activeArch);
+    const debFile = `coral-runtime_${num}_${debArch}.deb`;
+    const tarFile = `coral-${ver}-linux-${tarArch}.tar.gz`;
+    const debUrl = `https://github.com/${repo}/releases/download/${ver}/${debFile}`;
+    const tarUrl = `https://github.com/${repo}/releases/download/${ver}/${tarFile}`;
+
+    const osCmds = {
+      linux: "curl -fsSL https://seashyne.github.io/Coral-Container-Project/install.sh | bash",
+      deb: `curl -fsSLO ${debUrl} && sudo dpkg -i ${debFile}`,
+      wsl: "wsl --install -d Ubuntu && wsl bash -c 'curl -fsSL https://seashyne.github.io/Coral-Container-Project/install.sh | bash'",
+      mac: "coral machine init --vm lima --cpus 4 --memory 4096 && coral machine start",
+    };
+    if (heroCmdEl && osCmds[activeOs]) heroCmdEl.textContent = osCmds[activeOs];
+
+    const dlDeb = document.getElementById("dl-deb-link");
+    if (dlDeb) {
+      dlDeb.href = debUrl;
+      const prefix = dlDeb.textContent.split("coral-runtime_")[0] || "Download ";
+      dlDeb.textContent = `${prefix}${debFile}`;
+    }
+    const dlTar = document.getElementById("dl-tar-link");
+    if (dlTar) {
+      dlTar.href = tarUrl;
+      const prefix = dlTar.textContent.split("coral-v")[0] || "Download ";
+      dlTar.textContent = `${prefix}${tarFile}`;
+    }
+    const codeDeb = document.getElementById("code-deb");
+    if (codeDeb) {
+      codeDeb.textContent = `curl -fsSLO ${debUrl}\nsudo dpkg -i ${debFile}\nsystemctl --user enable --now coral-daemon.service\ncoral version`;
+    }
+    const capsEl = document.getElementById("arch-caps-summary");
+    if (capsEl) capsEl.textContent = caps;
+  }
+
+  function setCpuArch(arch) {
+    activeArch = arch === "arm64" ? "arm64" : "amd64";
+    document.querySelectorAll("[data-cpu-arch]").forEach((b) => {
+      b.setAttribute("aria-pressed", b.dataset.cpuArch === activeArch ? "true" : "false");
+    });
+    syncArchDownloads();
+  }
+
+  window.coralSyncArchDownloads = syncArchDownloads;
+
   document.querySelectorAll("[data-os-cmd]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const key = btn.dataset.osCmd;
-      if (heroCmdEl && OS_COMMANDS[key]) heroCmdEl.textContent = OS_COMMANDS[key];
+      activeOs = btn.dataset.osCmd || "linux";
       document.querySelectorAll("[data-os-cmd]").forEach((b) => {
         b.setAttribute("aria-pressed", b === btn ? "true" : "false");
       });
+      syncArchDownloads();
     });
   });
+
+  document.querySelectorAll("[data-cpu-arch]").forEach((btn) => {
+    btn.addEventListener("click", () => setCpuArch(btn.dataset.cpuArch));
+  });
+
+  // Auto-detect visitor CPU architecture (ARM64 vs x86_64) when exposed by browser
+  (async () => {
+    try {
+      if (navigator.userAgentData && typeof navigator.userAgentData.getHighEntropyValues === "function") {
+        const info = await navigator.userAgentData.getHighEntropyValues(["architecture"]);
+        if (info.architecture && /arm/i.test(info.architecture)) {
+          setCpuArch("arm64");
+          return;
+        }
+      }
+      if (/aarch64|arm64/i.test(navigator.userAgent || "")) {
+        setCpuArch("arm64");
+        return;
+      }
+    } catch {}
+    syncArchDownloads();
+  })();
 
   /* 3. Hero Terminal Copy Active Tab Command */
   const heroTermCopy = document.getElementById("hero-term-copy");
@@ -168,7 +252,7 @@
   const cmdInput = document.getElementById("cmd-input");
   const cmdList = document.getElementById("cmd-list");
   const CMD_ITEMS = [
-    { label: "Download & Install Coral v2.8.3", hint: "#install", href: "#install" },
+    { label: "Download & Install Coral v2.8.4", hint: "#install", href: "#install" },
     { label: "CLI Cookbook & Examples", hint: "#quickstart", href: "#quickstart" },
     { label: "Platform Features (vSwitch, Buildx, docker.sock)", hint: "#features", href: "#features" },
     { label: "Coral Desktop (Tauri v2 · 8 Languages)", hint: "#desktop", href: "#desktop" },
