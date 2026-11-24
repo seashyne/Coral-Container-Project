@@ -179,8 +179,4 @@
   --raw-backdrop: rgba(4, 10, 18, 0.58);
   --raw-backdrop-strong: rgba(4, 10, 18, 0.68);
   --raw-on-accent: #ffffff;
-
-  /* ---------- Brand Mark Gradient ---------- */
-  --raw-brand-mark: radial-gradient(circle at 35% 30%, #ff9a8b, #ff6f61 60%, #e8503f);
-  --raw-brand-glow: #ff6f61;
 }
