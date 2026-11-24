@@ -1,37 +1,61 @@
       <!-- 5. Platform Integration Features (v2.4) -->
       <section id="features" class="doc-section" tabindex="-1">
-        <h2 data-i18n="feat2.title">ฟีเจอร์เชิงแพลตฟอร์มระหว่างระบบ (v2.8.2)</h2>
+        <h2 data-i18n="feat2.title">ฟีเจอร์เชิงแพลตฟอร์มระหว่างระบบ (v2.8.3)</h2>
         <p class="section-lead" data-i18n="feat2.lead"></p>
 
-        <div class="cards-grid">
-          <article class="card">
-            <span class="card-tag">coral-daemon · layer cache</span>
-            <h3 data-i18n="feat2.cache.title"></h3>
-            <p data-i18n="feat2.cache.desc"></p>
+        <div class="bento-grid">
+          <article class="bento-card bento-wide">
+            <div>
+              <span class="card-tag">coral-net · L2/L3 vSwitch + DNS + NAT</span>
+              <h3 data-i18n="feat2.dns.title"></h3>
+              <p data-i18n="feat2.dns.desc"></p>
+            </div>
+            <div class="mini-diagram" aria-label="Rootless virtual switch topology">
+              <span class="diag-node">web-1 · 10.89.1.2</span>
+              <span class="diag-arrow">↔</span>
+              <span class="diag-node teal">gw · 10.89.1.1:53 (RR DNS)</span>
+              <span class="diag-arrow">→</span>
+              <span class="diag-node coral">Userspace UDP/TCP NAT</span>
+            </div>
           </article>
 
-          <article class="card">
-            <span class="card-tag">coral-net · RFC 1035</span>
-            <h3 data-i18n="feat2.dns.title"></h3>
-            <p data-i18n="feat2.dns.desc"></p>
+          <article class="bento-card bento-wide">
+            <div>
+              <span class="card-tag">coral-daemon · Zero-Copy Layers + OSV.dev</span>
+              <h3 data-i18n="feat2.cache.title"></h3>
+              <p data-i18n="feat2.cache.desc"></p>
+            </div>
+            <div class="mini-diagram" aria-label="Layer store and CVE verification flow">
+              <span class="diag-node">.layers/sha256/ (0-copy)</span>
+              <span class="diag-arrow">→</span>
+              <span class="diag-node">Multi-Lowerdir OverlayFS</span>
+              <span class="diag-arrow">→</span>
+              <span class="diag-node teal">OSV.dev CVE PASS</span>
+            </div>
           </article>
 
-          <article class="card">
-            <span class="card-tag">coral-daemon · BuildKit</span>
-            <h3 data-i18n="feat2.buildkit.title"></h3>
-            <p data-i18n="feat2.buildkit.desc"></p>
+          <article class="bento-card">
+            <div>
+              <span class="card-tag">coral-daemon · BuildKit / Buildx</span>
+              <h3 data-i18n="feat2.buildkit.title"></h3>
+              <p data-i18n="feat2.buildkit.desc"></p>
+            </div>
           </article>
 
-          <article class="card">
-            <span class="card-tag">coral-daemon · docker.sock</span>
-            <h3 data-i18n="feat2.dockersock.title"></h3>
-            <p data-i18n="feat2.dockersock.desc"></p>
+          <article class="bento-card">
+            <div>
+              <span class="card-tag">coral-daemon · docker.sock v1.47</span>
+              <h3 data-i18n="feat2.dockersock.title"></h3>
+              <p data-i18n="feat2.dockersock.desc"></p>
+            </div>
           </article>
 
-          <article class="card">
-            <span class="card-tag">coral-runtime · GPU passthrough</span>
-            <h3 data-i18n="feat2.gpu.title"></h3>
-            <p data-i18n="feat2.gpu.desc"></p>
+          <article class="bento-card">
+            <div>
+              <span class="card-tag">coral-runtime · CDI / Compose / CLI</span>
+              <h3 data-i18n="feat2.gpu.title"></h3>
+              <p data-i18n="feat2.gpu.desc"></p>
+            </div>
           </article>
         </div>
 

@@ -3,6 +3,26 @@
         <h2 data-i18n="bench.title">ผลทดสอบจริง &amp; ตารางเปรียบเทียบกับ Docker</h2>
         <p class="section-lead" data-i18n="bench.lead"></p>
 
+        <div class="bench-race" aria-label="Interactive benchmark race visualizer">
+          <div class="race-top">
+            <div class="race-tabs" role="group" aria-label="Benchmark workload">
+              <button type="button" class="race-tab" data-race="alpine" aria-pressed="true">Alpine 3.20</button>
+              <button type="button" class="race-tab" data-race="busybox" aria-pressed="false">BusyBox</button>
+              <button type="button" class="race-tab" data-race="debian" aria-pressed="false">Debian 12</button>
+              <button type="button" class="race-tab" data-race="ram" aria-pressed="false">Daemon RAM</button>
+              <button type="button" class="race-tab" data-race="nextgen" aria-pressed="false">Wasm &amp; KVM</button>
+            </div>
+            <button type="button" id="race-replay" class="btn btn-secondary" style="padding:6px 13px;font-size:0.8rem;" data-i18n="bench.replay">▶ Replay Race</button>
+          </div>
+
+          <div class="race-rows" id="race-rows"></div>
+
+          <div class="race-verdict">
+            <span id="race-note">Measured on Intel Core i5-13400F (16 CPUs), Ubuntu Linux, median-of-medians (5×30 runs).</span>
+            <span class="race-badge" id="race-badge">17.9× faster than Docker</span>
+          </div>
+        </div>
+
         <figure class="guide-figure" style="margin-bottom: 20px;">
           <img
             src="assets/coral-vs-docker-benchmark.png"

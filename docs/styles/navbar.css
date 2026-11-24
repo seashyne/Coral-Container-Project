@@ -60,14 +60,14 @@
 }
 
 .header-inner {
-  max-width: var(--container-w);
+  max-width: 1320px;
   block-size: 100%;
   margin: 0 auto;
   padding: 0 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
 }
 
 .header-inner > * {
@@ -164,10 +164,10 @@
 .site-menu a {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
+  padding: 7px 10px;
   border-radius: var(--radius-sm);
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   font-weight: 600;
   transition: background-color 0.15s ease, color 0.15s ease;
 }

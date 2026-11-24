@@ -1,0 +1,355 @@
+/* ==========================================================================
+   Coral v2.8.3 — Flagship Product Showcase Components
+   Scroll Progress Bar, Ecosystem Strip, Bento Grid, Interactive Desktop Mockup,
+   Live Benchmark Race Visualizer & Ctrl+K Command Palette.
+   ========================================================================== */
+
+/* ---------- 1. Top Scroll Progress Bar (scroll-progress-indicator) ---------- */
+#scroll-progress {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  block-size: 3px;
+  z-index: 90;
+  pointer-events: none;
+  background: linear-gradient(90deg, #1d63ed 0%, #2dd4bf 55%, #ff6b57 100%);
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    @keyframes grow-scroll-progress {
+      from { transform: scaleX(0); }
+      to { transform: scaleX(1); }
+    }
+
+    #scroll-progress {
+      animation: grow-scroll-progress auto linear;
+      animation-timeline: scroll(root block);
+    }
+  }
+}
+
+/* ---------- 2. Hero Platform Install Switcher & Ecosystem Strip ---------- */
+.install-os-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.os-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgb(138 178 255 / 0.22);
+  background: rgb(8 16 36 / 0.55);
+  color: #a8bee0;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.os-pill:hover {
+  color: #ffffff;
+  border-color: rgb(138 178 255 / 0.5);
+}
+
+.os-pill[aria-pressed="true"] {
+  background: rgb(29 99 237 / 0.34);
+  border-color: #60a5fa;
+  color: #ffffff;
+}
+
+.term-copy-btn {
+  padding: 3px 9px;
+  border-radius: 6px;
+  border: 1px solid rgb(138 178 255 / 0.25);
+  background: rgb(255 255 255 / 0.06);
+  color: #cfe0ff;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.term-copy-btn:hover {
+  background: #1d63ed;
+  border-color: #60a5fa;
+  color: #ffffff;
+}
+
+.eco-strip {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 20px;
+}
+
+.eco-inner {
+  max-width: var(--container-w);
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px 14px;
+}
+
+.eco-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-inline-end: 6px;
+}
+
+.eco-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 650;
+}
+
+.eco-badge i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brand);
+}
+
+/* ---------- 3. Asymmetric Bento Grid (Platform Features) ---------- */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 34px;
+}
+
+.bento-card {
+  grid-column: span 2;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.bento-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--brand) 55%, var(--border));
+  box-shadow: 0 14px 32px rgb(15 23 42 / 0.09);
+}
+
+.bento-card.bento-wide {
+  grid-column: span 3;
+  background: linear-gradient(155deg, var(--surface) 0%, var(--surface-2) 100%);
+}
+
+.bento-card h3 {
+  margin: 0 0 8px;
+  font-size: 1.08rem;
+  font-weight: 750;
+}
+
+.bento-card p {
+  margin: 0;
+  font-size: 0.91rem;
+  color: var(--muted);
+}
+
+.mini-diagram {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #0a1328;
+  color: #e2eeff;
+  color-scheme: only dark;
+  accent-color: var(--brand-dark);
+  border: 1px solid rgb(138 178 255 / 0.2);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+}
+
+.diag-node {
+  padding: 4px 9px;
+  border-radius: 7px;
+  background: rgb(29 99 237 / 0.24);
+  border: 1px solid rgb(96 165 250 / 0.42);
+  color: #dbeafe;
+}
+
+.diag-node.teal {
+  background: rgb(45 212 191 / 0.18);
+  border-color: rgb(45 212 191 / 0.42);
+  color: #99f6e4;
+}
+
+.diag-node.coral {
+  background: rgb(255 107 87 / 0.18);
+  border-color: rgb(255 107 87 / 0.42);
+  color: #fecaca;
+}
+
+.diag-arrow {
+  color: #7c93b8;
+  font-weight: 700;
+}
+
+/* ---------- 4. Interactive Coral Desktop Live Preview ---------- */
+.desktop-showcase {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 28px;
+  align-items: center;
+  margin-bottom: 26px;
+}
+
+.mock-window {
+  --mock-accent: #ff6b57;
+  color-scheme: only dark;
+  color: #e6eefc;
+  accent-color: var(--mock-accent);
+  background: #0c1222;
+  border: 1px solid rgb(138 178 255 / 0.22);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 22px 54px rgb(5 12 28 / 0.34);
+}
+
+.mock-window[data-accent="ocean"] { --mock-accent: #3b82f6; }
+.mock-window[data-accent="emerald"] { --mock-accent: #10b981; }
+.mock-window[data-accent="indigo"] { --mock-accent: #818cf8; }
+.mock-window[data-accent="amber"] { --mock-accent: #f59e0b; }
+
+.mock-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #111a2f;
+  border-bottom: 1px solid rgb(138 178 255 / 0.14);
+}
+
+.mock-palettes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mock-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.mock-swatch[aria-pressed="true"] {
+  border-color: #ffffff;
+  transform: scale(1.15);
+}
+
+.mock-body {
+  display: grid;
+  grid-template-columns: 126px minmax(0, 1fr);
+  min-height: 220px;
+}
+
+.mock-side {
+  padding: 12px 10px;
+  background: #0a101e;
+  border-inline-end: 1px solid rgb(138 178 255 / 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.74rem;
+  color: #8fa5c9;
+}
+
+.mock-nav-active {
+  padding: 6px 8px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--mock-accent) 20%, transparent);
+  color: #ffffff;
+  font-weight: 700;
+  border-inline-start: 3px solid var(--mock-accent);
+}
+
+.mock-nav-item {
+  padding: 5px 8px;
+}
+
+.mock-content {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mock-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mock-btn {
+  padding: 4px 10px;
+  border-radius: 7px;
+  background: var(--mock-accent);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.mock-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: #121c34;
+  border: 1px solid rgb(138 178 255 / 0.12);
+  font-size: 0.75rem;
+}
+
+.mock-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.mock-status i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4ade80;
+}
+
+.mock-ip {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: #7dd3fc;
+}
+

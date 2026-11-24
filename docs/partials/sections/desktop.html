@@ -1,29 +1,77 @@
-      <!-- 5. Coral Desktop -->
+      <!-- 5. Coral Desktop Interactive Showcase -->
       <section id="desktop" class="doc-section" tabindex="-1">
-        <h2 data-i18n="desktop.title">Coral Desktop (Tauri v2)</h2>
+        <h2 data-i18n="desktop.title">Coral Desktop (Tauri v2 · 8 ภาษา)</h2>
         <p class="section-lead" data-i18n="desktop.lead"></p>
 
+        <div class="desktop-showcase">
+          <div class="mock-window" id="desktop-mock" data-accent="coral" aria-label="Interactive Coral Desktop Preview">
+            <div class="mock-bar">
+              <div class="term-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+              <span class="term-title">Coral Desktop v2.8.3 · 8 Languages · Local CRI</span>
+              <div class="mock-palettes" role="group" aria-label="Try accent palette">
+                <button type="button" class="mock-swatch" data-mock-accent="coral" aria-pressed="true" title="Coral" style="background:#ff6b57"></button>
+                <button type="button" class="mock-swatch" data-mock-accent="ocean" aria-pressed="false" title="Ocean" style="background:#3b82f6"></button>
+                <button type="button" class="mock-swatch" data-mock-accent="emerald" aria-pressed="false" title="Emerald" style="background:#10b981"></button>
+                <button type="button" class="mock-swatch" data-mock-accent="indigo" aria-pressed="false" title="Indigo" style="background:#818cf8"></button>
+                <button type="button" class="mock-swatch" data-mock-accent="amber" aria-pressed="false" title="Amber" style="background:#f59e0b"></button>
+              </div>
+            </div>
+            <div class="mock-body">
+              <div class="mock-side" aria-hidden="true">
+                <div class="mock-nav-active">Containers · 3</div>
+                <div class="mock-nav-item">Images · 8</div>
+                <div class="mock-nav-item">Volumes · 2</div>
+                <div class="mock-nav-item">Sandboxes &amp; VM</div>
+                <div class="mock-nav-item">Settings</div>
+              </div>
+              <div class="mock-content">
+                <div class="mock-head-row">
+                  <strong style="font-size:0.86rem;">Containers</strong>
+                  <span class="mock-btn">+ Run Container</span>
+                </div>
+                <div class="mock-row">
+                  <span class="mock-status"><i></i>web-api</span>
+                  <span class="mock-ip">10.89.1.2 · :8080</span>
+                  <span style="color:#9cb2d6;">0.4% CPU · 14 MB</span>
+                </div>
+                <div class="mock-row">
+                  <span class="mock-status"><i></i>postgres-16</span>
+                  <span class="mock-ip">10.89.1.3 · :5432</span>
+                  <span style="color:#9cb2d6;">0.9% CPU · 42 MB</span>
+                </div>
+                <div class="mock-row">
+                  <span class="mock-status"><i></i>redis-cache</span>
+                  <span class="mock-ip">10.89.1.4 · :6379</span>
+                  <span style="color:#9cb2d6;">0.1% CPU · 6 MB</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="cards-grid" style="grid-template-columns: 1fr;">
+            <article class="card">
+              <span class="card-tag">CRI ExecStream · 8 Languages</span>
+              <h3 data-i18n="desktop.f1Title"></h3>
+              <p data-i18n="desktop.f1Desc"></p>
+            </article>
+            <article class="card">
+              <span class="card-tag">Native Modals · CVE Scan · Top</span>
+              <h3 data-i18n="desktop.f2Title"></h3>
+              <p data-i18n="desktop.f2Desc"></p>
+            </article>
+          </div>
+        </div>
+
         <div class="cards-grid">
-          <article class="card">
-            <span class="card-tag">CRI ExecStream</span>
-            <h3 data-i18n="desktop.f1Title"></h3>
-            <p data-i18n="desktop.f1Desc"></p>
-          </article>
-          <article class="card">
-            <span class="card-tag">Observability</span>
-            <h3 data-i18n="desktop.f2Title"></h3>
-            <p data-i18n="desktop.f2Desc"></p>
-          </article>
           <article class="card">
             <span class="card-tag">Ecosystem</span>
             <h3 data-i18n="desktop.f3Title"></h3>
             <p data-i18n="desktop.f3Desc"></p>
           </article>
           <article class="card">
-            <span class="card-tag">v2.0 UI</span>
+            <span class="card-tag">5 Palettes · EN / ไทย / 中文 / 日本語 / 한국어 / VI / ES / DE</span>
             <h3 data-i18n="desktop.f4Title"></h3>
             <p data-i18n="desktop.f4Desc"></p>
           </article>
         </div>
       </section>
-

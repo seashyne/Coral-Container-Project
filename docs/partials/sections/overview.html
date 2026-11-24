@@ -6,12 +6,19 @@
               <div>
                 <div class="hero-top">
                   <img class="hero-logo" src="assets/coral-icon.png" alt="Coral Container Project Logo" width="48" height="48" fetchpriority="high">
-                  <div class="hero-badge" data-i18n="hero.badge">Release v2.8.2 · Rust Edition 2024 · x86_64 &amp; ARM64 · Apache-2.0</div>
+                  <div class="hero-badge" data-i18n="hero.badge">Release v2.8.3 · Rust Edition 2024 · x86_64 &amp; ARM64 · Apache-2.0</div>
                 </div>
                 <h1 data-i18n="hero.title">พัฒนาไวขึ้น รันได้ทุกที่ ด้วย Rust Container Engine</h1>
                 <p class="hero-subtitle" data-i18n="hero.subtitle">
                   คำสั่งสไตล์ Docker + Streaming docker.sock API, Rootless L2/L3 Virtual Switch, BuildKit Multi-Arch, สแกน CVE ในตัว, WASI WebAssembly, KVM MicroVM และ Coral Desktop
                 </p>
+
+                <div class="install-os-tabs" role="group" aria-label="Install platform">
+                  <button type="button" class="os-pill" data-os-cmd="linux" aria-pressed="true">Linux</button>
+                  <button type="button" class="os-pill" data-os-cmd="deb" aria-pressed="false">Ubuntu / Debian (.deb)</button>
+                  <button type="button" class="os-pill" data-os-cmd="wsl" aria-pressed="false">Windows WSL2</button>
+                  <button type="button" class="os-pill" data-os-cmd="mac" aria-pressed="false">macOS (Lima)</button>
+                </div>
 
                 <div class="hero-install-bar">
                   <span class="hero-install-prompt" aria-hidden="true">$</span>
@@ -20,7 +27,7 @@
                 </div>
 
                 <div class="hero-actions">
-                  <a class="btn btn-primary" href="#install" data-i18n="hero.ctaInstall">ดาวน์โหลด &amp; ติดตั้ง v2.8.2</a>
+                  <a class="btn btn-primary" href="#install" data-i18n="hero.ctaInstall">ดาวน์โหลด &amp; ติดตั้ง v2.8.3</a>
                   <a class="btn btn-secondary" href="#benchmarks" data-i18n="hero.ctaBench">ผลเทียบกับ Docker &amp; รายงาน</a>
                   <a class="btn btn-teal" href="#support" data-i18n="hero.ctaSupport">สนับสนุนโปรเจกต์</a>
                 </div>
@@ -29,7 +36,8 @@
               <div class="hero-terminal" aria-label="Interactive Coral CLI Preview">
                 <div class="term-chrome">
                   <div class="term-dots" aria-hidden="true"><span></span><span></span><span></span></div>
-                  <span class="term-title">coral v2.8.2 — rootless oci · wasm · kvm</span>
+                  <span class="term-title">coral v2.8.3 — rootless oci · wasm · kvm</span>
+                  <button type="button" id="hero-term-copy" class="term-copy-btn" data-i18n="copy.btn">คัดลอก</button>
                 </div>
                 <div class="tabs">
                   <div class="tablist" role="tablist" focusgroup="tablist nomemory" aria-label="Hero CLI scenarios">
@@ -107,6 +115,22 @@
                 <div class="metric-sub" data-i18n="metric.memSub">0 Clippy warnings · 10 Rust Crates · 150+ Tests</div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div class="eco-strip" aria-label="Standards and ecosystem compatibility">
+          <div class="eco-inner">
+            <span class="eco-label" data-i18n="eco.label">Compatible with</span>
+            <span class="eco-badge"><i></i>OCI v1.0.2</span>
+            <span class="eco-badge"><i></i>Docker API v1.47</span>
+            <span class="eco-badge"><i></i>Kubernetes CRI v1</span>
+            <span class="eco-badge"><i></i>BuildKit / Buildx</span>
+            <span class="eco-badge"><i></i>Compose v2</span>
+            <span class="eco-badge"><i></i>Testcontainers</span>
+            <span class="eco-badge"><i></i>NVIDIA CDI</span>
+            <span class="eco-badge"><i></i>WASI Preview 1</span>
+            <span class="eco-badge"><i></i>Linux /dev/kvm</span>
+            <span class="eco-badge"><i></i>OSV.dev + SPDX 2.3</span>
           </div>
         </div>
 
