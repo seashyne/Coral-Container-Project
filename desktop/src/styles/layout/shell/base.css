@@ -52,9 +52,8 @@ body.rail {
 .mark {
   inline-size: 18px;
   block-size: 18px;
-  border-radius: var(--radius-pill);
-  background: var(--raw-brand-mark);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--raw-brand-glow) 18%, transparent);
+  display: block;
+  object-fit: contain;
   flex: none;
 }
 
