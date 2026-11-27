@@ -1,9 +1,26 @@
 //! Image signing, SBOM, CRI status and shell-completion subcommands
 //! (`keygen`, `sign`, `verify`, `sbom`, `cri-status`, `completion`).
 
-use clap::Args;
+use clap::{Args, Subcommand};
 use clap_complete::Shell;
 use std::path::PathBuf;
+
+/// Arguments for `coral security`.
+#[derive(Debug, Args)]
+pub struct SecurityArgs {
+    #[command(subcommand)]
+    pub action: SecurityAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum SecurityAction {
+    /// Run a CIS container runtime & host security posture audit
+    Audit {
+        /// Output structured JSON report
+        #[arg(long)]
+        json: bool,
+    },
+}
 
 /// Arguments for `coral keygen`.
 #[derive(Debug, Args)]

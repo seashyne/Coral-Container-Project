@@ -21,6 +21,7 @@ $("sec-sign-btn").addEventListener("click", () => runImageSecurityAction("sign")
 $("sec-verify-btn").addEventListener("click", () => runImageSecurityAction("verify"));
 $("sec-sbom-btn").addEventListener("click", () => runImageSecurityAction("sbom"));
 $("sec-scan-btn")?.addEventListener("click", () => runImageSecurityAction("scan"));
+$("sec-audit-btn")?.addEventListener("click", () => runImageSecurityAction("audit"));
 $("wasm-serve-target").addEventListener("input", updateWasmServePreview);
 $("wasm-serve-addr").addEventListener("input", updateWasmServePreview);
 $("wasm-serve-copy-btn").addEventListener("click", copyWasmServeCmd);

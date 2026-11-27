@@ -255,4 +255,7 @@ Object.assign(window.CORAL_DESKTOP_LOCALES.vi, {
   "settings.btnSaveAdv": "Lưu cài đặt nâng cao",
   "settings.aboutBrand": "Coral Desktop",
   "settings.aboutDesc": "Trình quản lý container và máy ảo nhanh, nhẹ viết bằng Rust.",
+  "nextgen.btnAudit": "Kiểm tra bảo mật CIS",
+  "modal.runCapDropAll": "Bỏ tất cả quyền Linux (--cap-drop ALL)",
+  "modal.runLandlock": "Bật Linux Landlock LSM",
 });

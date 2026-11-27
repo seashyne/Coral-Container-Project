@@ -101,7 +101,7 @@ async fn handle_info(svc: &CoralDaemonService) -> HttpResponse {
             "OSType": "linux",
             "Architecture": std::env::consts::ARCH,
             "ServerVersion": env!("CARGO_PKG_VERSION"),
-            "SecurityOptions": ["name=seccomp,profile=default", "name=rootless"]
+            "SecurityOptions": ["name=seccomp,profile=default-allowlist", "name=landlock", "name=masked-paths", "name=rootless"]
         }),
     )
 }

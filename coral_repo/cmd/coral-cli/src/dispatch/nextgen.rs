@@ -205,3 +205,83 @@ pub(crate) fn scan(ctx: &Ctx, args: crate::args::ScanArgs) -> Result<ExitCode> {
     }
     Ok(ExitCode::SUCCESS)
 }
+
+pub(crate) fn security(ctx: &Ctx, args: crate::args::SecurityArgs) -> Result<ExitCode> {
+    match args.action {
+        crate::args::SecurityAction::Audit { json } => {
+            let report: coral_daemon::service::nextgen::SecurityAuditReport = run_async(async {
+                if let Some(ch) = crate::daemon_client::try_connect_channel(&ctx.addr).await {
+                    let mut client =
+                        coral_api::runtime_service_client::RuntimeServiceClient::new(ch);
+                    let mut annotations = std::collections::HashMap::new();
+                    annotations.insert("coral.system.action".into(), "security_audit".into());
+                    let mut req = tonic::Request::new(coral_api::RunPodSandboxRequest {
+                        config: Some(coral_api::PodSandboxConfig {
+                            metadata: Some(coral_api::PodSandboxMetadata {
+                                name: "coral-security-audit".into(),
+                                uid: "coral-security-audit".into(),
+                                namespace: "coral-system".into(),
+                                attempt: 0,
+                            }),
+                            hostname: "coral-system".into(),
+                            log_directory: String::new(),
+                            labels: std::collections::HashMap::new(),
+                            annotations,
+                        }),
+                        runtime_handler: "coral".into(),
+                    });
+                    if let Ok(tok) = std::env::var("CORAL_AUTH_TOKEN")
+                        && !tok.trim().is_empty()
+                        && let Ok(val) = format!("Bearer {}", tok.trim()).parse()
+                    {
+                        req.metadata_mut().insert("authorization", val);
+                    }
+                    if let Ok(resp) = client.run_pod_sandbox(req).await {
+                        let raw = resp.into_inner().pod_sandbox_id;
+                        if let Ok(parsed) = serde_json::from_str(&raw) {
+                            return Ok(parsed);
+                        }
+                    }
+                }
+                Ok(coral_daemon::service::nextgen::run_host_security_audit(
+                    &ctx.state_root.join("daemon"),
+                ))
+            })?;
+
+            if json {
+                println!("{}", serde_json::to_string_pretty(&report)?);
+            } else {
+                println!(
+                    "Coral CIS Security Audit — Score: {}/100 ({} pass, {} warn, {} fail)",
+                    report.score, report.passed, report.warned, report.failed
+                );
+                println!(
+                    "Host: rootless={}, landlock_abi={}",
+                    report.rootless,
+                    report
+                        .landlock_abi
+                        .map(|v| format!("v{v}"))
+                        .unwrap_or_else(|| "unavailable".into())
+                );
+                println!("{:<10} {:<6} {:<42} DETAIL", "CHECK", "STATE", "TITLE");
+                for c in &report.checks {
+                    println!(
+                        "{:<10} {:<6} {:<42} {}",
+                        c.id,
+                        c.status.to_uppercase(),
+                        c.title,
+                        c.detail
+                    );
+                    if let Some(rem) = &c.remediation {
+                        println!("           fix -> {rem}");
+                    }
+                }
+            }
+            Ok(if report.failed > 0 {
+                ExitCode::from(1)
+            } else {
+                ExitCode::SUCCESS
+            })
+        }
+    }
+}

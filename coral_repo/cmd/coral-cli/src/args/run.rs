@@ -79,6 +79,18 @@ pub struct RunArgs {
     #[arg(long)]
     pub privileged: bool,
 
+    /// Drop Linux capabilities (`ALL` or capability name e.g. `NET_RAW`), repeatable
+    #[arg(long = "cap-drop")]
+    pub cap_drop: Vec<String>,
+
+    /// Add Linux capabilities (e.g. `NET_BIND_SERVICE`), repeatable
+    #[arg(long = "cap-add")]
+    pub cap_add: Vec<String>,
+
+    /// Security options (`seccomp=unconfined|/path.json`, `landlock=enforce|off`, `apparmor=<profile>`), repeatable
+    #[arg(long = "security-opt")]
+    pub security_opt: Vec<String>,
+
     /// Environment variable (KEY=VALUE), repeatable
     #[arg(short = 'e', long = "env")]
     pub envs: Vec<String>,

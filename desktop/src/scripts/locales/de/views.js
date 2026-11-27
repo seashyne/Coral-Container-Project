@@ -255,4 +255,7 @@ Object.assign(window.CORAL_DESKTOP_LOCALES.de, {
   "settings.btnSaveAdv": "Erweiterte Einstellungen speichern",
   "settings.aboutBrand": "Coral Desktop",
   "settings.aboutDesc": "Schneller, leichter Container- und VM-Manager in Rust.",
+  "nextgen.btnAudit": "CIS-Sicherheitsaudit",
+  "modal.runCapDropAll": "Alle Linux-Capabilities entfernen (--cap-drop ALL)",
+  "modal.runLandlock": "Linux Landlock LSM erzwingen",
 });

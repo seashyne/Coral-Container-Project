@@ -187,6 +187,7 @@ Object.assign(window.CORAL_DESKTOP_LOCALES.en, {
   "nextgen.btnVerify": "Verify Signature",
   "nextgen.btnSbom": "Generate SBOM",
   "nextgen.btnScan": "Scan CVEs (OSV.dev)",
+  "nextgen.btnAudit": "CIS Security Audit",
   "nextgen.secOutPlaceholder": "(output will appear here)",
 
   // Container v2.8 Management Modals

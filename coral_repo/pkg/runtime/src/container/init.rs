@@ -71,13 +71,28 @@ pub(crate) fn container_init_exec(
         let _ = coral_net::bring_loopback_up();
     }
 
-    let readonly = spec.root.as_ref().map(|r| r.readonly).unwrap_or(false);
-    prepare_rootfs(rootfs, overlay, &spec.mounts, readonly, rootless)?;
-
     let process = spec
         .process
         .as_ref()
         .ok_or_else(|| RuntimeError::InitFailed("missing process in OCI spec".into()))?;
+
+    let mut sec_cfg =
+        security::SecurityConfig::from_annotations(&spec.annotations, process.no_new_privileges)?;
+    // Pre-load any host-side custom Seccomp JSON profile BEFORE pivot_root hides the host FS.
+    sec_cfg.seccomp = sec_cfg.seccomp.preload_before_pivot()?;
+
+    let readonly = spec.root.as_ref().map(|r| r.readonly).unwrap_or(false);
+    prepare_rootfs(rootfs, overlay, &spec.mounts, readonly, rootless)?;
+
+    // Apply OCI maskedPaths & readonlyPaths defense-in-depth on /proc and /sys after pivot_root.
+    if !sec_cfg.privileged {
+        let (masked, ro_paths) = spec
+            .linux
+            .as_ref()
+            .map(|l| (l.masked_paths.as_slice(), l.readonly_paths.as_slice()))
+            .unwrap_or((&[], &[]));
+        crate::rootfs::hardening::apply_proc_sys_hardening(rootless, masked, ro_paths);
+    }
 
     // Resolve optional `coral.user` (username or uid[:gid]) inside the pivoted container rootfs.
     let (target_uid, target_gid, user_home) = resolve_target_user(
@@ -91,12 +106,7 @@ pub(crate) fn container_init_exec(
     chdir(Path::new(&process.cwd))
         .map_err(|e| RuntimeError::nix(format!("chdir to {}", process.cwd), e))?;
 
-    let privileged = spec
-        .annotations
-        .get("coral.privileged")
-        .is_some_and(|v| v == "true");
-
-    if process.no_new_privileges || !privileged {
+    if sec_cfg.no_new_privileges {
         let rc = unsafe { libc::prctl(libc::PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) };
         if rc != 0 {
             return Err(RuntimeError::sys(
@@ -106,18 +116,19 @@ pub(crate) fn container_init_exec(
         }
     }
 
-    if !privileged {
-        security::drop_capabilities()?;
-        security::apply_default_seccomp()?;
-    }
+    let cap_mask = if !sec_cfg.privileged {
+        let mask = security::compute_cap_mask(&sec_cfg.cap_drop, &sec_cfg.cap_add)?;
+        // Phase 1: Drop disallowed caps from bounding set while still euid 0 (with CAP_SETPCAP).
+        security::drop_bounding_set(mask);
+        Some(mask)
+    } else {
+        None
+    };
 
     if (target_uid != 0 || target_gid != 0)
         && is_id_mapped("/proc/self/uid_map", target_uid)
         && is_id_mapped("/proc/self/gid_map", target_gid)
     {
-        // In Multi-UID rootless or rootful containers (`setgroups` = allow), drop/set
-        // supplementary groups before dropping privileges; single-UID mode has `setgroups=deny`
-        // so EPERM is expected and harmless there.
         if nix::unistd::geteuid().as_raw() == 0 {
             let extra_gids: Vec<Gid> = spec
                 .process
@@ -148,6 +159,16 @@ pub(crate) fn container_init_exec(
             gid = target_gid,
             "requested non-root container UID/GID is not mapped in single-UID rootless userns; continuing as container UID 0"
         );
+    }
+
+    // Phase 2: Enforce final effective/permitted capabilities, LSM (AppArmor/Landlock), and Seccomp-BPF.
+    if let Some(mask) = cap_mask {
+        if nix::unistd::geteuid().as_raw() == 0 {
+            security::apply_capset(mask)?;
+        }
+        security::apply_apparmor_profile(sec_cfg.apparmor.as_deref())?;
+        security::apply_landlock(sec_cfg.landlock, readonly, &process.cwd)?;
+        security::apply_seccomp(&sec_cfg.seccomp)?;
     }
 
     let mut env_vec = process.env.clone();

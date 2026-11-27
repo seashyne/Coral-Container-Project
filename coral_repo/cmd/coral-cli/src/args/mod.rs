@@ -26,7 +26,8 @@ pub use images::{
 };
 pub use machine::{MachineAction, MachineArgs};
 pub use misc::{
-    CompletionArgs, CriStatusArgs, KeygenArgs, SbomArgs, ScanArgs, SignArgs, VerifyArgs,
+    CompletionArgs, CriStatusArgs, KeygenArgs, SbomArgs, ScanArgs, SecurityAction, SecurityArgs,
+    SignArgs, VerifyArgs,
 };
 pub use network::{NetworkAction, NetworkArgs};
 pub use oci::{CniConfigArgs, CreateArgs, DeleteArgs, KillArgs, SpecArgs, StartArgs, StateArgs};
@@ -229,6 +230,9 @@ pub enum Commands {
 
     /// Scan an installed OCI image for known OS package CVEs via OSV.dev (`coral scan alpine:3.20`)
     Scan(ScanArgs),
+
+    /// Audit Coral host, daemon, and running container security posture (`coral security audit`)
+    Security(SecurityArgs),
 
     /// Query Kubernetes CRI v1 RuntimeService Status (`RuntimeReady`, `NetworkReady`, verbose info)
     CriStatus(CriStatusArgs),

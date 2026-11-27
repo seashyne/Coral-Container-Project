@@ -146,6 +146,17 @@ pub(super) async fn handle_create_container(
         if hc.get("DeviceRequests").and_then(|v| v.as_array()).is_some_and(|a| !a.is_empty()) {
             annotations.insert("coral.gpus".into(), "all".into());
         }
+        if hc.get("Privileged").and_then(|v| v.as_bool()).unwrap_or(false) {
+            annotations.insert("coral.privileged".into(), "true".into());
+        }
+        for (hc_key, ann_key) in [("CapDrop", "coral.cap_drop"), ("CapAdd", "coral.cap_add"), ("SecurityOpt", "coral.security_opt")] {
+            if let Some(arr) = hc.get(hc_key).and_then(|v| v.as_array()) {
+                let vals: Vec<&str> = arr.iter().filter_map(|x| x.as_str()).collect();
+                if !vals.is_empty() {
+                    annotations.insert(ann_key.into(), vals.join("\n"));
+                }
+            }
+        }
     }
 
     let pod_resp = match svc

@@ -41,6 +41,10 @@ pub struct RunParams {
     pub gpus: String,
     #[serde(default)]
     pub log_driver: String,
+    #[serde(default)]
+    pub cap_drop: String,
+    #[serde(default)]
+    pub security_opt: String,
 }
 
 #[tauri::command]
@@ -129,6 +133,12 @@ pub async fn run_container(
         && !params.log_driver.trim().eq_ignore_ascii_case("raw")
     {
         annotations.insert("coral.log.driver".into(), params.log_driver.trim().into());
+    }
+    if !params.cap_drop.trim().is_empty() {
+        annotations.insert("coral.cap_drop".into(), params.cap_drop.trim().into());
+    }
+    if !params.security_opt.trim().is_empty() {
+        annotations.insert("coral.security_opt".into(), params.security_opt.trim().into());
     }
 
     let mut labels = HashMap::from([("managed-by".into(), "coral-desktop".into())]);

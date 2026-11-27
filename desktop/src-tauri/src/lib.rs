@@ -65,6 +65,7 @@ pub fn run() {
             cri::image_verify,
             cri::image_sbom,
             cri::image_scan,
+            cri::security_audit,
             cri::vm_setup_kernel,
             cri::vm_boot,
         ])

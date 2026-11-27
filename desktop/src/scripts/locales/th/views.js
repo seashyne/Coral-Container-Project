@@ -187,6 +187,7 @@ Object.assign(window.CORAL_DESKTOP_LOCALES.th, {
   "nextgen.btnVerify": "ตรวจสอบลายเซ็น",
   "nextgen.btnSbom": "สร้าง SBOM",
   "nextgen.btnScan": "สแกนช่องโหว่ CVE (OSV.dev)",
+  "nextgen.btnAudit": "ตรวจความปลอดภัย CIS",
   "nextgen.secOutPlaceholder": "(ผลลัพธ์จะแสดงที่นี่)",
 
   // Container v2.8 Management Modals

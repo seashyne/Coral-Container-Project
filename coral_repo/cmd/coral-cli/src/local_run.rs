@@ -56,6 +56,9 @@ pub struct LocalImageRunArgs {
     pub gpus: Option<String>,
     pub no_overlay: bool,
     pub privileged: bool,
+    pub cap_drop: Vec<String>,
+    pub cap_add: Vec<String>,
+    pub security_opt: Vec<String>,
     pub tty: bool,
     pub interactive: bool,
     pub memory_mb: i64,
@@ -122,6 +125,18 @@ pub fn run_from_image_local(
     if args.privileged {
         spec.annotations
             .insert("coral.privileged".into(), "true".into());
+    }
+    if !args.cap_drop.is_empty() {
+        spec.annotations
+            .insert("coral.cap_drop".into(), args.cap_drop.join("\n"));
+    }
+    if !args.cap_add.is_empty() {
+        spec.annotations
+            .insert("coral.cap_add".into(), args.cap_add.join("\n"));
+    }
+    if !args.security_opt.is_empty() {
+        spec.annotations
+            .insert("coral.security_opt".into(), args.security_opt.join("\n"));
     }
 
     let is_custom_net = !args.network.eq_ignore_ascii_case("host")

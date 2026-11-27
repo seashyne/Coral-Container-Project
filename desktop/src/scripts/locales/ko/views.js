@@ -255,4 +255,7 @@ Object.assign(window.CORAL_DESKTOP_LOCALES.ko, {
   "settings.btnSaveAdv": "고급 설정 저장",
   "settings.aboutBrand": "Coral Desktop",
   "settings.aboutDesc": "Rust로 제작된 빠르고 가벼운 컨테이너 및 VM 관리자.",
+  "nextgen.btnAudit": "CIS 보안 감사",
+  "modal.runCapDropAll": "모든 Linux 권한 제거 (--cap-drop ALL)",
+  "modal.runLandlock": "Linux Landlock LSM 적용",
 });

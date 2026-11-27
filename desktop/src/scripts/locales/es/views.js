@@ -255,4 +255,7 @@ Object.assign(window.CORAL_DESKTOP_LOCALES.es, {
   "settings.btnSaveAdv": "Guardar ajustes avanzados",
   "settings.aboutBrand": "Coral Desktop",
   "settings.aboutDesc": "Gestor rápido y ligero de contenedores y VMs escrito en Rust.",
+  "nextgen.btnAudit": "Auditoría de seguridad CIS",
+  "modal.runCapDropAll": "Quitar todas las capacidades (--cap-drop ALL)",
+  "modal.runLandlock": "Aplicar Linux Landlock LSM",
 });

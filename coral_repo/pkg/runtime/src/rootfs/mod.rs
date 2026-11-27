@@ -3,6 +3,7 @@
 pub mod devices;
 pub mod dns;
 pub mod gpu_cdi;
+pub mod hardening;
 pub mod volumes;
 
 pub use devices::{

@@ -1,6 +1,6 @@
-# คู่มือการใช้งานและพัฒนา Coral Container Runtime (`v2.8.4` Manual)
+# คู่มือการใช้งานและพัฒนา Coral Container Runtime (`v2.9.0` Manual)
 
-คู่มือนี้อธิบายขั้นตอนการติดตั้ง, การเตรียม Alpine Rootfs, การใช้งาน CLI (`coral`), การรันคอนเทนเนอร์สไตล์เดียวกับ Docker (`coral run`, `scan`, `top`, `wait`, `stats --all`, `pause`/`unpause`/`rename`/`update`), การใช้ **Coral Desktop v2.8.4**, CRI gRPC Daemon + Streaming `docker.sock` (`coral-daemon`), `coral machine`, Multi-Arch BuildKit DAG + `.dockerignore`, Rootless L2/L3 Virtual Switch + Outbound NAT + Upstream/Round-Robin Gateway DNS และ Quality Gates
+คู่มือนี้อธิบายขั้นตอนการติดตั้ง, การเตรียม Alpine Rootfs, การใช้งาน CLI (`coral`), การรันคอนเทนเนอร์สไตล์เดียวกับ Docker (`coral run`, `scan`, `top`, `wait`, `stats --all`, `pause`/`unpause`/`rename`/`update`), การใช้ **Coral Desktop v2.9.0**, CRI gRPC Daemon + Streaming `docker.sock` (`coral-daemon`), `coral machine`, Multi-Arch BuildKit DAG + `.dockerignore`, Rootless L2/L3 Virtual Switch + Outbound NAT + Upstream/Round-Robin Gateway DNS และ Quality Gates
 
 ![Visual Quick Guide — Coral v2.3.0](../../docs/assets/coral-usage-guide.png)
 
@@ -417,7 +417,7 @@ RUN --mount=type=secret,id=npmrc,target=/root/.npmrc \
 
 ### 7.4 `docker.sock` — ส่วนต่อ Docker Engine API
 
-`coral-daemon` เปิดให้บริการ **Docker Engine REST API** (`/v1.24`..`/v1.47`) บน Unix socket (ค่าเริ่มต้น `<state_dir>/docker.sock` โหมด `0660` — เมื่อรันผ่าน systemd unit ของแพ็กเกจจะอยู่ที่ `~/.local/state/coral/daemon/docker.sock`) และเปิดบน TCP ได้ด้วย เครื่องมือ Docker ที่มีอยู่แล้วจึงสั่งงาน Coral ได้โดยไม่ต้องแก้โค้ด
+`coral-daemon` เปิดให้บริการ **Docker Engine REST API** (`/v1.24`..`/v1.47`) บน Unix socket (ค่าเริ่มต้น `<state_dir>/docker.sock` โหมด `0600` ในโหมด rootless หรือ `0660` เมื่อรันเป็น root — เมื่อรันผ่าน systemd unit ของแพ็กเกจจะอยู่ที่ `~/.local/state/coral/daemon/docker.sock`) และเปิดบน TCP ได้ด้วย เครื่องมือ Docker ที่มีอยู่แล้วจึงสั่งงาน Coral ได้โดยไม่ต้องแก้โค้ด
 
 - endpoint ที่รองรับ: `/_ping`, `/version`, `/info`, `/images/json`, `/containers/json`, `/containers/create`, `/containers/{id}/json`, `/containers/{id}/logs`, `/containers/{id}/{start,stop,kill,restart,wait}`, `DELETE /containers/{id}`
 - `POST /containers/create` รองรับ `Image`, `name`, `Hostname`, `Cmd`, `Env`, `Entrypoint`, `User`, `HostConfig.Binds`, `HostConfig.NetworkMode` และ `HostConfig.Memory`
@@ -458,4 +458,31 @@ services:
     devices: ["/dev/video0:/dev/video0:ro"]
     log_driver: json-file
     aliases: [trainer-alias]
+```
+
+### 7.6 Enterprise Security Hardening (`v2.9.0`)
+
+ตั้งแต่ `v2.9.0` Coral ยกระดับการป้องกันระดับเคอร์เนลและ Daemon ให้เทียบเท่ามาตรฐาน OCI / CIS Benchmark:
+
+- **Default-Deny Seccomp-BPF Allowlist**: อนุญาตเฉพาะ ~290 syscall ที่ปลอดภัยตามโปรไฟล์ OCI (`x86_64` & `aarch64`) บล็อก syscall อันตรายและ syscall อนาคตที่ไม่รู้จักด้วย `EPERM` พร้อมรองรับ `--security-opt seccomp=/path/to/profile.json` และ `--security-opt seccomp=unconfined`
+- **OCI `maskedPaths` & `readonlyPaths`**: ปิดบัง `/proc/kcore`, `/proc/keys`, `/proc/acpi`, `/proc/timer_list`, `/sys/firmware`, `/sys/devices/virtual/powercap` และรีเมาต์ `/proc/bus`, `/proc/fs`, `/proc/irq`, `/proc/sys`, `/proc/sysrq-trigger` แบบ read-only อัตโนมัติในทุกคอนเทนเนอร์ที่ไม่ใช่ `--privileged`
+- **Per-Container Capabilities & Rootless Landlock LSM**: ถอดสิทธิ์และเปิดเคอร์เนล LSM confinement แบบรายคอนเทนเนอร์โดยไม่ต้องใช้ root
+- **Daemon Bearer Auth & CIS Audit**: ล็อกสิทธิ์ `coral.sock`/`docker.sock` เป็น `0600` ในโหมด rootless, รองรับ `coral-daemon --auth-token <secret>` (`CORAL_AUTH_TOKEN`) บน TCP gRPC และมีคำสั่ง **`coral security audit`**
+
+```bash
+# รันคอนเทนเนอร์แบบถอด Linux Capabilities ทั้งหมด + เปิด Linux Landlock LSM
+coral run --cap-drop ALL --security-opt landlock=enforce alpine:3.20 id
+
+# ถอดทั้งหมดแล้วเพิ่มเฉพาะสิทธิ์เปิดพอร์ต <1024
+coral run --cap-drop ALL --cap-add NET_BIND_SERVICE -p 8080:80 nginx:alpine
+
+# ใช้ Seccomp JSON โปรไฟล์เฉพาะทาง
+coral run --security-opt seccomp=/etc/coral/strict-seccomp.json alpine:3.20 /bin/sh
+
+# ตรวจสอบคะแนนความปลอดภัย CIS ของโฮสต์และ Daemon
+coral security audit
+coral security audit --json
+
+# เปิด gRPC Bearer Token เมื่อ bind ข้ามเครือข่าย
+CORAL_AUTH_TOKEN="my-long-random-secret" coral-daemon --listen 0.0.0.0:50051
 ```

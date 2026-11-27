@@ -89,6 +89,7 @@ pub(crate) fn dispatch(cli: Cli) -> Result<ExitCode> {
         Commands::Verify(args) => nextgen::verify(&ctx, args),
         Commands::Sbom(args) => nextgen::sbom(&ctx, args),
         Commands::Scan(args) => nextgen::scan(&ctx, args),
+        Commands::Security(args) => nextgen::security(&ctx, args),
         Commands::System(args) => system::system(&ctx, args),
         Commands::Pods(args) => system::pods(&ctx, args),
         Commands::Version => system::version(&ctx),

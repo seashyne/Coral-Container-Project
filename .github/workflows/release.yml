@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version tag (e.g. v2.8.4)"
+        description: "Release version tag (e.g. v2.9.0)"
         required: false
-        default: "v2.8.4"
+        default: "v2.9.0"
 
 permissions:
   contents: write
@@ -67,7 +67,7 @@ jobs:
         id: ver
         run: |
           TAG="${GITHUB_REF_NAME}"
-          if [[ "$TAG" != v* ]]; then TAG="${{ inputs.version || 'v2.8.4' }}"; fi
+          if [[ "$TAG" != v* ]]; then TAG="${{ inputs.version || 'v2.9.0' }}"; fi
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           echo "num=${TAG#v}" >> "$GITHUB_OUTPUT"
       - name: Build .deb and .tar.gz bundles

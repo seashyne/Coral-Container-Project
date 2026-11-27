@@ -37,6 +37,8 @@ Object.assign(window.CORAL_DESKTOP_LOCALES.en, {
   "modal.logJson": "Docker json-file",
   "modal.logSyslog": "Syslog (/dev/log)",
   "modal.logJournald": "Systemd journald",
+  "modal.runCapDropAll": "Drop ALL capabilities (--cap-drop ALL)",
+  "modal.runLandlock": "Enforce Linux Landlock LSM",
   "modal.runVolumes": "Storage / Volumes",
   "modal.runEnv": "Environment Variables",
   "modal.runSubmit": "Start Container",

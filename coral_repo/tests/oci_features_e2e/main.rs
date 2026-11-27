@@ -13,6 +13,7 @@ mod bridge_network;
 mod dockerfile_build;
 mod cli_compat;
 mod multi_uid_rootless;
+mod security_hardening;
 
 use coral_e2e_tests::{alpine_rootfs, ensure_coral_binary};
 use std::process::Command;

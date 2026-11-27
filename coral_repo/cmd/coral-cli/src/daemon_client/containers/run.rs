@@ -30,6 +30,9 @@ pub struct DaemonRunOptions {
     pub gpus: Option<String>,
     pub log_driver: String,
     pub privileged: bool,
+    pub cap_drop: Vec<String>,
+    pub cap_add: Vec<String>,
+    pub security_opt: Vec<String>,
     pub no_overlay: bool,
     pub workdir: Option<String>,
     pub user: Option<String>,
@@ -170,6 +173,15 @@ pub async fn cmd_run_via_daemon(addr: &str, opts: DaemonRunOptions) -> Result<Ex
     }
     if opts.privileged {
         annotations.insert("coral.privileged".into(), "true".into());
+    }
+    if !opts.cap_drop.is_empty() {
+        annotations.insert("coral.cap_drop".into(), opts.cap_drop.join("\n"));
+    }
+    if !opts.cap_add.is_empty() {
+        annotations.insert("coral.cap_add".into(), opts.cap_add.join("\n"));
+    }
+    if !opts.security_opt.is_empty() {
+        annotations.insert("coral.security_opt".into(), opts.security_opt.join("\n"));
     }
     if opts.no_overlay {
         annotations.insert("coral.overlay".into(), "false".into());

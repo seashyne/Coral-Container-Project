@@ -255,4 +255,7 @@ Object.assign(window.CORAL_DESKTOP_LOCALES.zh, {
   "settings.btnSaveAdv": "保存高级设置",
   "settings.aboutBrand": "Coral Desktop",
   "settings.aboutDesc": "基于 Rust 构建的极速轻量级容器与虚拟机管理器。",
+  "nextgen.btnAudit": "CIS 安全审计",
+  "modal.runCapDropAll": "丢弃所有 Linux 权限 (--cap-drop ALL)",
+  "modal.runLandlock": "启用 Linux Landlock LSM",
 });

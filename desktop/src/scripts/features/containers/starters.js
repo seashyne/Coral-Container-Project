@@ -64,6 +64,8 @@ async function submitRun() {
     gpus: ($("run-gpus")?.value || "").trim(),
     devices: ($("run-devices")?.value || "").trim(),
     logDriver: $("run-log-driver")?.value || "raw",
+    capDrop: $("run-cap-drop-all")?.checked ? "ALL" : "",
+    securityOpt: $("run-landlock")?.checked ? "landlock=enforce" : "",
     ports: $("run-ports").value,
     volumes: $("run-volumes").value,
     env: $("run-env").value,

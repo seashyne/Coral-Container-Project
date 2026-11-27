@@ -173,6 +173,7 @@ impl CoralDaemonService {
             "image_verify" => self.handle_image_verify(annotations).await,
             "image_sbom" => self.handle_image_sbom(annotations).await,
             "image_scan" => self.handle_image_scan(annotations).await,
+            "security_audit" => self.handle_security_audit().await,
             "vm_setup_kernel" => self.handle_vm_setup_kernel().await,
             "vm_boot" => self.handle_vm_boot(annotations).await,
             "container_pause" => {

@@ -255,4 +255,7 @@ Object.assign(window.CORAL_DESKTOP_LOCALES.ja, {
   "settings.btnSaveAdv": "詳細設定を保存",
   "settings.aboutBrand": "Coral Desktop",
   "settings.aboutDesc": "Rust 製の高速・軽量コンテナ & 仮想マシンマネージャー。",
+  "nextgen.btnAudit": "CIS セキュリティ監査",
+  "modal.runCapDropAll": "全 Linux ケイパビリティを削除 (--cap-drop ALL)",
+  "modal.runLandlock": "Linux Landlock LSM を強制",
 });

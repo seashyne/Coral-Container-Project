@@ -94,6 +94,10 @@ pub struct Linux {
     pub resources: Option<LinuxResources>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cgroups_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub masked_paths: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub readonly_paths: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -277,6 +281,8 @@ impl OciSpec {
                     pids: Some(LinuxPids { limit: 128 }),
                 }),
                 cgroups_path: None,
+                masked_paths: Vec::new(),
+                readonly_paths: Vec::new(),
             }),
             annotations: BTreeMap::new(),
         }

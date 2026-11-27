@@ -87,6 +87,10 @@ struct Args {
     /// Disable the Docker Engine REST API compatibility Unix socket
     #[arg(long, default_value_t = false)]
     no_docker_socket: bool,
+
+    /// Optional Bearer auth token required on TCP gRPC requests (recommended when binding non-loopback)
+    #[arg(long, env = "CORAL_AUTH_TOKEN")]
+    auth_token: Option<String>,
 }
 
 #[tokio::main]
@@ -141,6 +145,24 @@ async fn main() -> Result<()> {
         let _ = shutdown_tx.send(true);
     });
 
+    let sock_mode: u32 = if coral_runtime::MultiUidSupport::detect().host_uid == 0 {
+        0o660
+    } else {
+        0o600
+    };
+    let auth_token: Option<std::sync::Arc<String>> = args
+        .auth_token
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(|s| std::sync::Arc::new(s.to_string()));
+    if !args.listen.ip().is_loopback() && auth_token.is_none() {
+        tracing::warn!(
+            listen = %args.listen,
+            "SECURITY WARNING: coral-daemon TCP gRPC is bound to a non-loopback address without --auth-token / CORAL_AUTH_TOKEN"
+        );
+    }
+
     if !args.no_docker_socket {
         let docker_sock = args
             .docker_socket
@@ -153,7 +175,7 @@ async fn main() -> Result<()> {
         }
         match UnixListener::bind(&docker_sock) {
             Ok(listener) => {
-                let _ = fs::set_permissions(&docker_sock, fs::Permissions::from_mode(0o660));
+                let _ = fs::set_permissions(&docker_sock, fs::Permissions::from_mode(sock_mode));
                 let docker_svc = service.clone();
                 info!(
                     docker_socket = %docker_sock.display(),
@@ -205,12 +227,44 @@ async fn main() -> Result<()> {
         }
     }
 
+    #[derive(Clone)]
+    struct BearerAuth(Option<std::sync::Arc<String>>);
+
+    impl tonic::service::Interceptor for BearerAuth {
+        #[allow(clippy::result_large_err)]
+        fn call(&mut self, req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
+            let Some(secret) = self.0.as_deref() else {
+                return Ok(req);
+            };
+            let provided = req
+                .metadata()
+                .get("authorization")
+                .and_then(|v| v.to_str().ok())
+                .and_then(|v| v.strip_prefix("Bearer ").or_else(|| v.strip_prefix("bearer ")))
+                .unwrap_or("");
+            if coral_daemon::service::nextgen::constant_time_eq(
+                provided.as_bytes(),
+                secret.as_bytes(),
+            ) {
+                Ok(req)
+            } else {
+                Err(tonic::Status::unauthenticated(
+                    "invalid or missing Bearer token (set CORAL_AUTH_TOKEN)",
+                ))
+            }
+        }
+    }
+
     let tcp_svc = service.clone();
     let tcp_addr = args.listen;
+    let tcp_auth = BearerAuth(auth_token.clone());
     let tcp_fut = async move {
         Server::builder()
-            .add_service(RuntimeServiceServer::new(tcp_svc.clone()))
-            .add_service(ImageServiceServer::new(tcp_svc))
+            .add_service(RuntimeServiceServer::with_interceptor(
+                tcp_svc.clone(),
+                tcp_auth.clone(),
+            ))
+            .add_service(ImageServiceServer::with_interceptor(tcp_svc, tcp_auth))
             .serve_with_shutdown(tcp_addr, async move {
                 let _ = shutdown_rx_tcp.changed().await;
             })
@@ -227,7 +281,7 @@ async fn main() -> Result<()> {
         }
         let uds = UnixListener::bind(&sock_path)
             .with_context(|| format!("bind CRI Unix socket '{}'", sock_path.display()))?;
-        let _ = fs::set_permissions(&sock_path, fs::Permissions::from_mode(0o660));
+        let _ = fs::set_permissions(&sock_path, fs::Permissions::from_mode(sock_mode));
         let uds_stream = UnixListenerStream::new(uds);
 
         info!(

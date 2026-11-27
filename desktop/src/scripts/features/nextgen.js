@@ -175,16 +175,37 @@ async function runImageSecurityAction(action) {
     return;
   }
   const image = $("sec-image").value.trim();
-  if (!image) {
+  if (action !== "audit" && !image) {
     toast("Enter an image tag first", true);
     return;
   }
-  const btns = ["sec-sign-btn", "sec-verify-btn", "sec-sbom-btn", "sec-scan-btn"];
+  const btns = ["sec-sign-btn", "sec-verify-btn", "sec-sbom-btn", "sec-scan-btn", "sec-audit-btn"];
   btns.forEach((id) => {
     if ($(id)) $(id).disabled = true;
   });
   try {
     await guard(async () => {
+      if (action === "audit") {
+        const res = await invoke("security_audit");
+        $("sec-stats").textContent =
+          `CIS Score: ${res.score ?? 0}/100 • ${res.passed ?? 0} pass, ${res.warned ?? 0} warn, ${res.failed ?? 0} fail`;
+        toast(
+          `CIS Security Audit: ${res.score ?? 0}/100 (${res.failed ?? 0} fail)`,
+          (res.failed || 0) > 0,
+        );
+        const lines = [
+          `Coral CIS Security Audit — Score: ${res.score ?? 0}/100`,
+          `Host: rootless=${Boolean(res.rootless)}, Landlock ABI=${res.landlockAbi ? "v" + res.landlockAbi : "unavailable"}`,
+          "",
+          ...(res.checks || []).map(
+            (c) =>
+              `[${String(c.status || "").toUpperCase().padEnd(4)}] ${c.id} ${c.title}\n       ${c.detail}` +
+              (c.remediation ? `\n       Fix: ${c.remediation}` : ""),
+          ),
+        ];
+        $("sec-output").textContent = lines.join("\n");
+        return;
+      }
       const cmdMap = {
         sign: "image_sign",
         verify: "image_verify",

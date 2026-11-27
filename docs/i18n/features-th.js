@@ -1,13 +1,13 @@
 /**
  * Coral Container Project — Thai (th) dictionary, part 2
- * * * Platform integration & deep Docker-parity features through v2.8.4.
+ * * * Platform integration & deep Docker-parity features through v2.9.0.
  * * * Loaded before i18n.js, which merges this into window.CORAL_I18N.
  */
 window.CORAL_I18N_TH_FEATURES = {
   "nav.features": "ฟีเจอร์เชิงแพลตฟอร์ม",
-  "feat2.title": "ฟีเจอร์เชิงแพลตฟอร์มระดับลึก (v2.8.4)",
+  "feat2.title": "ฟีเจอร์เชิงแพลตฟอร์มระดับลึก (v2.9.0)",
   "feat2.lead":
-    "ความสามารถระดับ Production ครบชุดใน v2.8.4 เขียนด้วย Rust ล้วน ไม่ต้องติดตั้ง daemon ภายนอก และมีชุด unit/E2E test ครอบคลุมทุกข้อ",
+    "ความสามารถระดับ Production ครบชุดใน v2.9.0 เขียนด้วย Rust ล้วน ไม่ต้องติดตั้ง daemon ภายนอก และมีชุด unit/E2E test ครอบคลุมทุกข้อ",
   "feat2.cache.title": "Zero-Copy Shared Layer Store & Cache",
   "feat2.cache.desc":
     "coral pull แคชไฟล์บีบอัดใน .layer-cache/sha256/ (โหลดขนาน 4 สตรีม + ตรวจ SHA-256 สองชั้น) และแตกแต่ละ layer เพียงครั้งเดียวลง .layers/sha256/ แล้วแชร์พื้นที่ข้ามอิมเมจด้วย zero-copy hardlink พร้อม multi-lowerdir OverlayFS",
@@ -24,8 +24,8 @@ window.CORAL_I18N_TH_FEATURES = {
   "feat2.gpu.desc":
     "สแกนช่องโหว่ในตัวด้วย coral scan (SPDX SBOM + OSV.dev + --fail-on CI gate), coral top / wait / stats --all, CNCF CDI + ไลบรารี NVIDIA .so/nvidia-smi, Compose v2 (secrets, configs, include, --scale, watch), pause/rename/update และ coral machine (Linux/Lima VirtioFS/WSL2)",
   "feat2.usageTitle": "ใช้งานอย่างไร",
-  "feat2.usageLead": "สรุปคำสั่งสำคัญของแต่ละความสามารถใน v2.8.4",
-  "feat2.caption": "คำสั่งตัวอย่างสำหรับฟีเจอร์เชิงแพลตฟอร์มใน v2.8.4",
+  "feat2.usageLead": "สรุปคำสั่งสำคัญของแต่ละความสามารถใน v2.9.0",
+  "feat2.caption": "คำสั่งตัวอย่างสำหรับฟีเจอร์เชิงแพลตฟอร์มใน v2.9.0",
   "feat2.colCapability": "ความสามารถ",
   "feat2.colUsage": "วิธีใช้",
   "feat2.rowCache": "Zero-copy shared layer store",

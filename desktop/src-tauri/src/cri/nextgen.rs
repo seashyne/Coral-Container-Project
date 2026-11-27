@@ -157,6 +157,15 @@ pub async fn image_scan(
 }
 
 #[tauri::command]
+pub async fn security_audit(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+    invoke_nextgen(
+        &state,
+        HashMap::from([("coral.system.action".into(), "security_audit".into())]),
+    )
+    .await
+}
+
+#[tauri::command]
 pub async fn vm_setup_kernel(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
     invoke_nextgen(
         &state,
