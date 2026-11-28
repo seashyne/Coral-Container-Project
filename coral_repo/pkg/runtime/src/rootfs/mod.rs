@@ -112,13 +112,10 @@ pub fn prepare_rootfs(
     umount2("/", MntFlags::MNT_DETACH)
         .map_err(|e| RuntimeError::nix("umount old root after pivot_root", e))?;
 
-    // 8. Optionally lock rootfs read-only if requested by OCI spec.
+    // 8. Optionally lock rootfs read-only if requested by OCI spec or `--read-only`.
     if readonly {
-        let mut flags = MsFlags::MS_BIND | MsFlags::MS_REMOUNT | MsFlags::MS_RDONLY;
-        if rootless {
-            flags |= MsFlags::MS_NODEV | MsFlags::MS_NOSUID;
-        }
-        let _ = mount(None::<&str>, "/", None::<&str>, flags, None::<&str>);
+        let _ = rootless;
+        hardening::remount_rootfs_readonly();
     }
 
     Ok(())

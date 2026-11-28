@@ -95,6 +95,18 @@ impl ComposeService {
         if self.privileged {
             annotations.insert("coral.privileged".into(), "true".into());
         }
+        if self.read_only {
+            annotations.insert("coral.readonly_rootfs".into(), "true".into());
+        }
+        if !self.cap_drop.is_empty() {
+            annotations.insert("coral.cap_drop".into(), self.cap_drop.join("\n"));
+        }
+        if !self.cap_add.is_empty() {
+            annotations.insert("coral.cap_add".into(), self.cap_add.join("\n"));
+        }
+        if !self.security_opt.is_empty() {
+            annotations.insert("coral.security_opt".into(), self.security_opt.join("\n"));
+        }
         if !self.restart.trim().is_empty() && !self.restart.eq_ignore_ascii_case("no") {
             annotations.insert("coral.restart".into(), self.restart.trim().to_string());
         }

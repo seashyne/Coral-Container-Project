@@ -45,6 +45,8 @@ pub struct RunParams {
     pub cap_drop: String,
     #[serde(default)]
     pub security_opt: String,
+    #[serde(default)]
+    pub read_only: bool,
 }
 
 #[tauri::command]
@@ -139,6 +141,9 @@ pub async fn run_container(
     }
     if !params.security_opt.trim().is_empty() {
         annotations.insert("coral.security_opt".into(), params.security_opt.trim().into());
+    }
+    if params.read_only {
+        annotations.insert("coral.readonly_rootfs".into(), "true".into());
     }
 
     let mut labels = HashMap::from([("managed-by".into(), "coral-desktop".into())]);

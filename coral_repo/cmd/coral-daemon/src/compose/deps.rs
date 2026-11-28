@@ -44,6 +44,9 @@ pub(super) fn apply_list_item(
         "dns" => svc.dns.push(item.to_string()),
         "extra_hosts" => svc.extra_hosts.push(item.to_string()),
         "devices" => svc.devices.push(item.to_string()),
+        "cap_drop" => svc.cap_drop.push(item.to_string()),
+        "cap_add" => svc.cap_add.push(item.to_string()),
+        "security_opt" => svc.security_opt.push(item.to_string()),
         "aliases" | "network_aliases" => {
             if !svc.network_aliases.iter().any(|a| a == item) {
                 svc.network_aliases.push(item.to_string());

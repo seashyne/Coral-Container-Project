@@ -30,7 +30,7 @@ esac
 if [[ -z "$VERSION" ]]; then
   VERSION="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null \
     | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1 || true)"
-  VERSION="${VERSION:-v2.9.0}"
+  VERSION="${VERSION:-v2.9.1}"
 fi
 
 TARBALL="coral-${VERSION}-linux-${ARCH}.tar.gz"

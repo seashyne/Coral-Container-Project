@@ -39,6 +39,7 @@ Object.assign(window.CORAL_DESKTOP_LOCALES.th, {
   "modal.logJournald": "Systemd journald",
   "modal.runCapDropAll": "ถอดสิทธิ์ Linux Capabilities ทั้งหมด (--cap-drop ALL)",
   "modal.runLandlock": "เปิดใช้ Linux Landlock LSM",
+  "modal.runReadOnly": "ล็อกไฟล์ระบบอ่านอย่างเดียว (--read-only)",
   "modal.runVolumes": "พื้นที่เก็บข้อมูล (Volumes)",
   "modal.runEnv": "ตัวแปรสภาพแวดล้อม",
   "modal.runSubmit": "เริ่มรันคอนเทนเนอร์",

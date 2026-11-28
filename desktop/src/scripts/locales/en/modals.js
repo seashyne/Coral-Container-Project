@@ -39,6 +39,7 @@ Object.assign(window.CORAL_DESKTOP_LOCALES.en, {
   "modal.logJournald": "Systemd journald",
   "modal.runCapDropAll": "Drop ALL capabilities (--cap-drop ALL)",
   "modal.runLandlock": "Enforce Linux Landlock LSM",
+  "modal.runReadOnly": "Read-only rootfs (--read-only)",
   "modal.runVolumes": "Storage / Volumes",
   "modal.runEnv": "Environment Variables",
   "modal.runSubmit": "Start Container",

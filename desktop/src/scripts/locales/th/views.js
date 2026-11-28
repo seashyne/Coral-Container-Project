@@ -236,6 +236,7 @@ Object.assign(window.CORAL_DESKTOP_LOCALES.th, {
   "settings.modeWsl2": "WSL2 (Windows)",
   "settings.modeRemote": "เครื่องอื่น (Remote)",
   "settings.endpoint": "Endpoint (host:port)",
+  "settings.authToken": "โทเค็นยืนยันตัวตน Bearer (ไม่บังคับ)",
   "settings.btnConnect": "เชื่อมต่อ / เชื่อมใหม่",
   "settings.hintLocal": "เชื่อมต่อกับ Coral Engine บนเครื่อง Linux นี้",
   "settings.hintWsl2": "เชื่อมต่อกับ Coral Engine ภายใน WSL2 Linux distro",

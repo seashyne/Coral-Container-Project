@@ -20,6 +20,7 @@ async function loadSettingsForm() {
     if ($("set-images-dir")) $("set-images-dir").value = s.imagesDir || "";
     if ($("set-state-dir")) $("set-state-dir").value = s.stateDir;
     if ($("set-wsl-distro")) $("set-wsl-distro").value = s.wslDistro;
+    if ($("set-auth-token")) $("set-auth-token").value = s.authToken || "";
     if ($("set-docker-sock")) {
       const base = (s.stateDir || "").trim() || "~/.local/state/coral/daemon";
       $("set-docker-sock").value = `unix://${base.replace(/\/+$/, "")}/docker.sock`;
@@ -45,6 +46,7 @@ function collectSettings() {
     imagesDir: ($("set-images-dir")?.value || "").trim(),
     stateDir: ($("set-state-dir")?.value || "").trim(),
     wslDistro: ($("set-wsl-distro")?.value || "").trim(),
+    authToken: ($("set-auth-token")?.value || "").trim(),
   };
 }
 

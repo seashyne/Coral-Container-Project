@@ -258,4 +258,6 @@ Object.assign(window.CORAL_DESKTOP_LOCALES.ko, {
   "nextgen.btnAudit": "CIS 보안 감사",
   "modal.runCapDropAll": "모든 Linux 권한 제거 (--cap-drop ALL)",
   "modal.runLandlock": "Linux Landlock LSM 적용",
+  "modal.runReadOnly": "읽기 전용 루트 파일시스템 (--read-only)",
+  "settings.authToken": "Bearer 인증 토큰 (선택)",
 });

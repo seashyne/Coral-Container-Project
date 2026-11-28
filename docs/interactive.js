@@ -24,7 +24,7 @@
 
   function getReleaseMeta() {
     const cfg = window.CORAL_SPONSOR_CONFIG || {};
-    const ver = cfg.releaseVersion || "v2.9.0";
+    const ver = cfg.releaseVersion || "v2.9.1";
     const num = ver.replace(/^v/, "");
     const repo = cfg.repoSlug || "seashyne/Coral-Container-Project";
     return { ver, num, repo };
@@ -252,7 +252,7 @@
   const cmdInput = document.getElementById("cmd-input");
   const cmdList = document.getElementById("cmd-list");
   const CMD_ITEMS = [
-    { label: "Download & Install Coral v2.9.0", hint: "#install", href: "#install" },
+    { label: "Download & Install Coral v2.9.1", hint: "#install", href: "#install" },
     { label: "CLI Cookbook & Examples", hint: "#quickstart", href: "#quickstart" },
     { label: "Platform Features (vSwitch, Buildx, docker.sock)", hint: "#features", href: "#features" },
     { label: "Coral Desktop (Tauri v2 · 8 Languages)", hint: "#desktop", href: "#desktop" },

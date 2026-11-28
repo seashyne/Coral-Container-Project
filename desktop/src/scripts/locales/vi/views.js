@@ -258,4 +258,6 @@ Object.assign(window.CORAL_DESKTOP_LOCALES.vi, {
   "nextgen.btnAudit": "Kiểm tra bảo mật CIS",
   "modal.runCapDropAll": "Bỏ tất cả quyền Linux (--cap-drop ALL)",
   "modal.runLandlock": "Bật Linux Landlock LSM",
+  "modal.runReadOnly": "Hệ thống tệp gốc chỉ đọc (--read-only)",
+  "settings.authToken": "Mã xác thực Bearer (tùy chọn)",
 });

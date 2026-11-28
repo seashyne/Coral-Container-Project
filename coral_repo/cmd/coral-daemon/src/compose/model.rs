@@ -93,6 +93,14 @@ pub struct ComposeService {
     pub replicas: u32,
     #[serde(default)]
     pub privileged: bool,
+    #[serde(default)]
+    pub read_only: bool,
+    #[serde(default)]
+    pub cap_drop: Vec<String>,
+    #[serde(default)]
+    pub cap_add: Vec<String>,
+    #[serde(default)]
+    pub security_opt: Vec<String>,
     pub memory_mb: i64,
     pub cpu_percent: i64,
     pub pids_limit: i64,
@@ -137,6 +145,10 @@ impl Default for ComposeService {
             configs: Vec::new(),
             replicas: 1,
             privileged: false,
+            read_only: false,
+            cap_drop: Vec::new(),
+            cap_add: Vec::new(),
+            security_opt: Vec::new(),
             memory_mb: 0,
             cpu_percent: 0,
             pids_limit: 0,

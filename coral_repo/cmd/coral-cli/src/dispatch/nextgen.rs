@@ -215,7 +215,7 @@ pub(crate) fn security(ctx: &Ctx, args: crate::args::SecurityArgs) -> Result<Exi
                         coral_api::runtime_service_client::RuntimeServiceClient::new(ch);
                     let mut annotations = std::collections::HashMap::new();
                     annotations.insert("coral.system.action".into(), "security_audit".into());
-                    let mut req = tonic::Request::new(coral_api::RunPodSandboxRequest {
+                    let req = tonic::Request::new(coral_api::RunPodSandboxRequest {
                         config: Some(coral_api::PodSandboxConfig {
                             metadata: Some(coral_api::PodSandboxMetadata {
                                 name: "coral-security-audit".into(),
@@ -230,12 +230,6 @@ pub(crate) fn security(ctx: &Ctx, args: crate::args::SecurityArgs) -> Result<Exi
                         }),
                         runtime_handler: "coral".into(),
                     });
-                    if let Ok(tok) = std::env::var("CORAL_AUTH_TOKEN")
-                        && !tok.trim().is_empty()
-                        && let Ok(val) = format!("Bearer {}", tok.trim()).parse()
-                    {
-                        req.metadata_mut().insert("authorization", val);
-                    }
                     if let Ok(resp) = client.run_pod_sandbox(req).await {
                         let raw = resp.into_inner().pod_sandbox_id;
                         if let Ok(parsed) = serde_json::from_str(&raw) {

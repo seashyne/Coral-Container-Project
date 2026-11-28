@@ -30,7 +30,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: ubuntu-22.04
+          - platform: ubuntu-24.04
             arch: x86_64
           - platform: ubuntu-24.04-arm
             arch: aarch64
@@ -41,6 +41,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: coral_repo
+
+      - name: Allow unprivileged user namespaces on Ubuntu 24.04 runners
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
       - name: Install runtime dependencies
         run: |

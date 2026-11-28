@@ -4,6 +4,34 @@ use nix::mount::{MsFlags, mount};
 use std::path::Path;
 use tracing::debug;
 
+/// Locks the pivoted container root filesystem (`/`) read-only while preserving existing
+/// mount flags (matching `runc`/`crun` rootless remount behavior).
+pub fn remount_rootfs_readonly() {
+    let mut flags = MsFlags::MS_BIND | MsFlags::MS_REMOUNT | MsFlags::MS_RDONLY;
+    let mut st: libc::statvfs = unsafe { std::mem::zeroed() };
+    if unsafe { libc::statvfs(c"/".as_ptr(), &mut st) } == 0 {
+        let f = st.f_flag;
+        if (f & libc::ST_NOSUID) != 0 {
+            flags |= MsFlags::MS_NOSUID;
+        }
+        if (f & libc::ST_NODEV) != 0 {
+            flags |= MsFlags::MS_NODEV;
+        }
+        if (f & libc::ST_NOEXEC) != 0 {
+            flags |= MsFlags::MS_NOEXEC;
+        }
+    }
+    if mount(None::<&str>, "/", None::<&str>, flags, None::<&str>).is_err() {
+        let _ = mount(
+            None::<&str>,
+            "/",
+            None::<&str>,
+            MsFlags::MS_BIND | MsFlags::MS_REMOUNT | MsFlags::MS_RDONLY,
+            None::<&str>,
+        );
+    }
+}
+
 /// Standard OCI/Docker sensitive kernel paths masked inside non-privileged containers.
 pub const DEFAULT_MASKED_PATHS: &[&str] = &[
     "/proc/acpi",

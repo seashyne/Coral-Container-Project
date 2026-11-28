@@ -258,4 +258,6 @@ Object.assign(window.CORAL_DESKTOP_LOCALES.es, {
   "nextgen.btnAudit": "Auditoría de seguridad CIS",
   "modal.runCapDropAll": "Quitar todas las capacidades (--cap-drop ALL)",
   "modal.runLandlock": "Aplicar Linux Landlock LSM",
+  "modal.runReadOnly": "Sistema de archivos solo lectura (--read-only)",
+  "settings.authToken": "Token Bearer de autenticación (opcional)",
 });

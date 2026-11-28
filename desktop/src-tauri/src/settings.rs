@@ -21,6 +21,7 @@ pub struct Settings {
     pub images_dir: String,
     pub state_dir: String,
     pub wsl_distro: String,
+    pub auth_token: String,
 }
 
 impl Default for Settings {
@@ -38,6 +39,7 @@ impl Default for Settings {
             images_dir: String::new(),
             state_dir: String::new(),
             wsl_distro: String::new(),
+            auth_token: String::new(),
         }
     }
 }
@@ -62,5 +64,11 @@ pub fn load(app: &AppHandle) -> Settings {
 pub fn save(app: &AppHandle, settings: &Settings) -> Result<(), String> {
     let path = settings_path(app)?;
     let json = serde_json::to_string_pretty(settings).map_err(|e| e.to_string())?;
-    std::fs::write(path, json).map_err(|e| format!("write settings: {e}"))
+    std::fs::write(&path, json).map_err(|e| format!("write settings: {e}"))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600));
+    }
+    Ok(())
 }

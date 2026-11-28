@@ -33,6 +33,7 @@ pub struct DaemonRunOptions {
     pub cap_drop: Vec<String>,
     pub cap_add: Vec<String>,
     pub security_opt: Vec<String>,
+    pub read_only: bool,
     pub no_overlay: bool,
     pub workdir: Option<String>,
     pub user: Option<String>,
@@ -182,6 +183,9 @@ pub async fn cmd_run_via_daemon(addr: &str, opts: DaemonRunOptions) -> Result<Ex
     }
     if !opts.security_opt.is_empty() {
         annotations.insert("coral.security_opt".into(), opts.security_opt.join("\n"));
+    }
+    if opts.read_only {
+        annotations.insert("coral.readonly_rootfs".into(), "true".into());
     }
     if opts.no_overlay {
         annotations.insert("coral.overlay".into(), "false".into());

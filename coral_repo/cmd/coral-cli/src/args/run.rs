@@ -91,6 +91,10 @@ pub struct RunArgs {
     #[arg(long = "security-opt")]
     pub security_opt: Vec<String>,
 
+    /// Mount the container's root filesystem as read-only
+    #[arg(long = "read-only")]
+    pub read_only: bool,
+
     /// Environment variable (KEY=VALUE), repeatable
     #[arg(short = 'e', long = "env")]
     pub envs: Vec<String>,

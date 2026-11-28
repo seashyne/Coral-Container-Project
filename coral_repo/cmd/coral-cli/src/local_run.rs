@@ -59,6 +59,7 @@ pub struct LocalImageRunArgs {
     pub cap_drop: Vec<String>,
     pub cap_add: Vec<String>,
     pub security_opt: Vec<String>,
+    pub read_only: bool,
     pub tty: bool,
     pub interactive: bool,
     pub memory_mb: i64,
@@ -137,6 +138,10 @@ pub fn run_from_image_local(
     if !args.security_opt.is_empty() {
         spec.annotations
             .insert("coral.security_opt".into(), args.security_opt.join("\n"));
+    }
+    if args.read_only {
+        spec.annotations
+            .insert("coral.readonly_rootfs".into(), "true".into());
     }
 
     let is_custom_net = !args.network.eq_ignore_ascii_case("host")

@@ -25,11 +25,42 @@ use serde::Serialize;
 use std::collections::HashMap;
 use tauri::{AppHandle, State};
 use tokio::sync::{Mutex, mpsc};
+use tonic::metadata::{Ascii, MetadataValue};
+use tonic::service::interceptor::InterceptedService;
 use tonic::transport::Channel;
 
+#[derive(Clone, Default)]
+pub struct BearerClientAuth(Option<MetadataValue<Ascii>>);
+
+impl BearerClientAuth {
+    fn from_setting_or_env(setting: &str) -> Self {
+        let raw = if !setting.trim().is_empty() {
+            Some(setting.trim().to_string())
+        } else {
+            std::env::var("CORAL_AUTH_TOKEN")
+                .ok()
+                .map(|v| v.trim().to_string())
+                .filter(|v| !v.is_empty())
+        };
+        Self(raw.and_then(|t| format!("Bearer {t}").parse().ok()))
+    }
+}
+
+impl tonic::service::Interceptor for BearerClientAuth {
+    #[allow(clippy::result_large_err)]
+    fn call(&mut self, mut req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
+        if let Some(ref val) = self.0 {
+            req.metadata_mut().insert("authorization", val.clone());
+        }
+        Ok(req)
+    }
+}
+
+pub type AuthChannel = InterceptedService<Channel, BearerClientAuth>;
+
 pub struct Connection {
-    pub runtime: RuntimeServiceClient<Channel>,
-    pub image: ImageServiceClient<Channel>,
+    pub runtime: RuntimeServiceClient<AuthChannel>,
+    pub image: ImageServiceClient<AuthChannel>,
     pub endpoint: String,
     pub version: String,
     pub spawned: Option<SpawnedDaemon>,
@@ -53,7 +84,7 @@ impl AppState {
         loaded
     }
 
-    pub(crate) async fn runtime(&self) -> Result<RuntimeServiceClient<Channel>, String> {
+    pub(crate) async fn runtime(&self) -> Result<RuntimeServiceClient<AuthChannel>, String> {
         self.conn
             .lock()
             .await
@@ -62,7 +93,7 @@ impl AppState {
             .ok_or_else(|| "not connected — connect to a daemon first".into())
     }
 
-    pub(crate) async fn image(&self) -> Result<ImageServiceClient<Channel>, String> {
+    pub(crate) async fn image(&self) -> Result<ImageServiceClient<AuthChannel>, String> {
         self.conn
             .lock()
             .await
@@ -131,12 +162,16 @@ pub async fn connect(app: AppHandle, state: State<'_, AppState>) -> Result<Conne
     disconnect_inner(&state).await;
 
     let spawned = daemon::ensure(&settings).await?;
-    let channel = Channel::from_shared(format!("http://{}", settings.endpoint))
+    let raw_channel = Channel::from_shared(format!("http://{}", settings.endpoint))
         .map_err(err)?
         .connect_timeout(std::time::Duration::from_secs(5))
         .connect()
         .await
         .map_err(|e| format!("connect to {}: {e}", settings.endpoint))?;
+    let channel = InterceptedService::new(
+        raw_channel,
+        BearerClientAuth::from_setting_or_env(&settings.auth_token),
+    );
 
     let mut runtime = RuntimeServiceClient::new(channel.clone());
     let version = runtime

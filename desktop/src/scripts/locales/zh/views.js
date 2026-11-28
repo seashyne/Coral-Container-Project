@@ -258,4 +258,6 @@ Object.assign(window.CORAL_DESKTOP_LOCALES.zh, {
   "nextgen.btnAudit": "CIS 安全审计",
   "modal.runCapDropAll": "丢弃所有 Linux 权限 (--cap-drop ALL)",
   "modal.runLandlock": "启用 Linux Landlock LSM",
+  "modal.runReadOnly": "只读根文件系统 (--read-only)",
+  "settings.authToken": "Bearer 认证令牌 (可选)",
 });

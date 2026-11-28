@@ -87,7 +87,7 @@ pub(super) fn resolve_project_name(
 }
 
 pub(super) async fn wait_for_service_condition(
-    rt: &mut RuntimeServiceClient<tonic::transport::Channel>,
+    rt: &mut RuntimeServiceClient<crate::daemon_client::AuthChannel>,
     dep_service: &str,
     dep_cid: &str,
     condition: DependsCondition,
@@ -146,7 +146,7 @@ pub(super) async fn wait_for_service_condition(
 }
 
 pub(super) async fn list_project_containers(
-    rt: &mut RuntimeServiceClient<tonic::transport::Channel>,
+    rt: &mut RuntimeServiceClient<crate::daemon_client::AuthChannel>,
     project: &str,
     services: &[String],
 ) -> Result<Vec<coral_api::Container>> {

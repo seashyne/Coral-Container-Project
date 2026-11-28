@@ -236,6 +236,7 @@ Object.assign(window.CORAL_DESKTOP_LOCALES.en, {
   "settings.modeWsl2": "WSL2 (Windows)",
   "settings.modeRemote": "Remote host",
   "settings.endpoint": "Endpoint (host:port)",
+  "settings.authToken": "Bearer Auth Token (optional)",
   "settings.btnConnect": "Connect / Reconnect",
   "settings.hintLocal": "Connects to the Coral Engine running on this Linux machine.",
   "settings.hintWsl2": "Connects to Coral Engine inside your WSL2 Linux distribution.",

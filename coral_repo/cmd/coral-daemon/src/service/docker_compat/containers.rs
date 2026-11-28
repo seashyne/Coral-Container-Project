@@ -149,6 +149,9 @@ pub(super) async fn handle_create_container(
         if hc.get("Privileged").and_then(|v| v.as_bool()).unwrap_or(false) {
             annotations.insert("coral.privileged".into(), "true".into());
         }
+        if hc.get("ReadonlyRootfs").and_then(|v| v.as_bool()).unwrap_or(false) {
+            annotations.insert("coral.readonly_rootfs".into(), "true".into());
+        }
         for (hc_key, ann_key) in [("CapDrop", "coral.cap_drop"), ("CapAdd", "coral.cap_add"), ("SecurityOpt", "coral.security_opt")] {
             if let Some(arr) = hc.get(hc_key).and_then(|v| v.as_array()) {
                 let vals: Vec<&str> = arr.iter().filter_map(|x| x.as_str()).collect();

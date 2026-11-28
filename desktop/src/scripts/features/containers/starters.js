@@ -66,6 +66,7 @@ async function submitRun() {
     logDriver: $("run-log-driver")?.value || "raw",
     capDrop: $("run-cap-drop-all")?.checked ? "ALL" : "",
     securityOpt: $("run-landlock")?.checked ? "landlock=enforce" : "",
+    readOnly: Boolean($("run-read-only")?.checked),
     ports: $("run-ports").value,
     volumes: $("run-volumes").value,
     env: $("run-env").value,

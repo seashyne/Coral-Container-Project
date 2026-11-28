@@ -111,4 +111,108 @@ fn cap_drop_all_masked_paths_seccomp_allowlist_and_landlock_work_end_to_end() {
     assert!(checks.iter().any(|c| c["id"] == "CIS-1.1"));
     assert!(checks.iter().any(|c| c["id"] == "CIS-2.1"));
     assert!(checks.iter().any(|c| c["id"] == "CIS-2.2"));
+
+    // 4. `--read-only` locks container rootfs against writes
+    let ro_out = Command::new(coral)
+        .arg("--root")
+        .arg(&state_root)
+        .arg("--images-dir")
+        .arg(&images_dir)
+        .arg("run")
+        .arg("--image")
+        .arg(&rootfs)
+        .args([
+            "--name",
+            "sec-readonly",
+            "--read-only",
+            "--",
+            "/bin/sh",
+            "-c",
+            "touch /ro-probe 2>&1; echo EXIT=$?",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        ro_out.status.success(),
+        "readonly container failed to run: {}",
+        String::from_utf8_lossy(&ro_out.stderr)
+    );
+    let ro_stdout = String::from_utf8_lossy(&ro_out.stdout);
+    assert!(
+        ro_stdout.contains("Read-only file system") && !ro_stdout.contains("EXIT=0"),
+        "expected write to / to fail on --read-only rootfs, got:\n{ro_stdout}"
+    );
+}
+
+#[test]
+fn daemon_bearer_token_rejects_unauthenticated_cli_and_accepts_coral_auth_token() {
+    let coral = ensure_coral_binary();
+    let daemon = coral.with_file_name("coral-daemon");
+    if !daemon.is_file() {
+        return;
+    }
+    let tmp = tempdir().unwrap();
+    let port = std::net::TcpListener::bind("127.0.0.1:0")
+        .unwrap()
+        .local_addr()
+        .unwrap()
+        .port();
+    let listen = format!("127.0.0.1:{port}");
+    let addr = format!("http://{listen}");
+
+    let mut child = Command::new(&daemon)
+        .args([
+            "--listen",
+            &listen,
+            "--no-docker-socket",
+            "--no-unix-socket",
+            "--auth-token",
+            "coral-e2e-secret-291",
+            "--state-dir",
+        ])
+        .arg(tmp.path().join("daemon"))
+        .spawn()
+        .expect("spawn coral-daemon with --auth-token");
+
+    // Wait for TCP port to accept connections (up to 5s).
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while Instant::now() < deadline {
+        if std::net::TcpStream::connect(&listen).is_ok() {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+
+    // Without token: `coral ps` MUST fail with unauthenticated error.
+    let unauth = Command::new(coral)
+        .env_remove("CORAL_AUTH_TOKEN")
+        .args(["--addr", &addr, "ps"])
+        .output()
+        .unwrap();
+    assert!(
+        !unauth.status.success(),
+        "expected unauthenticated `coral ps` to be rejected"
+    );
+    let unauth_err = String::from_utf8_lossy(&unauth.stderr);
+    assert!(
+        unauth_err.to_ascii_lowercase().contains("unauthenticated")
+            || unauth_err.contains("Bearer"),
+        "expected unauthenticated error, got:\n{unauth_err}"
+    );
+
+    // With matching CORAL_AUTH_TOKEN: `coral ps` MUST succeed.
+    let authed = Command::new(coral)
+        .env("CORAL_AUTH_TOKEN", "coral-e2e-secret-291")
+        .args(["--addr", &addr, "ps"])
+        .output()
+        .unwrap();
+
+    let _ = child.kill();
+    let _ = child.wait();
+
+    assert!(
+        authed.status.success(),
+        "expected authenticated `coral ps` to succeed, stderr:\n{}",
+        String::from_utf8_lossy(&authed.stderr)
+    );
 }

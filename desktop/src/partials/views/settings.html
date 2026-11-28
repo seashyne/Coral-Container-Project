@@ -31,6 +31,10 @@
                 <span data-i18n="settings.endpoint">Daemon Endpoint (host:port)</span>
                 <input id="set-endpoint" class="field mono" type="text" placeholder="127.0.0.1:50051" />
               </label>
+              <label class="col-span-full">
+                <span data-i18n="settings.authToken">Bearer Auth Token (optional)</span>
+                <input id="set-auth-token" class="field mono" type="password" autocomplete="off" placeholder="Optional — required when remote coral-daemon uses --auth-token" />
+              </label>
             </div>
             <p class="hint" id="mode-hint"></p>
             <div class="form-row">
@@ -179,7 +183,7 @@
             </div>
             <p class="about-desc" data-i18n="settings.aboutDesc">Fast, lightweight container and VM manager built with Rust.</p>
             <div class="spec-chips-row">
-              <span class="spec-chip">Version <b>v2.9.0</b></span>
+              <span class="spec-chip">Version <b>v2.9.1</b></span>
               <span class="spec-chip">License <b>Apache-2.0</b></span>
             </div>
           </div>

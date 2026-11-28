@@ -34,7 +34,6 @@ pub fn default_allowed_syscalls() -> Vec<i64> {
         libc::SYS_fchdir,
         libc::SYS_mkdirat,
         libc::SYS_unlinkat,
-        libc::SYS_renameat,
         libc::SYS_renameat2,
         libc::SYS_linkat,
         libc::SYS_symlinkat,
@@ -50,7 +49,6 @@ pub fn default_allowed_syscalls() -> Vec<i64> {
         libc::SYS_fdatasync,
         libc::SYS_sync,
         libc::SYS_syncfs,
-        libc::SYS_sync_file_range,
         libc::SYS_utimensat,
         libc::SYS_statfs,
         libc::SYS_fstatfs,
@@ -223,8 +221,6 @@ pub fn default_allowed_syscalls() -> Vec<i64> {
         libc::SYS_getrandom,
         libc::SYS_uname,
         libc::SYS_sysinfo,
-        libc::SYS_getrlimit,
-        libc::SYS_setrlimit,
         libc::SYS_prlimit64,
         libc::SYS_getrusage,
         libc::SYS_times,
@@ -242,12 +238,16 @@ pub fn default_allowed_syscalls() -> Vec<i64> {
         libc::SYS_timer_delete,
         libc::SYS_getcpu,
         libc::SYS_mknodat,
-        libc::SYS_fchmodat2,
+        452, // SYS_fchmodat2 (universal Linux 6.6+ syscall number on x86_64 and aarch64)
         libc::SYS_futex_waitv,
     ];
 
     #[cfg(target_arch = "x86_64")]
     syscalls.extend_from_slice(&[
+        libc::SYS_renameat,
+        libc::SYS_sync_file_range,
+        libc::SYS_getrlimit,
+        libc::SYS_setrlimit,
         libc::SYS_open,
         libc::SYS_stat,
         libc::SYS_lstat,

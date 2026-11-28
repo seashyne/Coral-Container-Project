@@ -232,3 +232,43 @@ services:
     );
     assert!(web.volumes.iter().any(|v| v.ends_with(":/app_cfg:ro")));
 }
+
+#[test]
+fn parses_compose_security_hardening_fields_and_emits_cri_annotations() {
+    let yaml = r#"
+services:
+  hardened:
+    image: alpine:3.20
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add: [NET_BIND_SERVICE]
+    security_opt:
+      - landlock=enforce
+      - no-new-privileges:true
+"#;
+    let spec = ComposeSpec::from_yaml_str(yaml, None).expect("parse security compose");
+    let svc = &spec.services[0];
+    assert!(svc.read_only);
+    assert_eq!(svc.cap_drop, vec!["ALL"]);
+    assert_eq!(svc.cap_add, vec!["NET_BIND_SERVICE"]);
+    assert_eq!(
+        svc.security_opt,
+        vec!["landlock=enforce", "no-new-privileges:true"]
+    );
+    let launch = svc.to_launch_spec("secproj", "alpine:3.20");
+    let ann = &launch.container_config.annotations;
+    assert_eq!(
+        ann.get("coral.readonly_rootfs").map(String::as_str),
+        Some("true")
+    );
+    assert_eq!(ann.get("coral.cap_drop").map(String::as_str), Some("ALL"));
+    assert_eq!(
+        ann.get("coral.cap_add").map(String::as_str),
+        Some("NET_BIND_SERVICE")
+    );
+    assert_eq!(
+        ann.get("coral.security_opt").map(String::as_str),
+        Some("landlock=enforce\nno-new-privileges:true")
+    );
+}

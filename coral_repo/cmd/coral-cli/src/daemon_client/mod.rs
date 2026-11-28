@@ -32,7 +32,38 @@ use coral_api::{ContainerState, VersionRequest};
 use coral_daemon::images as daemon_images;
 use std::path::PathBuf;
 use std::time::Duration;
+use tonic::metadata::{Ascii, MetadataValue};
+use tonic::service::interceptor::InterceptedService;
 use tonic::transport::Channel;
+
+/// Client-side gRPC interceptor that attaches `Authorization: Bearer <CORAL_AUTH_TOKEN>`
+/// to every `coral-daemon` RPC whenever `CORAL_AUTH_TOKEN` is set in the environment.
+#[derive(Clone, Default)]
+pub(crate) struct BearerClientAuth(Option<MetadataValue<Ascii>>);
+
+impl BearerClientAuth {
+    pub(crate) fn from_env() -> Self {
+        let header = std::env::var("CORAL_AUTH_TOKEN")
+            .ok()
+            .as_deref()
+            .map(str::trim)
+            .filter(|t| !t.is_empty())
+            .and_then(|t| format!("Bearer {t}").parse().ok());
+        Self(header)
+    }
+}
+
+impl tonic::service::Interceptor for BearerClientAuth {
+    #[allow(clippy::result_large_err)]
+    fn call(&mut self, mut req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
+        if let Some(ref val) = self.0 {
+            req.metadata_mut().insert("authorization", val.clone());
+        }
+        Ok(req)
+    }
+}
+
+pub(crate) type AuthChannel = InterceptedService<Channel, BearerClientAuth>;
 
 pub fn normalize_addr(addr: &str) -> String {
     let trimmed = addr.trim();
@@ -43,9 +74,9 @@ pub fn normalize_addr(addr: &str) -> String {
     }
 }
 
-pub(crate) async fn connect_channel(addr: &str, timeout_secs: u64) -> Result<Channel> {
+pub(crate) async fn connect_channel(addr: &str, timeout_secs: u64) -> Result<AuthChannel> {
     let trimmed = addr.trim();
-    if let Some(sock_path) = trimmed
+    let ch = if let Some(sock_path) = trimmed
         .strip_prefix("unix://")
         .or_else(|| trimmed.starts_with('/').then_some(trimmed))
     {
@@ -53,7 +84,7 @@ pub(crate) async fn connect_channel(addr: &str, timeout_secs: u64) -> Result<Cha
         let endpoint = tonic::transport::Endpoint::try_from("http://[::]:50051")
             .context("construct dummy URI for Unix socket transport")?
             .connect_timeout(Duration::from_secs(timeout_secs));
-        return endpoint
+        endpoint
             .connect_with_connector(tower::service_fn(move |_: tonic::transport::Uri| {
                 let p = path.clone();
                 async move {
@@ -62,19 +93,20 @@ pub(crate) async fn connect_channel(addr: &str, timeout_secs: u64) -> Result<Cha
                 }
             }))
             .await
-            .with_context(|| format!("connect to coral-daemon over Unix socket '{sock_path}'"));
-    }
-
-    let url = normalize_addr(trimmed);
-    Channel::from_shared(url.clone())
-        .with_context(|| format!("invalid daemon address '{url}'"))?
-        .connect_timeout(Duration::from_secs(timeout_secs))
-        .connect()
-        .await
-        .with_context(|| format!("connect to coral-daemon at {url}"))
+            .with_context(|| format!("connect to coral-daemon over Unix socket '{sock_path}'"))?
+    } else {
+        let url = normalize_addr(trimmed);
+        Channel::from_shared(url.clone())
+            .with_context(|| format!("invalid daemon address '{url}'"))?
+            .connect_timeout(Duration::from_secs(timeout_secs))
+            .connect()
+            .await
+            .with_context(|| format!("connect to coral-daemon at {url}"))?
+    };
+    Ok(InterceptedService::new(ch, BearerClientAuth::from_env()))
 }
 
-pub(crate) async fn try_connect_channel(addr: &str) -> Option<Channel> {
+pub(crate) async fn try_connect_channel(addr: &str) -> Option<AuthChannel> {
     connect_channel(addr, 1).await.ok()
 }
 

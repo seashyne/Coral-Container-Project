@@ -163,6 +163,9 @@ pub(super) fn apply_service_property(
         "privileged" => {
             svc.privileged = matches!(val.to_ascii_lowercase().as_str(), "true" | "1" | "yes");
         }
+        "read_only" => {
+            svc.read_only = matches!(val.to_ascii_lowercase().as_str(), "true" | "1" | "yes");
+        }
         "network_mode" | "network" => {
             if !val.is_empty() {
                 svc.network = val.to_string();
@@ -200,7 +203,7 @@ pub(super) fn apply_service_property(
         }
         "ports" | "expose" | "volumes" | "environment" | "depends_on" | "dns" | "extra_hosts"
         | "labels" | "profiles" | "networks" | "devices" | "aliases" | "network_aliases"
-        | "secrets" | "configs"
+        | "secrets" | "configs" | "cap_drop" | "cap_add" | "security_opt"
             if val_raw.starts_with('[') && val_raw.ends_with(']') =>
         {
             for item in parse_inline_list(val_raw) {

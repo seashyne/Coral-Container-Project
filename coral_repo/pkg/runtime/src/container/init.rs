@@ -81,7 +81,11 @@ pub(crate) fn container_init_exec(
     // Pre-load any host-side custom Seccomp JSON profile BEFORE pivot_root hides the host FS.
     sec_cfg.seccomp = sec_cfg.seccomp.preload_before_pivot()?;
 
-    let readonly = spec.root.as_ref().map(|r| r.readonly).unwrap_or(false);
+    let readonly = spec.root.as_ref().map(|r| r.readonly).unwrap_or(false)
+        || spec
+            .annotations
+            .get("coral.readonly_rootfs")
+            .is_some_and(|v| v == "true" || v == "1");
     prepare_rootfs(rootfs, overlay, &spec.mounts, readonly, rootless)?;
 
     // Apply OCI maskedPaths & readonlyPaths defense-in-depth on /proc and /sys after pivot_root.

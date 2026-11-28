@@ -258,4 +258,6 @@ Object.assign(window.CORAL_DESKTOP_LOCALES.ja, {
   "nextgen.btnAudit": "CIS セキュリティ監査",
   "modal.runCapDropAll": "全 Linux ケイパビリティを削除 (--cap-drop ALL)",
   "modal.runLandlock": "Linux Landlock LSM を強制",
+  "modal.runReadOnly": "読み取り専用ルートFS (--read-only)",
+  "settings.authToken": "Bearer 認証トークン (任意)",
 });
